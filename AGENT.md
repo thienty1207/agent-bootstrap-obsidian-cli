@@ -17,26 +17,19 @@ The CLI bootstraps new coding projects so they get:
 
 - `src/`: CLI implementation
 - `test/`: Node test suite
-- `scaffold/base/`: template assets copied into generated project roots
+- `.github/agents`, `.github/commands`, `.github/prompts`, `.github/rules`, `.github/skills`: template assets copied into generated project roots
 - `.github/workflows/`: CI for this CLI repo itself
-
-## Important note about `scaffold/base/.github`
-
-`scaffold/base/.github` is intentionally a template source.
-
-It is not the active `.github` folder for this CLI repo. During bootstrap, the CLI copies that folder into the target project's root so the generated repository ends up with its own real root `.github/`.
+- `docs/` and `plans/`: template assets copied into generated project roots
 
 ## Working rules
 
 - Keep the generated project shape aligned with VS Code/Copilot workspace expectations.
-- Prefer root `AGENT.md` for fast human/agent orientation.
-- Keep root `AGENTS.md` in sync for tools that recognize that filename.
+- Keep exactly one root `AGENT.md` in generated repos.
 - Do not reintroduce `.github/copilot-instructions.md` into generated repos unless explicitly requested.
 - Verify bootstrap behavior through `test/cli.test.js` and real smoke tests before claiming completion.
 
 ## Fast path
 
-1. Read `.github/AGENT.md`
-2. Read `README.md`
+1. Read `README.md`
+2. Inspect `.github/`, `docs/`, and `plans/`
 3. Run `npm test`
-

@@ -16,7 +16,6 @@ const {
   decisionsTemplate,
   repoReadmeTemplate,
   rootAgentTemplate,
-  githubAgentBlock,
   vaultMemoryDoc,
   localRuntimeScriptTemplate,
   gitPostCommitHookTemplate,
@@ -31,8 +30,18 @@ function copyTemplateIfPresent(vaultRoot, projectRoot) {
 }
 
 function copyRepoScaffold(repoRoot) {
-  const scaffoldRoot = path.join(__dirname, '..', 'scaffold', 'base');
-  copyMissingRecursive(scaffoldRoot, repoRoot);
+  const packageRoot = path.join(__dirname, '..');
+  const githubDirs = ['agents', 'commands', 'prompts', 'rules', 'skills'];
+
+  for (const directory of githubDirs) {
+    copyMissingRecursive(
+      path.join(packageRoot, '.github', directory),
+      path.join(repoRoot, '.github', directory)
+    );
+  }
+
+  copyMissingRecursive(path.join(packageRoot, 'docs'), path.join(repoRoot, 'docs'));
+  copyMissingRecursive(path.join(packageRoot, 'plans'), path.join(repoRoot, 'plans'));
 }
 
 function ensureGitRepository(repoRoot) {
@@ -89,33 +98,22 @@ function initProject({ projectPath, slug, vaultRoot: explicitVaultRoot }) {
   writeFile(path.join(projectRoot, 'Decisions.md'), decisionsTemplate(projectSlug, today));
 
   copyRepoScaffold(repoRoot);
-  const copilotInstructionsPath = path.join(repoRoot, '.github', 'copilot-instructions.md');
-  if (fs.existsSync(copilotInstructionsPath)) {
-    fs.rmSync(copilotInstructionsPath, { force: true });
-  }
   writeFileIfMissing(path.join(repoRoot, 'README.md'), repoReadmeTemplate(repoName, projectSlug));
   writeFile(path.join(repoRoot, 'scripts', 'agent-memory.js'), localRuntimeScriptTemplate());
 
   const rootAgentPath = path.join(repoRoot, 'AGENT.md');
-  const rootAgentsPath = path.join(repoRoot, 'AGENTS.md');
-  const githubAgentPath = path.join(repoRoot, '.github', 'AGENT.md');
   const docsPath = path.join(repoRoot, 'docs', 'vault-memory.md');
   const agentTemplate = rootAgentTemplate(vaultRoot, projectRoot);
-
   const currentRootAgent = fs.existsSync(rootAgentPath)
     ? fs.readFileSync(rootAgentPath, 'utf8')
     : '# Workspace Agent Guide\n';
-  const currentRootAgents = fs.existsSync(rootAgentsPath)
-    ? fs.readFileSync(rootAgentsPath, 'utf8')
-    : '# Repository Agent Entry Point\n';
-  const currentGithubAgent = fs.existsSync(githubAgentPath)
-    ? fs.readFileSync(githubAgentPath, 'utf8')
-    : '';
 
   writeFile(rootAgentPath, upsertManagedBlock(currentRootAgent, agentTemplate));
-  writeFile(rootAgentsPath, upsertManagedBlock(currentRootAgents, agentTemplate));
-  writeFile(githubAgentPath, githubAgentBlock(vaultRoot, projectRoot));
   writeFile(docsPath, vaultMemoryDoc(vaultRoot, projectRoot));
+
+  fs.rmSync(path.join(repoRoot, 'AGENTS.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.github', 'AGENT.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
 
   const gitInitialized = ensureGitRepository(repoRoot);
   const hooksConfigured = gitInitialized ? configureHooks(repoRoot) : false;

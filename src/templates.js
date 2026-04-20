@@ -93,16 +93,17 @@ function repoReadmeTemplate(repoName, projectSlug) {
 
 ${repoName} is a VS Code friendly agent workspace layout.
 
-It keeps the "agent team" structure under \`.github\`, while project-facing documentation and planning live at the repository root.
+It keeps the agent workspace under \`.github\`, while project-facing documentation and planning live at the repository root.
 
 Project slug: \`${projectSlug}\`
 
 ## Structure
 
+- \`AGENT.md\`: main operating contract for AI agents
 - \`.github/\`
-  - \`AGENT.md\`: main operating contract
   - \`agents/\`: specialized subagents
   - \`commands/\`: reusable workflow prompts
+  - \`prompts/\`: prompt packs and assets
   - \`rules/\`: workflow and quality guardrails
   - \`skills/\`: upstream skill libraries and deeper guidance
 - \`docs/\`: project documentation and reference notes
@@ -132,6 +133,8 @@ function rootAgentTemplate(vaultRoot, projectRoot) {
 
 Read this file first if you are working in this repository.
 
+## External memory
+
 This repository writes durable agent memory to the external Obsidian vault at:
 
 \`${vaultRoot}\`
@@ -140,18 +143,21 @@ Project capsule:
 
 \`${projectRoot}\`
 
+## Read order
+
 Before meaningful work, read:
 
-1. \`.github/AGENT.md\`
-2. \`docs/vault-memory.md\`
-3. \`${vaultRoot}/AGENTS.md\`
-4. \`${projectRoot}/README.md\`
-5. \`${projectRoot}/Tasks.md\`
+1. \`docs/vault-memory.md\`
+2. \`${vaultRoot}/AGENTS.md\`
+3. \`${projectRoot}/README.md\`
+4. \`${projectRoot}/Tasks.md\`
 
-Fast paths:
+## Fast paths
 
 - \`agent-bootstrap context\`
 - \`node scripts/agent-memory.js context\`
+
+## Write-back rules
 
 After meaningful work, write back to the vault:
 
@@ -160,98 +166,15 @@ After meaningful work, write back to the vault:
 - \`Research/\` for project-specific research
 - global \`Research\` or \`Notes\` for reusable insights
 
-Repo-local runtime:
+## Repo-local runtime
 
 - \`node scripts/agent-memory.js <context|task|decision|research|note>\`
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 
-VS Code compatibility:
-
-\`AGENTS.md\` mirrors the durable-memory contract for tools that recognize that filename.
-
-Global fallback:
+## Global fallback
 
 \`agent-bootstrap memory <task|decision|research|note> ...\`
 `;
-}
-
-function githubAgentBlock(vaultRoot, projectRoot) {
-  return `# FullAgent Team Contract
-
-This \`.github\` folder is the equivalent of a \`.claude\` agent-team workspace.
-
-## External memory bridge
-
-This repository uses an external Obsidian vault as its durable memory layer.
-
-- Vault path: \`${vaultRoot}\`
-- Project capsule: \`${projectRoot}\`
-- Project README: \`${projectRoot}/README.md\`
-- Project tasks: \`${projectRoot}/Tasks.md\`
-- Project decisions: \`${projectRoot}/Decisions.md\`
-- Project research: \`${projectRoot}/Research/\`
-
-If you are an agent working inside this repository, read these vault files before meaningful work:
-
-1. \`AGENT.md\`
-2. \`${vaultRoot}/AGENTS.md\`
-3. \`${projectRoot}/README.md\`
-4. \`${projectRoot}/Tasks.md\`
-
-Fast paths:
-
-- \`node scripts/agent-memory.js context\`
-- \`agent-bootstrap context\`
-
-After meaningful work, write durable memory back into the vault:
-
-- Update \`Tasks.md\` when status or next steps change
-- Update \`Decisions.md\` when technical choices are made
-- Add a note under \`Research/\` for source-based investigation
-- Add a note under \`Notes/\` for implementation notes worth keeping
-- Let the installed git \`post-commit\` hook write commit-level worklogs automatically
-
-Prefer using the repository-local runtime:
-
-\`node scripts/agent-memory.js <context|task|decision|research|note>\`
-
-Global fallback:
-
-\`agent-bootstrap memory <task|decision|research|note> ...\`
-
-Code lives in this repository. Memory lives in the external vault.
-
-## Core model
-
-Use Karpathy discipline inside each change:
-
-- think before coding
-- prefer the simplest solution
-- make surgical diffs
-- define success criteria and verify them
-
-Use Superpowers workflow across the full task:
-
-- brainstorm before non-trivial implementation
-- write a plan before multi-step work
-- debug by finding root cause before proposing fixes
-- prefer test-first development when practical
-- review and verify before claiming completion
-
-## Working style
-
-- Ask clarifying questions when ambiguity changes behavior, architecture, or scope.
-- Match existing codebase patterns before introducing new ones.
-- Avoid speculative abstractions and unrelated cleanup.
-- Keep changes small, clear, and reversible.
-- Do not claim success without fresh evidence.
-
-## Where to look
-
-- \`agents/\` for specialist roles
-- \`commands/\` for workflow entrypoints
-- \`rules/\` for operational guardrails
-- \`skills/\` for upstream skill libraries and deeper guidance`;
 }
 
 function vaultMemoryDoc(vaultRoot, projectRoot) {
@@ -269,14 +192,10 @@ This repository is paired with an external Obsidian vault for durable agent memo
 
 Before doing meaningful work in this repo, read:
 
-1. \`${vaultRoot}/AGENTS.md\`
-2. \`${projectRoot}/README.md\`
-3. \`${projectRoot}/Tasks.md\`
-
-Fast paths:
-
-- \`node scripts/agent-memory.js context\`
-- \`agent-bootstrap context\`
+1. \`AGENT.md\`
+2. \`${vaultRoot}/AGENTS.md\`
+3. \`${projectRoot}/README.md\`
+4. \`${projectRoot}/Tasks.md\`
 
 ## Write-back rules
 
@@ -301,7 +220,8 @@ Global fallback:
 This split is intentional:
 
 - repository = source code and execution
-- vault = long-term memory, planning, research, and handoff`;
+- vault = long-term memory, planning, research, and handoff
+`;
 }
 
 function localRuntimeScriptTemplate() {
@@ -363,8 +283,6 @@ function readRepoConfig(repoRoot) {
 function getContext(repoRoot, config) {
   const sections = [
     ['Repo AGENT', path.join(repoRoot, 'AGENT.md')],
-    ['Repo AGENTS', path.join(repoRoot, 'AGENTS.md')],
-    ['GitHub AGENT', path.join(repoRoot, '.github', 'AGENT.md')],
     ['Vault Bridge', path.join(repoRoot, 'docs', 'vault-memory.md')],
     ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
     ['Project README', path.join(config.project_root, 'README.md')],
@@ -527,7 +445,6 @@ module.exports = {
   decisionsTemplate,
   repoReadmeTemplate,
   rootAgentTemplate,
-  githubAgentBlock,
   vaultMemoryDoc,
   localRuntimeScriptTemplate,
   gitPostCommitHookTemplate

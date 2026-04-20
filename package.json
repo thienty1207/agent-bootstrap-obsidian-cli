@@ -4,8 +4,10 @@
   "description": "Portable Obsidian vault bootstrap CLI for coding projects",
   "files": [
     "bin",
+    ".github",
+    "docs",
+    "plans",
     "src",
-    "scaffold",
     "README.md"
   ],
   "bin": {

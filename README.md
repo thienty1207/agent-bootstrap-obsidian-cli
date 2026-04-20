@@ -42,9 +42,8 @@ That single command will:
 
 - create a project capsule under `Projects/<slug>` in the vault
 - connect the project folder to the vault with `vault.config.json`
-- create root `AGENT.md` and `AGENTS.md`
+- create exactly one root `AGENT.md`
 - scaffold `.github/`, `docs/`, and `plans/` with the FullAgent layout
-- create `.github/AGENT.md`
 - create `docs/vault-memory.md`
 - create a repo-local `scripts/agent-memory.js` runtime
 - install a git `post-commit` hook that writes commit worklogs into the vault
@@ -94,3 +93,17 @@ Supported environment variables:
 ```bash
 npm test
 ```
+
+## Template source
+
+This repository keeps the reusable template content directly at the root:
+
+- `.github/agents`
+- `.github/commands`
+- `.github/prompts`
+- `.github/rules`
+- `.github/skills`
+- `docs`
+- `plans`
+
+During bootstrap, those directories are copied into the generated project root.
