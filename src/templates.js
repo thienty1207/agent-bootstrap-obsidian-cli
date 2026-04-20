@@ -88,6 +88,45 @@ tags:
 `;
 }
 
+function repoReadmeTemplate(repoName, projectSlug) {
+  return `# ${repoName}
+
+${repoName} is a VS Code friendly agent workspace layout.
+
+It keeps the "agent team" structure under \`.github\`, while project-facing documentation and planning live at the repository root.
+
+Project slug: \`${projectSlug}\`
+
+## Structure
+
+- \`.github/\`
+  - \`AGENT.md\`: main operating contract
+  - \`agents/\`: specialized subagents
+  - \`commands/\`: reusable workflow prompts
+  - \`rules/\`: workflow and quality guardrails
+  - \`skills/\`: upstream skill libraries and deeper guidance
+- \`docs/\`: project documentation and reference notes
+- \`plans/\`: implementation templates and handoff reports
+- \`scripts/\`: repo-local runtime helpers for durable memory write-back
+
+## Intent
+
+This layout combines:
+
+- Karpathy-style coding discipline
+- Superpowers-style workflow orchestration
+- an Obsidian-backed memory bridge that stays outside the source repo
+
+## Suggested use
+
+1. Read \`.github/AGENT.md\`.
+2. Pick a specialist from \`.github/agents/\` when the task fits a role.
+3. Use \`.github/commands/\` to kick off repeatable workflows.
+4. Treat \`.github/rules/\` as the guardrails.
+5. Use \`node scripts/agent-memory.js context\` to load repo and vault context.
+`;
+}
+
 function rootAgentsBlock(vaultRoot, projectRoot) {
   return `This repository writes durable agent memory to the external Obsidian vault at:
 
@@ -97,9 +136,18 @@ Project capsule:
 
 \`${projectRoot}\`
 
-Fast path:
+Before meaningful work, read:
+
+1. \`.github/AGENT.md\`
+2. \`docs/vault-memory.md\`
+3. \`${vaultRoot}/AGENTS.md\`
+4. \`${projectRoot}/README.md\`
+5. \`${projectRoot}/Tasks.md\`
+
+Fast paths:
 
 - \`agent-bootstrap context\`
+- \`node scripts/agent-memory.js context\`
 
 After meaningful work, write back to the vault:
 
@@ -108,14 +156,22 @@ After meaningful work, write back to the vault:
 - \`Research/\` for project-specific research
 - global \`Research\` or \`Notes\` for reusable insights
 
-Preferred command family:
+Repo-local runtime:
 
-\`agent-bootstrap context\`
+- \`node scripts/agent-memory.js <context|task|decision|research|note>\`
+- git \`post-commit\` hook auto-writes a durable worklog note into the vault
+
+Global fallback:
+
 \`agent-bootstrap memory <task|decision|research|note> ...\``;
 }
 
 function githubAgentBlock(vaultRoot, projectRoot) {
-  return `## External memory bridge
+  return `# FullAgent Team Contract
+
+This \`.github\` folder is the equivalent of a \`.claude\` agent-team workspace.
+
+## External memory bridge
 
 This repository uses an external Obsidian vault as its durable memory layer.
 
@@ -126,13 +182,66 @@ This repository uses an external Obsidian vault as its durable memory layer.
 - Project decisions: \`${projectRoot}/Decisions.md\`
 - Project research: \`${projectRoot}/Research/\`
 
-Fast path:
+If you are an agent working inside this repository, read these vault files before meaningful work:
 
-- Run \`agent-bootstrap context\`
+1. \`${vaultRoot}/AGENTS.md\`
+2. \`${projectRoot}/README.md\`
+3. \`${projectRoot}/Tasks.md\`
 
-After meaningful work, write durable memory back into the vault with:
+Fast paths:
 
-\`agent-bootstrap memory <task|decision|research|note> ...\``;
+- \`node scripts/agent-memory.js context\`
+- \`agent-bootstrap context\`
+
+After meaningful work, write durable memory back into the vault:
+
+- Update \`Tasks.md\` when status or next steps change
+- Update \`Decisions.md\` when technical choices are made
+- Add a note under \`Research/\` for source-based investigation
+- Add a note under \`Notes/\` for implementation notes worth keeping
+- Let the installed git \`post-commit\` hook write commit-level worklogs automatically
+
+Prefer using the repository-local runtime:
+
+\`node scripts/agent-memory.js <context|task|decision|research|note>\`
+
+Global fallback:
+
+\`agent-bootstrap memory <task|decision|research|note> ...\`
+
+Code lives in this repository. Memory lives in the external vault.
+
+## Core model
+
+Use Karpathy discipline inside each change:
+
+- think before coding
+- prefer the simplest solution
+- make surgical diffs
+- define success criteria and verify them
+
+Use Superpowers workflow across the full task:
+
+- brainstorm before non-trivial implementation
+- write a plan before multi-step work
+- debug by finding root cause before proposing fixes
+- prefer test-first development when practical
+- review and verify before claiming completion
+
+## Working style
+
+- Ask clarifying questions when ambiguity changes behavior, architecture, or scope.
+- Match existing codebase patterns before introducing new ones.
+- Avoid speculative abstractions and unrelated cleanup.
+- Keep changes small, clear, and reversible.
+- Do not claim success without fresh evidence.
+
+## Where to look
+
+- \`agents/\` for specialist roles
+- \`commands/\` for workflow entrypoints
+- \`rules/\` for operational guardrails
+- \`skills/\` for upstream skill libraries and deeper guidance`;
 }
 
 function vaultMemoryDoc(vaultRoot, projectRoot) {
@@ -146,15 +255,258 @@ This repository is paired with an external Obsidian vault for durable agent memo
 - Vault guide: \`${vaultRoot}/AGENTS.md\`
 - Project capsule: \`${projectRoot}\`
 
-## Fast path
+## Read first
 
+Before doing meaningful work in this repo, read:
+
+1. \`${vaultRoot}/AGENTS.md\`
+2. \`${projectRoot}/README.md\`
+3. \`${projectRoot}/Tasks.md\`
+
+Fast paths:
+
+- \`node scripts/agent-memory.js context\`
 - \`agent-bootstrap context\`
 
-## Write-back
+## Write-back rules
 
-Use:
+After meaningful work:
+
+- update \`Tasks.md\` for status, handoff, and next actions
+- update \`Decisions.md\` for architecture or implementation decisions
+- create project research notes under \`Research/\` when investigation happens
+- move reusable cross-project insights into the vault's global \`Research\` or \`Notes\`
+- rely on the repo git \`post-commit\` hook to keep a low-friction commit worklog
+
+Preferred repo-local runtime:
+
+\`node scripts/agent-memory.js <context|task|decision|research|note>\`
+
+Global fallback:
 
 \`agent-bootstrap memory <task|decision|research|note> ...\`
+
+## Purpose
+
+This split is intentional:
+
+- repository = source code and execution
+- vault = long-term memory, planning, research, and handoff`;
+}
+
+function localRuntimeScriptTemplate() {
+  return `#!/usr/bin/env node
+
+const fs = require('node:fs');
+const path = require('node:path');
+const cp = require('node:child_process');
+
+function readFile(filePath) {
+  return fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf8') : null;
+}
+
+function ensureDir(dirPath) {
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function writeFile(filePath, content) {
+  ensureDir(path.dirname(filePath));
+  fs.writeFileSync(filePath, content);
+}
+
+function findRepoRoot(startPath) {
+  let current = path.resolve(startPath);
+
+  while (true) {
+    if (fs.existsSync(path.join(current, 'vault.config.json'))) {
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+
+    current = parent;
+  }
+
+  throw new Error('Could not find a bootstrapped repo from the current directory.');
+}
+
+function getTodayString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return \`\${year}-\${month}-\${day}\`;
+}
+
+function readRepoConfig(repoRoot) {
+  const configPath = path.join(repoRoot, 'vault.config.json');
+  const raw = readFile(configPath);
+  if (!raw) {
+    throw new Error('Missing vault.config.json. Run agent-bootstrap in the repo root first.');
+  }
+  return JSON.parse(raw);
+}
+
+function getContext(repoRoot, config) {
+  const sections = [
+    ['Repo AGENTS', path.join(repoRoot, 'AGENTS.md')],
+    ['GitHub AGENT', path.join(repoRoot, '.github', 'AGENT.md')],
+    ['Vault Bridge', path.join(repoRoot, 'docs', 'vault-memory.md')],
+    ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
+    ['Project README', path.join(config.project_root, 'README.md')],
+    ['Project Tasks', path.join(config.project_root, config.tasks_file)],
+  ];
+
+  return sections
+    .map(([label, filePath]) => {
+      const body = readFile(filePath);
+      if (!body) {
+        return null;
+      }
+      return \`===== \${label} =====\\n\${body.trimEnd()}\\n\`;
+    })
+    .filter(Boolean)
+    .join('\\n');
+}
+
+function appendTask(config, content) {
+  const tasksPath = path.join(config.project_root, config.tasks_file);
+  const existing = readFile(tasksPath) || '# Tasks\\n';
+  fs.writeFileSync(tasksPath, \`\${existing.trimEnd()}\\n\\n- [ ] \${content}\\n\`);
+  return tasksPath;
+}
+
+function appendDecision(config, title, content) {
+  const decisionsPath = path.join(config.project_root, config.decisions_file);
+  const existing = readFile(decisionsPath) || '# Decisions\\n';
+  const today = getTodayString();
+  const entry = \`\\n## \${today} - \${title}\\n- Context: repo-local agent runtime\\n- Decision: \${content}\\n\`;
+  fs.writeFileSync(decisionsPath, \`\${existing.trimEnd()}\\n\${entry}\`);
+  return decisionsPath;
+}
+
+function createNote(config, noteType, title, content, extraTags = []) {
+  const directory = noteType === 'research' ? config.research_dir : config.notes_dir;
+  const targetDir = path.join(config.project_root, directory);
+  ensureDir(targetDir);
+  const today = getTodayString();
+  const safeTitle = title.replace(/[<>:"/\\\\|?*\\u0000-\\u001F]/g, '-').replace(/\\s+/g, ' ').trim();
+  const tags = extraTags.length > 0
+    ? \`tags:\\n\${extraTags.map((tag) => \`  - \${tag}\`).join('\\n')}\\n\`
+    : '';
+  const notePath = path.join(targetDir, \`\${today} \${safeTitle}.md\`);
+  writeFile(notePath, \`---\\ntype: \${noteType}\\nproject: \${config.project_slug}\\ncreated: \${today}\\n\${tags}---\\n\\n# \${title}\\n\\n\${content}\\n\`);
+  return notePath;
+}
+
+function parseFlags(argv) {
+  const args = [...argv];
+  const options = {};
+  const rest = [];
+
+  while (args.length > 0) {
+    const value = args.shift();
+    if (!value.startsWith('--')) {
+      rest.push(value);
+      continue;
+    }
+
+    const flag = value.slice(2);
+    const next = args.shift();
+    if (!next || next.startsWith('--')) {
+      throw new Error(\`Missing value for --\${flag}\`);
+    }
+
+    options[flag] = next;
+  }
+
+  return { rest, options };
+}
+
+function writeMemory(repoRoot, config, mode, content, title) {
+  switch (mode) {
+    case 'task':
+      return appendTask(config, content);
+    case 'decision':
+      if (!title) {
+        throw new Error('Title is required for decision mode.');
+      }
+      return appendDecision(config, title, content);
+    case 'research':
+    case 'note':
+      if (!title) {
+        throw new Error(\`Title is required for \${mode} mode.\`);
+      }
+      return createNote(config, mode, title, content);
+    case 'post-commit': {
+      let sha = '';
+      let subject = '';
+      let body = '';
+
+      try {
+        sha = cp.execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim();
+        subject = cp.execFileSync('git', ['log', '-1', '--pretty=%s'], { cwd: repoRoot, encoding: 'utf8' }).trim();
+        body = cp.execFileSync('git', ['log', '-1', '--pretty=%b'], { cwd: repoRoot, encoding: 'utf8' }).trim();
+      } catch (error) {
+        throw new Error(\`Could not read latest commit information: \${error.message}\`);
+      }
+
+      const shortSha = sha.slice(0, 7);
+      const noteTitle = \`Commit \${shortSha} - \${subject || 'update'}\`;
+      const noteBody = [
+        \`- Commit: \\\`\${sha}\\\`\`,
+        \`- Subject: \${subject || 'n/a'}\`,
+        body ? \`- Body: \${body.replace(/\\r?\\n+/g, ' / ')}\` : '- Body: n/a',
+        '- Source: git post-commit hook',
+      ].join('\\n');
+      return createNote(config, 'note', noteTitle, noteBody, ['commit-log']);
+    }
+    default:
+      throw new Error(\`Unsupported mode: \${mode}\`);
+  }
+}
+
+function main(argv) {
+  const { rest, options } = parseFlags(argv);
+  const [command, maybeContent] = rest;
+  const repoRoot = options['repo-root'] ? path.resolve(options['repo-root']) : findRepoRoot(process.cwd());
+  const config = readRepoConfig(repoRoot);
+
+  if (!command || command === 'context') {
+    process.stdout.write(\`\${getContext(repoRoot, config)}\\n\`);
+    return;
+  }
+
+  if (command === 'post-commit') {
+    process.stdout.write(\`\${writeMemory(repoRoot, config, 'post-commit')}\\n\`);
+    return;
+  }
+
+  process.stdout.write(\`\${writeMemory(repoRoot, config, command, maybeContent, options.title)}\\n\`);
+}
+
+try {
+  main(process.argv.slice(2));
+} catch (error) {
+  const message = error && error.message ? error.message : String(error);
+  process.stderr.write(\`\${message}\\n\`);
+  process.exit(1);
+}
+`;
+}
+
+function gitPostCommitHookTemplate() {
+  return `#!/usr/bin/env sh
+set +e
+
+if command -v node >/dev/null 2>&1; then
+  node scripts/agent-memory.js post-commit >/dev/null 2>&1 || true
+fi
+
+exit 0
 `;
 }
 
@@ -162,7 +514,10 @@ module.exports = {
   projectReadmeTemplate,
   tasksTemplate,
   decisionsTemplate,
+  repoReadmeTemplate,
   rootAgentsBlock,
   githubAgentBlock,
-  vaultMemoryDoc
+  vaultMemoryDoc,
+  localRuntimeScriptTemplate,
+  gitPostCommitHookTemplate
 };

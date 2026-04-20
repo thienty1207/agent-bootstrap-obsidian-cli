@@ -42,9 +42,12 @@ That single command will:
 
 - create a project capsule under `Projects/<slug>` in the vault
 - connect the project folder to the vault with `vault.config.json`
+- scaffold `.github/`, `docs/`, and `plans/` with the FullAgent layout
 - create `AGENTS.md`
 - create `.github/AGENT.md`
 - create `docs/vault-memory.md`
+- create a repo-local `scripts/agent-memory.js` runtime
+- install a git `post-commit` hook that writes commit worklogs into the vault
 
 You can also bootstrap an explicit path:
 
@@ -54,7 +57,17 @@ agent-bootstrap "D:\project\Go\face_gen_tools"
 
 ## Agent-only commands
 
-These are intended for the agent workflow after bootstrap:
+These are intended for the agent workflow after bootstrap. The repo-local runtime is preferred because it works even if the global CLI is not installed:
+
+```bash
+node scripts/agent-memory.js context
+node scripts/agent-memory.js task "Investigate module layout"
+node scripts/agent-memory.js decision "Use Cobra CLI" --title "CLI framework choice"
+node scripts/agent-memory.js research "Compared image libs" --title "Go image tooling survey"
+node scripts/agent-memory.js note "Implemented first prototype" --title "Prototype notes"
+```
+
+The global CLI still exposes the same capabilities:
 
 ```bash
 agent-bootstrap context

@@ -10,12 +10,42 @@ function writeFile(filePath, content) {
   fs.writeFileSync(filePath, content);
 }
 
+function writeFileIfMissing(filePath, content) {
+  if (fs.existsSync(filePath)) {
+    return;
+  }
+
+  writeFile(filePath, content);
+}
+
 function readIfExists(filePath) {
   if (!fs.existsSync(filePath)) {
     return null;
   }
 
   return fs.readFileSync(filePath, 'utf8');
+}
+
+function copyMissingRecursive(sourcePath, targetPath) {
+  if (!fs.existsSync(sourcePath)) {
+    return;
+  }
+
+  const sourceStat = fs.statSync(sourcePath);
+  if (sourceStat.isDirectory()) {
+    ensureDir(targetPath);
+    for (const entry of fs.readdirSync(sourcePath, { withFileTypes: true })) {
+      copyMissingRecursive(
+        path.join(sourcePath, entry.name),
+        path.join(targetPath, entry.name)
+      );
+    }
+    return;
+  }
+
+  if (!fs.existsSync(targetPath)) {
+    writeFile(targetPath, fs.readFileSync(sourcePath));
+  }
 }
 
 function slugify(value) {
@@ -75,7 +105,9 @@ function findRepoRoot(startPath) {
 module.exports = {
   ensureDir,
   writeFile,
+  writeFileIfMissing,
   readIfExists,
+  copyMissingRecursive,
   slugify,
   upsertManagedBlock,
   findRepoRoot,

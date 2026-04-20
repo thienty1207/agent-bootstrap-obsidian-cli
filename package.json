@@ -5,6 +5,7 @@
   "files": [
     "bin",
     "src",
+    "scaffold",
     "README.md"
   ],
   "bin": {

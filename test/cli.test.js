@@ -36,6 +36,10 @@ function writeFile(filePath, content) {
   fs.writeFileSync(filePath, content);
 }
 
+function readFile(filePath) {
+  return fs.readFileSync(filePath, 'utf8');
+}
+
 test('config set-vault stores portable config and init bootstraps current repo', () => {
   const root = makeTempDir('agent-bootstrap-cli-');
   const vaultRoot = path.join(root, 'vault');
@@ -61,11 +65,21 @@ test('config set-vault stores portable config and init bootstraps current repo',
   assert.ok(fs.existsSync(path.join(repoRoot, 'AGENTS.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'AGENTS.md')) || fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'vault-memory.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'code-standards.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, 'plans', 'templates', 'feature-implementation-plan.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'commands', 'plan', 'brainstorm.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')));
+  assert.ok(fs.existsSync(path.join(repoRoot, '.githooks', 'post-commit')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'vault.config.json')));
+  assert.ok(fs.existsSync(path.join(repoRoot, 'README.md')));
 
-  const readme = fs.readFileSync(path.join(projectRoot, 'README.md'), 'utf8');
+  const readme = readFile(path.join(projectRoot, 'README.md'));
   assert.match(readme, /face-gen-tools/);
   assert.match(readme, new RegExp(repoRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+
+  const repoReadme = readFile(path.join(repoRoot, 'README.md'));
+  assert.match(repoReadme, /face-gen-tools/i);
 });
 
 test('context reads repo and vault files from a nested directory', () => {
@@ -125,7 +139,7 @@ test('memory task appends to project tasks from nested repo path', () => {
   const result = runCli(['memory', 'task', 'Append from global CLI'], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
 
-  const tasks = fs.readFileSync(path.join(projectRoot, 'Tasks.md'), 'utf8');
+  const tasks = readFile(path.join(projectRoot, 'Tasks.md'));
   assert.match(tasks, /Append from global CLI/);
 });
 
@@ -138,4 +152,75 @@ test('init fails clearly when no vault root is configured', () => {
   const result = runCli([], { configHome, cwd: repoRoot });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /No vault root configured/i);
+});
+
+test('bootstrap preserves an existing root README while adding bridge files', () => {
+  const root = makeTempDir('agent-bootstrap-existing-readme-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+  writeFile(path.join(repoRoot, 'README.md'), '# Custom README\n\nKeep this content.\n');
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const readme = readFile(path.join(repoRoot, 'README.md'));
+  assert.match(readme, /Keep this content\./);
+  assert.doesNotMatch(readme, /VS Code friendly agent workspace layout/i);
+  assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')));
+});
+
+test('post-commit hook writes a durable worklog note into the vault', () => {
+  const root = makeTempDir('agent-bootstrap-hook-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  let git = spawnSync('git', ['config', 'user.name', 'Agent Bootstrap'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['config', 'user.email', 'agent@example.com'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  writeFile(path.join(repoRoot, 'app.txt'), 'hello\n');
+
+  git = spawnSync('git', ['add', '.'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['commit', '-m', 'Initial agent sync'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  const notesRoot = path.join(vaultRoot, 'Projects', 'repo', 'Notes');
+  const notes = fs.readdirSync(notesRoot).filter((file) => file.endsWith('.md'));
+  const worklog = notes.find((file) => /Commit/i.test(file) || /initial-agent-sync/i.test(file));
+  assert.ok(worklog, `Expected a commit worklog note in ${notesRoot}, got: ${notes.join(', ')}`);
+
+  const noteBody = readFile(path.join(notesRoot, worklog));
+  assert.match(noteBody, /Initial agent sync/);
+  assert.match(noteBody, /git post-commit hook/i);
 });
