@@ -6,9 +6,41 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 
 const binPath = path.join(__dirname, '..', 'bin', 'agent-bootstrap.js');
+const repoRoot = path.join(__dirname, '..');
 
 function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+}
+
+function toGitFileUrl(filePath) {
+  const normalized = filePath.replace(/\\/g, '/');
+  return `git+file://${normalized.startsWith('/') ? '' : '/'}${normalized}`;
+}
+
+function copyFixtureRepo(targetRoot) {
+  const entries = [
+    '.github',
+    'bin',
+    'dist',
+    'docs',
+    'plans',
+    'src',
+    'AGENT.md',
+    'README.md',
+    'package.json',
+    'package-lock.json',
+    'tsconfig.json',
+  ];
+
+  for (const entry of entries) {
+    const sourcePath = path.join(repoRoot, entry);
+    if (!fs.existsSync(sourcePath)) {
+      continue;
+    }
+
+    const targetPath = path.join(targetRoot, entry);
+    fs.cpSync(sourcePath, targetPath, { recursive: true });
+  }
 }
 
 function runCli(args, options = {}) {
@@ -609,4 +641,61 @@ test('daily note logging deduplicates repeated note writes with the same title',
   const daily = readFile(dailyPath);
   const occurrences = daily.split('Deployment checklist').length - 1;
   assert.equal(occurrences, 1);
+});
+
+test('global git install succeeds from a prebuilt local git repo', { timeout: 120000 }, () => {
+  const root = makeTempDir('agent-bootstrap-global-install-');
+  const packageRepo = path.join(root, 'package-repo');
+  const prefix = path.join(root, 'prefix');
+  const cache = path.join(root, 'npm-cache');
+
+  fs.mkdirSync(packageRepo, { recursive: true });
+  fs.mkdirSync(prefix, { recursive: true });
+  copyFixtureRepo(packageRepo);
+
+  let git = spawnSync('git', ['init'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['config', 'user.name', 'Agent Bootstrap Tests'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['config', 'user.email', 'agent-bootstrap-tests@example.com'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['add', '.'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['commit', '-m', 'Fixture snapshot'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  const installCommand = process.platform === 'win32'
+    ? `npm install -g ${toGitFileUrl(packageRepo)} --prefix "${prefix}"`
+    : `npm install -g '${toGitFileUrl(packageRepo)}' --prefix '${prefix}'`;
+
+  const result = spawnSync(installCommand, {
+    cwd: root,
+    env: {
+      ...process.env,
+      npm_config_cache: cache,
+    },
+    encoding: 'utf8',
+    shell: true,
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
 });
