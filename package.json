@@ -1,0 +1,17 @@
+{
+  "name": "agent-bootstrap-obsidian-cli",
+  "version": "0.1.0",
+  "description": "Portable Obsidian vault bootstrap CLI for coding projects",
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "bin": {
+    "agent-bootstrap": "./bin/agent-bootstrap.js"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "license": "MIT"
+}
