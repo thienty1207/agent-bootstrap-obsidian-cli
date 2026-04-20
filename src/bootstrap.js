@@ -15,7 +15,7 @@ const {
   tasksTemplate,
   decisionsTemplate,
   repoReadmeTemplate,
-  rootAgentsBlock,
+  rootAgentTemplate,
   githubAgentBlock,
   vaultMemoryDoc,
   localRuntimeScriptTemplate,
@@ -89,13 +89,22 @@ function initProject({ projectPath, slug, vaultRoot: explicitVaultRoot }) {
   writeFile(path.join(projectRoot, 'Decisions.md'), decisionsTemplate(projectSlug, today));
 
   copyRepoScaffold(repoRoot);
+  const copilotInstructionsPath = path.join(repoRoot, '.github', 'copilot-instructions.md');
+  if (fs.existsSync(copilotInstructionsPath)) {
+    fs.rmSync(copilotInstructionsPath, { force: true });
+  }
   writeFileIfMissing(path.join(repoRoot, 'README.md'), repoReadmeTemplate(repoName, projectSlug));
   writeFile(path.join(repoRoot, 'scripts', 'agent-memory.js'), localRuntimeScriptTemplate());
 
+  const rootAgentPath = path.join(repoRoot, 'AGENT.md');
   const rootAgentsPath = path.join(repoRoot, 'AGENTS.md');
   const githubAgentPath = path.join(repoRoot, '.github', 'AGENT.md');
   const docsPath = path.join(repoRoot, 'docs', 'vault-memory.md');
+  const agentTemplate = rootAgentTemplate(vaultRoot, projectRoot);
 
+  const currentRootAgent = fs.existsSync(rootAgentPath)
+    ? fs.readFileSync(rootAgentPath, 'utf8')
+    : '# Workspace Agent Guide\n';
   const currentRootAgents = fs.existsSync(rootAgentsPath)
     ? fs.readFileSync(rootAgentsPath, 'utf8')
     : '# Repository Agent Entry Point\n';
@@ -103,7 +112,8 @@ function initProject({ projectPath, slug, vaultRoot: explicitVaultRoot }) {
     ? fs.readFileSync(githubAgentPath, 'utf8')
     : '';
 
-  writeFile(rootAgentsPath, upsertManagedBlock(currentRootAgents, rootAgentsBlock(vaultRoot, projectRoot)));
+  writeFile(rootAgentPath, upsertManagedBlock(currentRootAgent, agentTemplate));
+  writeFile(rootAgentsPath, upsertManagedBlock(currentRootAgents, agentTemplate));
   writeFile(githubAgentPath, githubAgentBlock(vaultRoot, projectRoot));
   writeFile(docsPath, vaultMemoryDoc(vaultRoot, projectRoot));
 

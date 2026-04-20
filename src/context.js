@@ -10,6 +10,7 @@ function getContext({ repoRoot }) {
   const config = readRepoConfig(resolvedRepoRoot);
 
   const sections = [
+    ['Repo AGENT', path.join(resolvedRepoRoot, 'AGENT.md')],
     ['Repo AGENTS', path.join(resolvedRepoRoot, 'AGENTS.md')],
     ['GitHub AGENT', path.join(resolvedRepoRoot, '.github', 'AGENT.md')],
     ['Vault Bridge', path.join(resolvedRepoRoot, 'docs', 'vault-memory.md')],

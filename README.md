@@ -42,8 +42,8 @@ That single command will:
 
 - create a project capsule under `Projects/<slug>` in the vault
 - connect the project folder to the vault with `vault.config.json`
+- create root `AGENT.md` and `AGENTS.md`
 - scaffold `.github/`, `docs/`, and `plans/` with the FullAgent layout
-- create `AGENTS.md`
 - create `.github/AGENT.md`
 - create `docs/vault-memory.md`
 - create a repo-local `scripts/agent-memory.js` runtime

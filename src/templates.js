@@ -119,7 +119,7 @@ This layout combines:
 
 ## Suggested use
 
-1. Read \`.github/AGENT.md\`.
+1. Read \`AGENT.md\`.
 2. Pick a specialist from \`.github/agents/\` when the task fits a role.
 3. Use \`.github/commands/\` to kick off repeatable workflows.
 4. Treat \`.github/rules/\` as the guardrails.
@@ -127,8 +127,12 @@ This layout combines:
 `;
 }
 
-function rootAgentsBlock(vaultRoot, projectRoot) {
-  return `This repository writes durable agent memory to the external Obsidian vault at:
+function rootAgentTemplate(vaultRoot, projectRoot) {
+  return `# Workspace Agent Guide
+
+Read this file first if you are working in this repository.
+
+This repository writes durable agent memory to the external Obsidian vault at:
 
 \`${vaultRoot}\`
 
@@ -161,9 +165,14 @@ Repo-local runtime:
 - \`node scripts/agent-memory.js <context|task|decision|research|note>\`
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 
+VS Code compatibility:
+
+\`AGENTS.md\` mirrors the durable-memory contract for tools that recognize that filename.
+
 Global fallback:
 
-\`agent-bootstrap memory <task|decision|research|note> ...\``;
+\`agent-bootstrap memory <task|decision|research|note> ...\`
+`;
 }
 
 function githubAgentBlock(vaultRoot, projectRoot) {
@@ -184,9 +193,10 @@ This repository uses an external Obsidian vault as its durable memory layer.
 
 If you are an agent working inside this repository, read these vault files before meaningful work:
 
-1. \`${vaultRoot}/AGENTS.md\`
-2. \`${projectRoot}/README.md\`
-3. \`${projectRoot}/Tasks.md\`
+1. \`AGENT.md\`
+2. \`${vaultRoot}/AGENTS.md\`
+3. \`${projectRoot}/README.md\`
+4. \`${projectRoot}/Tasks.md\`
 
 Fast paths:
 
@@ -352,6 +362,7 @@ function readRepoConfig(repoRoot) {
 
 function getContext(repoRoot, config) {
   const sections = [
+    ['Repo AGENT', path.join(repoRoot, 'AGENT.md')],
     ['Repo AGENTS', path.join(repoRoot, 'AGENTS.md')],
     ['GitHub AGENT', path.join(repoRoot, '.github', 'AGENT.md')],
     ['Vault Bridge', path.join(repoRoot, 'docs', 'vault-memory.md')],
@@ -515,7 +526,7 @@ module.exports = {
   tasksTemplate,
   decisionsTemplate,
   repoReadmeTemplate,
-  rootAgentsBlock,
+  rootAgentTemplate,
   githubAgentBlock,
   vaultMemoryDoc,
   localRuntimeScriptTemplate,

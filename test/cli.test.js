@@ -62,6 +62,7 @@ test('config set-vault stores portable config and init bootstraps current repo',
 
   const projectRoot = path.join(vaultRoot, 'Projects', 'face-gen-tools');
   assert.ok(fs.existsSync(path.join(projectRoot, 'README.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, 'AGENT.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'AGENTS.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'AGENTS.md')) || fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'vault-memory.md')));
@@ -73,6 +74,7 @@ test('config set-vault stores portable config and init bootstraps current repo',
   assert.ok(fs.existsSync(path.join(repoRoot, '.githooks', 'post-commit')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'vault.config.json')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'README.md')));
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'copilot-instructions.md')), false);
 
   const readme = readFile(path.join(projectRoot, 'README.md'));
   assert.match(readme, /face-gen-tools/);
@@ -80,6 +82,12 @@ test('config set-vault stores portable config and init bootstraps current repo',
 
   const repoReadme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(repoReadme, /face-gen-tools/i);
+
+  const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
+  const rootAgents = readFile(path.join(repoRoot, 'AGENTS.md'));
+  assert.match(rootAgent, /node scripts\/agent-memory\.js context/);
+  assert.match(rootAgent, /vault/i);
+  assert.match(rootAgents, /node scripts\/agent-memory\.js context/);
 });
 
 test('context reads repo and vault files from a nested directory', () => {
