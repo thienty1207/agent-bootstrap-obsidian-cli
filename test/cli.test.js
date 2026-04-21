@@ -115,6 +115,37 @@ test('config set-vault uses the current working directory when no path is provid
   assert.equal(fs.existsSync(path.join(vaultRoot, 'Projects', '_template', 'README.md')), true);
 });
 
+test('setup command is a direct alias for configuring the vault root', () => {
+  const root = makeTempDir('agent-bootstrap-setup-');
+  const vaultRoot = path.join(root, 'vault');
+  const configHome = path.join(root, 'config-home');
+  const workspaceRoot = path.join(root, 'workspace');
+
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+
+  const result = runCli(['setup', vaultRoot], { configHome, cwd: workspaceRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const config = parseJson(runCli(['config', 'get'], { configHome, cwd: workspaceRoot }).stdout);
+  assert.equal(config.vaultRoot, vaultRoot);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'AGENTS.md')), true);
+});
+
+test('help prints the four-command quickstart flow', () => {
+  const root = makeTempDir('agent-bootstrap-help-');
+  const configHome = path.join(root, 'config-home');
+  const workspaceRoot = path.join(root, 'workspace');
+
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+
+  const result = runCli(['help'], { configHome, cwd: workspaceRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /npm i -g @tytybill123\/agent-bootstrap/);
+  assert.match(result.stdout, /agent-bootstrap setup/);
+  assert.match(result.stdout, /agent-bootstrap init/);
+  assert.match(result.stdout, /npm uninstall -g @tytybill123\/agent-bootstrap/);
+});
+
 test('config set-vault stores portable config and init bootstraps current repo', () => {
   const root = makeTempDir('agent-bootstrap-cli-');
   const vaultRoot = path.join(root, 'vault');
@@ -735,4 +766,102 @@ test('global tarball install succeeds from a packed local repo snapshot', { time
     });
 
   assert.equal(smoke.status, 0, smoke.stderr || smoke.stdout);
+});
+
+test('global install command can be repeated to update the same package', { timeout: 120000 }, () => {
+  const root = makeTempDir('agent-bootstrap-global-reinstall-');
+  const packageRepo = path.join(root, 'package-repo');
+  const prefix = path.join(root, 'prefix');
+  const cache = path.join(root, 'npm-cache');
+
+  fs.mkdirSync(packageRepo, { recursive: true });
+  fs.mkdirSync(prefix, { recursive: true });
+  copyFixtureRepo(packageRepo);
+
+  let git = spawnSync('git', ['init'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['config', 'user.name', 'Agent Bootstrap Tests'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['config', 'user.email', 'agent-bootstrap-tests@example.com'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['add', '.'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  git = spawnSync('git', ['commit', '-m', 'Fixture snapshot'], {
+    cwd: packageRepo,
+    encoding: 'utf8',
+  });
+  assert.equal(git.status, 0, git.stderr);
+
+  const pack = spawnSync('npm pack --silent', {
+    cwd: packageRepo,
+    encoding: 'utf8',
+    shell: true,
+  });
+  assert.equal(pack.status, 0, pack.stderr || pack.stdout);
+
+  const tarballName = pack.stdout.trim().split(/\r?\n/).pop();
+  assert.ok(tarballName);
+
+  const tarballPath = path.join(packageRepo, tarballName);
+  const installCommand = process.platform === 'win32'
+    ? `npm install -g "${tarballPath}" --prefix "${prefix}"`
+    : `npm install -g '${tarballPath}' --prefix '${prefix}'`;
+
+  const firstInstall = spawnSync(installCommand, {
+    cwd: root,
+    env: {
+      ...process.env,
+      npm_config_cache: cache,
+    },
+    encoding: 'utf8',
+    shell: true,
+  });
+  assert.equal(firstInstall.status, 0, firstInstall.stderr || firstInstall.stdout);
+
+  const secondInstall = spawnSync(installCommand, {
+    cwd: root,
+    env: {
+      ...process.env,
+      npm_config_cache: cache,
+    },
+    encoding: 'utf8',
+    shell: true,
+  });
+  assert.equal(secondInstall.status, 0, secondInstall.stderr || secondInstall.stdout);
+  assert.match(secondInstall.stdout, /(changed|up to date|added) 1 package/i);
+
+  const smoke = process.platform === 'win32'
+    ? spawnSync('cmd.exe', [
+      '/d',
+      '/s',
+      '/c',
+      path.join(prefix, 'agent-bootstrap.cmd'),
+      'help',
+    ], {
+      cwd: root,
+      encoding: 'utf8',
+    })
+    : spawnSync(path.join(prefix, 'bin', 'agent-bootstrap'), ['help'], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+
+  assert.equal(smoke.status, 0, smoke.stderr || smoke.stdout);
+  assert.match(smoke.stdout, /agent-bootstrap setup/);
 });

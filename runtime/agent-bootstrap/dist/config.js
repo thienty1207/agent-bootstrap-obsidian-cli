@@ -57,5 +57,5 @@ function resolveVaultRoot(explicitVaultRoot) {
     if (config.vaultRoot) {
         return node_path_1.default.resolve(config.vaultRoot);
     }
-    throw new Error('No vault root configured. Run "agent-bootstrap config set-vault [path]" first.');
+    throw new Error('No vault root configured. Run "agent-bootstrap setup [path]" first.');
 }

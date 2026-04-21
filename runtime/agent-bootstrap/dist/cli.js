@@ -12,6 +12,8 @@ const memory_1 = require("./memory");
 const projects_1 = require("./projects");
 const doctor_1 = require("./doctor");
 const vault_1 = require("./vault");
+const INSTALL_COMMAND = 'npm i -g @tytybill123/agent-bootstrap';
+const UNINSTALL_COMMAND = 'npm uninstall -g @tytybill123/agent-bootstrap';
 function parseFlags(args) {
     const options = {};
     const rest = [];
@@ -34,15 +36,18 @@ function parseFlags(args) {
 function writeJson(value) {
     process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
+function setupVault(maybePath) {
+    const resolvedVaultRoot = node_path_1.default.resolve(maybePath || process.cwd());
+    const current = (0, config_1.loadConfig)();
+    current.vaultRoot = resolvedVaultRoot;
+    (0, config_1.saveConfig)(current);
+    (0, vault_1.ensureVaultScaffold)(resolvedVaultRoot);
+    writeJson({ vaultRoot: resolvedVaultRoot, initialized: true });
+}
 function handleConfig(rest) {
     const [subcommand, maybePath] = rest;
     if (subcommand === 'set-vault') {
-        const resolvedVaultRoot = node_path_1.default.resolve(maybePath || process.cwd());
-        const current = (0, config_1.loadConfig)();
-        current.vaultRoot = resolvedVaultRoot;
-        (0, config_1.saveConfig)(current);
-        (0, vault_1.ensureVaultScaffold)(resolvedVaultRoot);
-        writeJson({ vaultRoot: resolvedVaultRoot, initialized: true });
+        setupVault(maybePath);
         return;
     }
     if (subcommand === 'get') {
@@ -76,6 +81,28 @@ function handleProjects(rest, options) {
     }
     throw new Error('Usage: agent-bootstrap projects <list|show [slug]>');
 }
+function writeHelp() {
+    process.stdout.write([
+        'Agent Bootstrap Quickstart',
+        '',
+        'Install or update the CLI:',
+        `  ${INSTALL_COMMAND}`,
+        '',
+        'Set up your Obsidian vault once on each machine:',
+        '  agent-bootstrap setup [vault-path]',
+        '',
+        'Initialize a project in the current folder or at an explicit path:',
+        '  agent-bootstrap init [project-path]',
+        '',
+        'Remove the CLI if you no longer need it:',
+        `  ${UNINSTALL_COMMAND}`,
+        '',
+        'Notes:',
+        `- Re-running "${INSTALL_COMMAND}" updates the global CLI after a successful install.`,
+        '- "agent-bootstrap" with no arguments still initializes the current folder.',
+    ].join('\n'));
+    process.stdout.write('\n');
+}
 async function main(argv) {
     const [command, ...tail] = argv;
     if (!command) {
@@ -84,6 +111,14 @@ async function main(argv) {
     }
     if (command === 'config') {
         handleConfig(tail);
+        return;
+    }
+    if (command === 'setup') {
+        setupVault(tail[0]);
+        return;
+    }
+    if (command === 'help' || command === '--help' || command === '-h') {
+        writeHelp();
         return;
     }
     if (command === 'context') {

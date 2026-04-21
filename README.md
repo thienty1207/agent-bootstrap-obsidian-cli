@@ -2,52 +2,64 @@
 
 Portable TypeScript CLI for bootstrapping coding projects into an Obsidian-based agent memory system.
 
-The intended user flow stays simple:
+The public flow is intentionally small: install, set up the vault once, initialize a project, uninstall if you no longer need the CLI.
 
-1. install the CLI
-2. run `agent-bootstrap config set-vault [path]` once
-3. `cd` into a project and run `agent-bootstrap`
+## Quickstart
 
-Everything else should be automated by the kit.
+### 1. Install or update
 
-## Install
-
-Install from npm:
+Run the same command every time. If the CLI is not installed yet, it installs. If it is already installed cleanly, the same command updates it.
 
 ```bash
 npm i -g @tytybill123/agent-bootstrap
 ```
 
-If you cannot use the npm registry, use the GitHub tarball instead:
+### 2. Set up your vault once
+
+Pick the Obsidian vault root you want to use on this machine.
 
 ```bash
-npm i -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/tar.gz/main
-```
-
-Windows note:
-- On Windows, use the npm package above or the tarball fallback. The Git shorthand install path is intentionally not documented because npm global Git installs can leave a broken shim for this package.
-
-## One-time setup
-
-Set your vault root once on each machine:
-
-```bash
-agent-bootstrap config set-vault "C:\Users\Ty\Ho Thien Ty"
-```
-
-If you are already inside the folder you want to use as the vault root, the path is optional:
-
-```bash
-agent-bootstrap config set-vault
+agent-bootstrap setup "C:\Users\Ty\ObsidianVault"
 ```
 
 Ubuntu example:
 
 ```bash
-agent-bootstrap config set-vault "/home/ty/ObsidianVault"
+agent-bootstrap setup "/home/ty/ObsidianVault"
 ```
 
-If the vault path is empty or does not exist yet, `set-vault` now auto-initializes a portable vault skeleton:
+If you are already standing inside the folder you want to use as the vault root, the path is optional:
+
+```bash
+agent-bootstrap setup
+```
+
+### 3. Initialize a project
+
+Move into the project folder, then initialize it:
+
+```bash
+cd D:\project\nodejs\shop-web
+agent-bootstrap init
+```
+
+Or bootstrap an explicit path:
+
+```bash
+agent-bootstrap init "D:\project\nodejs\shop-web"
+```
+
+`agent-bootstrap` with no arguments still initializes the current folder, but `agent-bootstrap init` is the documented primary command.
+
+### 4. Uninstall
+
+```bash
+npm uninstall -g @tytybill123/agent-bootstrap
+```
+
+## What `setup` creates
+
+The first `setup` creates or repairs a portable vault skeleton:
 
 - `Daily`
 - `Templates`
@@ -61,196 +73,39 @@ If the vault path is empty or does not exist yet, `set-vault` now auto-initializ
 - `Projects/_template`
 - `.obsidian` daily note settings
 
-You can also override per-command:
+## What `init` creates
 
-```bash
-agent-bootstrap init --vault-root "/home/ty/ObsidianVault"
-```
+Project initialization keeps the repo onboarding small while wiring the vault integration automatically.
 
-## Quick start
+It will:
 
-Create a new project folder, enter it, then run:
-
-```bash
-agent-bootstrap
-```
-
-That single command will:
-
-- ensure the vault skeleton exists even on a fresh machine
 - create a project capsule under `Projects/<slug>` in the vault
-- connect the project folder to the vault with `vault.config.json`
+- connect the repo to the vault with `vault.config.json`
 - stamp the current kit version into repo metadata
 - create exactly one root `AGENT.md`
-- scaffold `.github/`, `docs/`, and `plans/` with the FullAgent layout
+- scaffold `.github/`, `docs/`, and `plans/`
 - create `docs/vault-memory.md`
 - create a type-aware `docs/project-map.md`
 - create a repo-local `scripts/agent-memory.js` runtime
 - create or touch today's daily note automatically
 - install a git `post-commit` hook that writes commit worklogs into the vault
 
-After bootstrap, the generated runtime is designed so the agent can follow the kit without extra user commands:
+Existing repo READMEs are preserved.
 
-- `context` ensures today's daily note exists and records a session marker
-- `context` also includes a compact project memory index for faster warmup
-- `task`, `decision`, `research`, and `note` writes also append to today's daily note automatically
-- `research` and `note` entries auto-route to project or global scope by default
-- routing decisions are stored with a `scope_reason`
-- the project capsule keeps an `Artifacts/memory-index.json` summary for fast recall
-- `post-commit` keeps writing commit worklogs into the project capsule
+## Built-in help
 
-You can also bootstrap an explicit path:
+The CLI now exposes a small quickstart directly:
 
 ```bash
-agent-bootstrap "D:\project\Go\face_gen_tools"
+agent-bootstrap help
 ```
 
-Create a typed project in one command:
+That help output is aligned with the same 4-command flow above.
 
-```bash
-agent-bootstrap new web "D:\project\nodejs\shop-web"
-agent-bootstrap new api "/home/ty/projects/payments-api"
-agent-bootstrap new tool
-```
+## For contributors
 
-Supported project types:
-
-- `web`
-- `api`
-- `tool`
-- `desktop`
-- `mobile`
-- `fullstack`
-
-The default type for `agent-bootstrap` or `agent-bootstrap init` is `tool`.
-
-## Command surface
-
-```bash
-agent-bootstrap
-agent-bootstrap init [path] --type <type>
-agent-bootstrap new <type> [path]
-agent-bootstrap config set-vault [path]
-agent-bootstrap config get
-agent-bootstrap projects list
-agent-bootstrap projects show [slug]
-agent-bootstrap doctor
-agent-bootstrap update
-agent-bootstrap migrate [path] --type <type>
-agent-bootstrap sync
-agent-bootstrap context
-agent-bootstrap memory <task|decision|research|note> ...
-```
-
-## Project registry
-
-Bootstrapped projects are registered machine-locally at:
-
-- Windows: `%USERPROFILE%\.agent-bootstrap\projects.json`
-- Linux/macOS: `~/.agent-bootstrap/projects.json`
-
-Useful commands:
-
-```bash
-agent-bootstrap projects list
-agent-bootstrap projects show
-```
-
-## Diagnostics and sync
-
-Check the current repo health:
-
-```bash
-agent-bootstrap doctor
-```
-
-Restore missing generated files without clobbering your existing README:
-
-```bash
-agent-bootstrap sync
-```
-
-Refresh the repo-local kit files from the current CLI version:
-
-```bash
-agent-bootstrap update
-```
-
-Upgrade an older repo into the current single-`AGENT.md` kit layout:
-
-```bash
-agent-bootstrap migrate "D:\project\legacy-api" --type api
-```
-
-`doctor` now reports:
-
-- current repo and vault bridge health
-- missing managed repo paths such as `.github/agents/planner.md` or `scripts/agent-memory.js`
-- missing vault capsule paths such as `Tasks.md`
-- suggested repair commands like `agent-bootstrap update` or `agent-bootstrap sync`
-
-## Agent-only commands
-
-These are intended for the agent workflow after bootstrap. The repo-local runtime is preferred because it works even if the global CLI is not installed:
-
-```bash
-node scripts/agent-memory.js context
-node scripts/agent-memory.js task "Investigate module layout"
-node scripts/agent-memory.js decision "Use Cobra CLI" --title "CLI framework choice"
-node scripts/agent-memory.js research "Compared image libs" --title "Go image tooling survey"
-node scripts/agent-memory.js note "Implemented first prototype" --title "Prototype notes"
-```
-
-Routing behavior:
-
-- `task` and `decision` always stay project-scoped
-- `research` and `note` default to auto routing
-- reusable or cross-project material goes to global `Research` or `Notes`
-- project-specific material stays under `Projects/<slug>/...`
-- you can still override with `--scope project` or `--scope global`
-
-The global CLI still exposes the same capabilities:
-
-```bash
-agent-bootstrap context
-agent-bootstrap memory task "Investigate module layout"
-agent-bootstrap memory decision "Use Cobra CLI" --title "CLI framework choice"
-agent-bootstrap memory research "Compared image libs" --title "Go image tooling survey"
-agent-bootstrap memory note "Implemented first prototype" --title "Prototype notes"
-```
-
-## Config file
-
-The CLI stores machine-local config at:
-
-- Windows: `%USERPROFILE%\.agent-bootstrap\config.json`
-- Linux/macOS: `~/.agent-bootstrap/config.json`
-
-Supported environment variables:
-
-- `AGENT_BOOTSTRAP_CONFIG_HOME`
-- `AGENT_BOOTSTRAP_VAULT_ROOT`
-
-## Tests
+Run the full verification suite locally with:
 
 ```bash
 npm test
 ```
-
-The test script builds TypeScript to `dist/` before running the test suite.
-
-## Template source
-
-This repository keeps the reusable template content directly at the root:
-
-- `.github/agents`
-- `.github/commands`
-- `.github/prompts`
-- `.github/rules`
-- `.github/skills`
-- `docs`
-- `plans`
-
-During bootstrap, those directories are copied into the generated project root.
-
-In addition, the CLI generates a managed `docs/project-map.md` per project so a fresh agent session can orient itself faster.

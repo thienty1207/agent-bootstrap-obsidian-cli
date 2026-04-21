@@ -7,6 +7,9 @@ import { listProjects, showProject } from './projects';
 import { runDoctor } from './doctor';
 import { ensureVaultScaffold } from './vault';
 
+const INSTALL_COMMAND = 'npm i -g @tytybill123/agent-bootstrap';
+const UNINSTALL_COMMAND = 'npm uninstall -g @tytybill123/agent-bootstrap';
+
 interface ParsedArgs {
   rest: string[];
   options: Record<string, string>;
@@ -40,15 +43,19 @@ function writeJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
 
+function setupVault(maybePath?: string): void {
+  const resolvedVaultRoot = path.resolve(maybePath || process.cwd());
+  const current = loadConfig();
+  current.vaultRoot = resolvedVaultRoot;
+  saveConfig(current);
+  ensureVaultScaffold(resolvedVaultRoot);
+  writeJson({ vaultRoot: resolvedVaultRoot, initialized: true });
+}
+
 function handleConfig(rest: string[]): void {
   const [subcommand, maybePath] = rest;
   if (subcommand === 'set-vault') {
-    const resolvedVaultRoot = path.resolve(maybePath || process.cwd());
-    const current = loadConfig();
-    current.vaultRoot = resolvedVaultRoot;
-    saveConfig(current);
-    ensureVaultScaffold(resolvedVaultRoot);
-    writeJson({ vaultRoot: resolvedVaultRoot, initialized: true });
+    setupVault(maybePath);
     return;
   }
 
@@ -90,6 +97,31 @@ function handleProjects(rest: string[], options: Record<string, string>): void {
   throw new Error('Usage: agent-bootstrap projects <list|show [slug]>');
 }
 
+function writeHelp(): void {
+  process.stdout.write(
+    [
+      'Agent Bootstrap Quickstart',
+      '',
+      'Install or update the CLI:',
+      `  ${INSTALL_COMMAND}`,
+      '',
+      'Set up your Obsidian vault once on each machine:',
+      '  agent-bootstrap setup [vault-path]',
+      '',
+      'Initialize a project in the current folder or at an explicit path:',
+      '  agent-bootstrap init [project-path]',
+      '',
+      'Remove the CLI if you no longer need it:',
+      `  ${UNINSTALL_COMMAND}`,
+      '',
+      'Notes:',
+      `- Re-running "${INSTALL_COMMAND}" updates the global CLI after a successful install.`,
+      '- "agent-bootstrap" with no arguments still initializes the current folder.',
+    ].join('\n'),
+  );
+  process.stdout.write('\n');
+}
+
 export async function main(argv: string[]): Promise<void> {
   const [command, ...tail] = argv;
 
@@ -100,6 +132,16 @@ export async function main(argv: string[]): Promise<void> {
 
   if (command === 'config') {
     handleConfig(tail);
+    return;
+  }
+
+  if (command === 'setup') {
+    setupVault(tail[0]);
+    return;
+  }
+
+  if (command === 'help' || command === '--help' || command === '-h') {
+    writeHelp();
     return;
   }
 
