@@ -205,7 +205,7 @@ ${typeFocus(projectType).join('\n')}
 - \`agent-bootstrap context\`
 - \`node scripts/agent-memory.js context\`
 
-Running \`context\` should be the first step in a fresh session. It ensures today's daily note exists and records a session marker automatically.
+Running \`context\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, and includes the project memory index so the agent does not need to scan the vault manually.
 
 ## Write-back rules
 
@@ -220,6 +220,7 @@ The repo runtime handles the low-friction automation:
 
 - it appends to today's daily note automatically
 - it routes \`research\` and \`note\` entries to project or global scope automatically unless you override \`--scope\`
+- it records routing reasons and keeps a compact project memory index under \`Artifacts/memory-index.json\`
 - it still supports explicit \`--scope project\` or \`--scope global\` when needed
 
 ## Repo-local runtime
@@ -379,6 +380,7 @@ The runtime will:
 - ensure today's daily note exists
 - append daily worklog entries automatically
 - auto-route \`research\` and \`note\` entries to project or global scope by default
+- maintain a compact project memory index so \`context\` loads faster and with better recall
 
 Global fallback:
 
@@ -433,6 +435,10 @@ function getTodayString() {
   return \`\${year}-\${month}-\${day}\`;
 }
 
+function getIsoTimestamp() {
+  return new Date().toISOString();
+}
+
 function getCurrentTimeString() {
   const now = new Date();
   const hours = String(now.getHours()).padStart(2, '0');
@@ -442,6 +448,18 @@ function getCurrentTimeString() {
 
 function getWeekdayString() {
   return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date());
+}
+
+function compactPreview(value, maxLength = 180) {
+  const singleLine = value.replace(/\\s+/g, ' ').trim();
+  return singleLine.length > maxLength ? \`\${singleLine.slice(0, maxLength - 1)}…\` : singleLine;
+}
+
+function normalizeMarker(value) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function ensureVaultScaffold(vaultRoot) {
@@ -490,32 +508,226 @@ function appendDailyLog(vaultRoot, entry, marker) {
   return dailyPath;
 }
 
-function resolveScope(mode, title, content, scope) {
+function createDailyLogMarker(parts) {
+  return \`<!-- agent-bootstrap:\${parts.map(normalizeMarker).join(':')} -->\`;
+}
+
+function buildMemoryLogMarker(kind, projectSlug, title, scope) {
+  return createDailyLogMarker([kind, projectSlug, scope || 'project', title, getTodayString()]);
+}
+
+function createEmptyIndex(projectSlug, projectType) {
+  return {
+    project: {
+      slug: projectSlug,
+      projectType,
+      updatedAt: getIsoTimestamp(),
+    },
+    recent: {
+      tasks: [],
+      decisions: [],
+      research: [],
+      notes: [],
+      daily: [],
+    },
+  };
+}
+
+function getProjectMemoryIndexPath(projectRoot) {
+  return path.join(projectRoot, 'Artifacts', 'memory-index.json');
+}
+
+function readProjectMemoryIndex(projectRoot, projectSlug, projectType) {
+  const indexPath = getProjectMemoryIndexPath(projectRoot);
+  const raw = readFile(indexPath);
+  if (!raw) {
+    return createEmptyIndex(projectSlug, projectType);
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return createEmptyIndex(projectSlug, projectType);
+  }
+}
+
+function pushRecent(items, item) {
+  const dedupeKey = \`\${item.kind}:\${item.title}:\${item.scope || ''}\`;
+  const next = items.filter((existing) => \`\${existing.kind}:\${existing.title}:\${existing.scope || ''}\` !== dedupeKey);
+  next.unshift(item);
+  return next.slice(0, 12);
+}
+
+function createMemoryIndexRecord({ kind, title, preview, scope, recordPath, reason }) {
+  return {
+    ts: getIsoTimestamp(),
+    kind,
+    title,
+    preview: compactPreview(preview),
+    scope,
+    path: recordPath,
+    reason,
+  };
+}
+
+function updateProjectMemoryIndex({ projectRoot, projectSlug, projectType, bucket, item }) {
+  const next = readProjectMemoryIndex(projectRoot, projectSlug, projectType);
+  next.project.updatedAt = getIsoTimestamp();
+  next.recent[bucket] = pushRecent(next.recent[bucket], item);
+  const indexPath = getProjectMemoryIndexPath(projectRoot);
+  ensureDir(path.dirname(indexPath));
+  fs.writeFileSync(indexPath, JSON.stringify(next, null, 2));
+  return indexPath;
+}
+
+function formatProjectMemoryIndex(index) {
+  const sections = [
+    ['Recent Tasks', index.recent.tasks],
+    ['Recent Decisions', index.recent.decisions],
+    ['Recent Research', index.recent.research],
+    ['Recent Notes', index.recent.notes],
+    ['Recent Daily Events', index.recent.daily],
+  ];
+
+  const lines = [
+    '# Project Memory Index',
+    '',
+    \`- Project: \\\`\${index.project.slug}\\\`\`,
+    \`- Project type: \\\`\${index.project.projectType}\\\`\`,
+    \`- Updated: \\\`\${index.project.updatedAt}\\\`\`,
+    '',
+  ];
+
+  for (const [label, items] of sections) {
+    lines.push(\`## \${label}\`);
+    if (items.length === 0) {
+      lines.push('- none');
+      lines.push('');
+      continue;
+    }
+
+    for (const item of items.slice(0, 4)) {
+      const scopeText = item.scope ? \` [\${item.scope}]\` : '';
+      lines.push(\`- \${item.ts}\${scopeText} \${item.title}: \${item.preview}\`);
+    }
+    lines.push('');
+  }
+
+  return \`\${lines.join('\\n').trimEnd()}\\n\`;
+}
+
+function resolveRoutingDecision(mode, title, content, scope, projectSlug, repoName) {
   if (scope === 'project' || scope === 'global') {
-    return scope;
+    return {
+      scope,
+      reason: \`explicit --scope \${scope}\`,
+      scores: { global: scope === 'global' ? 100 : 0, project: scope === 'project' ? 100 : 0 },
+    };
   }
 
   if (mode === 'task' || mode === 'decision') {
-    return 'project';
+    return {
+      scope: 'project',
+      reason: \`\${mode} entries are always project-scoped\`,
+      scores: { global: 0, project: 100 },
+    };
   }
 
   const haystack = \`\${title || ''}\\n\${content}\`.toLowerCase();
+  let globalScore = 0;
+  let projectScore = 0;
+  const globalReasons = [];
+  const projectReasons = [];
+
   const globalSignals = [
-    'cross-project',
-    'across projects',
-    'shared',
-    'reusable',
-    'global',
-    'playbook',
-    'template',
-    'standard',
-    'general pattern',
-    'future repos',
-    'future projects',
-    'multi-project',
+    ['cross-project', 5, 'cross-project signal'],
+    ['across projects', 5, 'across-projects signal'],
+    ['future projects', 5, 'future-projects signal'],
+    ['future repos', 5, 'future-repos signal'],
+    ['multi-project', 4, 'multi-project signal'],
+    ['shared', 3, 'shared signal'],
+    ['reusable', 3, 'reusable signal'],
+    ['global', 3, 'global signal'],
+    ['playbook', 4, 'playbook signal'],
+    ['template', 4, 'template signal'],
+    ['standard', 3, 'standard signal'],
+    ['convention', 3, 'convention signal'],
+    ['guideline', 3, 'guideline signal'],
+    ['best practice', 3, 'best-practice signal'],
+    ['team-wide', 4, 'team-wide signal'],
+    ['org-wide', 4, 'org-wide signal'],
   ];
 
-  return globalSignals.some((signal) => haystack.includes(signal)) ? 'global' : 'project';
+  for (const [signal, weight, reason] of globalSignals) {
+    if (haystack.includes(signal)) {
+      globalScore += weight;
+      globalReasons.push(reason);
+    }
+  }
+
+  const projectSignals = [
+    ['this repo', 6, 'this-repo signal'],
+    ['this project', 6, 'this-project signal'],
+    ['current repo', 6, 'current-repo signal'],
+    ['current project', 6, 'current-project signal'],
+    ['project-specific', 6, 'project-specific signal'],
+    ['codebase', 4, 'codebase signal'],
+  ];
+
+  for (const [signal, weight, reason] of projectSignals) {
+    if (haystack.includes(signal)) {
+      projectScore += weight;
+      projectReasons.push(reason);
+    }
+  }
+
+  for (const candidate of [projectSlug, repoName]) {
+    if (candidate) {
+      const normalized = candidate.toLowerCase();
+      if (normalized && haystack.includes(normalized)) {
+        projectScore += 5;
+        projectReasons.push(\`project identity signal: \${normalized}\`);
+      }
+    }
+  }
+
+  if (/(src\\/|app\\/|pages\\/|components\\/|routes\\/|lib\\/|internal\\/)/i.test(haystack)) {
+    projectScore += 4;
+    projectReasons.push('repo-path signal');
+  }
+
+  if (/\\b(package\\.json|tsconfig\\.json|cargo\\.toml|go\\.mod|requirements\\.txt|pom\\.xml|dockerfile)\\b/i.test(haystack)) {
+    projectScore += 4;
+    projectReasons.push('repo-file signal');
+  }
+
+  if (/\`[^\`]+\`/.test(\`\${title || ''}\\n\${content}\`) || /\\b[a-z0-9_-]+\\.[a-z]{2,4}\\b/i.test(haystack)) {
+    projectScore += 2;
+    projectReasons.push('code-or-file reference signal');
+  }
+
+  if (/\\b(module|feature|flow|endpoint|handler|schema|migration|bug|checkout|payment)\\b/i.test(haystack)) {
+    projectScore += 1;
+    projectReasons.push('implementation-detail signal');
+  }
+
+  if (projectScore >= globalScore) {
+    return {
+      scope: 'project',
+      reason: projectReasons.length > 0
+        ? \`project signals outranked global signals: \${projectReasons.join(', ')}\`
+        : 'defaulted to project scope',
+      scores: { global: globalScore, project: projectScore },
+    };
+  }
+
+  return {
+    scope: 'global',
+    reason: globalReasons.length > 0
+      ? \`global signals outranked project signals: \${globalReasons.join(', ')}\`
+      : 'defaulted to global scope',
+    scores: { global: globalScore, project: projectScore },
+  };
 }
 
 function readRepoConfig(repoRoot) {
@@ -532,7 +744,7 @@ function getContext(repoRoot, config) {
   appendDailyLog(
     config.vault_root,
     \`Session started for \\\`\${config.project_slug}\\\`\`,
-    \`<!-- agent-bootstrap:session:\${config.project_slug}:\${new Date().toISOString().slice(0, 13)} -->\`,
+    createDailyLogMarker(['session', config.project_slug, new Date().toISOString().slice(0, 13)]),
   );
 
   const sections = [
@@ -542,9 +754,15 @@ function getContext(repoRoot, config) {
     ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],
+    ['Project Decisions', path.join(config.project_root, config.decisions_file)],
+    ['Today Daily Note', path.join(config.vault_root, 'Daily', \`\${getTodayString()}.md\`)],
   ];
+  const memoryIndex = formatProjectMemoryIndex(
+    readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type),
+  );
 
-  return sections
+  return [
+    ...sections
     .map(([label, filePath]) => {
       const body = readFile(filePath);
       if (!body) {
@@ -553,14 +771,34 @@ function getContext(repoRoot, config) {
       return \`===== \${label} =====\\n\${body.trimEnd()}\\n\`;
     })
     .filter(Boolean)
-    .join('\\n');
+    ,
+    \`===== Project Memory Index =====\\n\${memoryIndex.trimEnd()}\\n\`,
+  ].join('\\n');
 }
 
 function appendTask(config, content) {
   const tasksPath = path.join(config.project_root, config.tasks_file);
   const existing = readFile(tasksPath) || '# Tasks\\n';
   fs.writeFileSync(tasksPath, \`\${existing.trimEnd()}\\n\\n- [ ] \${content}\\n\`);
-  appendDailyLog(config.vault_root, \`Task updated for \\\`\${config.project_slug}\\\`: \${content}\`);
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'tasks',
+    item: createMemoryIndexRecord({
+      kind: 'task',
+      title: content,
+      preview: content,
+      scope: 'project',
+      recordPath: tasksPath,
+      reason: 'tasks are always project-scoped',
+    }),
+  });
+  appendDailyLog(
+    config.vault_root,
+    \`Task updated for \\\`\${config.project_slug}\\\`: \${content}\`,
+    buildMemoryLogMarker('task', config.project_slug, content, 'project'),
+  );
   return tasksPath;
 }
 
@@ -570,12 +808,31 @@ function appendDecision(config, title, content) {
   const today = getTodayString();
   const entry = \`\\n## \${today} - \${title}\\n- Context: repo-local agent runtime\\n- Decision: \${content}\\n\`;
   fs.writeFileSync(decisionsPath, \`\${existing.trimEnd()}\\n\${entry}\`);
-  appendDailyLog(config.vault_root, \`Decision recorded for \\\`\${config.project_slug}\\\`: \${title}\`);
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'decisions',
+    item: createMemoryIndexRecord({
+      kind: 'decision',
+      title,
+      preview: content,
+      scope: 'project',
+      recordPath: decisionsPath,
+      reason: 'decisions are always project-scoped',
+    }),
+  });
+  appendDailyLog(
+    config.vault_root,
+    \`Decision recorded for \\\`\${config.project_slug}\\\`: \${title}\`,
+    buildMemoryLogMarker('decision', config.project_slug, title, 'project'),
+  );
   return decisionsPath;
 }
 
 function createNote(config, noteType, title, content, scope, extraTags = []) {
-  const resolvedScope = resolveScope(noteType, title, content, scope);
+  const routing = resolveRoutingDecision(noteType, title, content, scope, config.project_slug, path.basename(findRepoRoot(process.cwd())));
+  const resolvedScope = routing.scope;
   const baseRoot = resolvedScope === 'global' ? config.vault_root : config.project_root;
   const directory = noteType === 'research'
     ? (resolvedScope === 'global' ? 'Research' : config.research_dir)
@@ -588,10 +845,25 @@ function createNote(config, noteType, title, content, scope, extraTags = []) {
     ? \`tags:\\n\${extraTags.map((tag) => \`  - \${tag}\`).join('\\n')}\\n\`
     : '';
   const notePath = path.join(targetDir, \`\${today} \${safeTitle}.md\`);
-  writeFile(notePath, \`---\\ntype: \${noteType}\\nscope: \${resolvedScope}\\nproject: \${resolvedScope === 'global' ? '' : config.project_slug}\\nproject_type: \${config.project_type}\\ncreated: \${today}\\nupdated: \${today}\\nstatus: draft\\n\${tags}---\\n\\n# \${title}\\n\\n\${content}\\n\`);
+  writeFile(notePath, \`---\\ntype: \${noteType}\\nscope: \${resolvedScope}\\nscope_reason: \${routing.reason}\\nproject: \${resolvedScope === 'global' ? '' : config.project_slug}\\nproject_type: \${config.project_type}\\ncreated: \${today}\\nupdated: \${today}\\nstatus: draft\\n\${tags}---\\n\\n# \${title}\\n\\n\${content}\\n\`);
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: noteType === 'research' ? 'research' : 'notes',
+    item: createMemoryIndexRecord({
+      kind: noteType,
+      title,
+      preview: content,
+      scope: resolvedScope,
+      recordPath: notePath,
+      reason: routing.reason,
+    }),
+  });
   appendDailyLog(
     config.vault_root,
     \`\${noteType === 'research' ? 'Research' : 'Note'} captured [\${resolvedScope}] for \\\`\${config.project_slug}\\\`: \${title}\`,
+    buildMemoryLogMarker(noteType, config.project_slug, title, resolvedScope),
   );
   return notePath;
 }

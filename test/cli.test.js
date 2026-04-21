@@ -499,3 +499,114 @@ test('bootstrap and repo-local runtime auto-create daily note and route research
   assert.match(daily, /Auth pattern playbook/);
   assert.match(daily, /Checkout flow notes/);
 });
+
+test('auto routing prefers strong project signals over a single reusable keyword', () => {
+  const root = makeTempDir('agent-bootstrap-routing-score-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'checkout-engine');
+  const configHome = path.join(root, 'config-home');
+  const today = getTodayString();
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const runtimePath = path.join(repoRoot, 'scripts', 'agent-memory.js');
+  const runtime = spawnSync(process.execPath, [
+    runtimePath,
+    'research',
+    'Reusable input validation notes for this repo checkout-engine payment flow and src/checkout module',
+    '--title',
+    'Reusable checkout validation',
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(runtime.status, 0, runtime.stderr);
+
+  const projectPath = path.join(vaultRoot, 'Projects', 'checkout-engine', 'Research', `${today} Reusable checkout validation.md`);
+  const globalPath = path.join(vaultRoot, 'Research', `${today} Reusable checkout validation.md`);
+
+  assert.equal(fs.existsSync(projectPath), true);
+  assert.equal(fs.existsSync(globalPath), false);
+
+  const body = readFile(projectPath);
+  assert.match(body, /scope_reason:/);
+  assert.match(body, /project/i);
+});
+
+test('memory writes build a project memory index and context includes it', () => {
+  const root = makeTempDir('agent-bootstrap-memory-index-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['memory', 'decision', 'Use a single runtime bridge', '--title', 'Runtime bridge'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['memory', 'research', 'Shared routing strategy for future projects', '--title', 'Routing strategy'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const indexPath = path.join(vaultRoot, 'Projects', 'repo', 'Artifacts', 'memory-index.json');
+  assert.equal(fs.existsSync(indexPath), true);
+
+  const index = JSON.parse(readFile(indexPath));
+  assert.equal(index.project.slug, 'repo');
+  assert.equal(index.recent.decisions[0].title, 'Runtime bridge');
+  assert.equal(index.recent.research[0].title, 'Routing strategy');
+
+  result = runCli(['context'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Project Memory Index/);
+  assert.match(result.stdout, /Runtime bridge/);
+  assert.match(result.stdout, /Routing strategy/);
+});
+
+test('daily note logging deduplicates repeated note writes with the same title', () => {
+  const root = makeTempDir('agent-bootstrap-daily-dedupe-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+  const today = getTodayString();
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const runtimePath = path.join(repoRoot, 'scripts', 'agent-memory.js');
+
+  for (let index = 0; index < 2; index += 1) {
+    const runtime = spawnSync(process.execPath, [
+      runtimePath,
+      'research',
+      'Shared deployment checklist across projects',
+      '--title',
+      'Deployment checklist',
+    ], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    });
+    assert.equal(runtime.status, 0, runtime.stderr);
+  }
+
+  const dailyPath = path.join(vaultRoot, 'Daily', `${today}.md`);
+  const daily = readFile(dailyPath);
+  const occurrences = daily.split('Deployment checklist').length - 1;
+  assert.equal(occurrences, 1);
+});

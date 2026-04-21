@@ -36,6 +36,7 @@ The CLI bootstraps new coding projects so they get:
 - Keep `agent-bootstrap config set-vault <path>` sufficient to initialize a brand new vault path.
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
+- Keep `context` loading a compact project memory index so large repos do not require broad vault scans.
 - Keep `doctor` actionable: when something is missing, it should point users to `update` or `sync`.
 - Verify bootstrap behavior through `test/cli.test.js` and real smoke tests before claiming completion.
 

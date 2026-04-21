@@ -1,9 +1,43 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { getTodayString } from './date';
+import { getIsoTimestamp, getTodayString } from './date';
 import { ensureDir, writeFileIfMissing, readIfExists } from './fs-utils';
 
 export type MemoryScope = 'auto' | 'project' | 'global';
+
+export interface MemoryRoutingDecision {
+  scope: Exclude<MemoryScope, 'auto'>;
+  reason: string;
+  scores: {
+    global: number;
+    project: number;
+  };
+}
+
+export interface MemoryIndexRecord {
+  ts: string;
+  kind: 'task' | 'decision' | 'research' | 'note' | 'daily';
+  title: string;
+  preview: string;
+  scope?: 'project' | 'global';
+  path?: string;
+  reason?: string;
+}
+
+export interface ProjectMemoryIndex {
+  project: {
+    slug: string;
+    projectType: string;
+    updatedAt: string;
+  };
+  recent: {
+    tasks: MemoryIndexRecord[];
+    decisions: MemoryIndexRecord[];
+    research: MemoryIndexRecord[];
+    notes: MemoryIndexRecord[];
+    daily: MemoryIndexRecord[];
+  };
+}
 
 const DEFAULT_FOLDERS = [
   'Archive',
@@ -16,6 +50,8 @@ const DEFAULT_FOLDERS = [
   'Tools',
 ] as const;
 
+const MAX_INDEX_ITEMS = 12;
+
 function getCurrentTimeString(): string {
   const now = new Date();
   const hours = String(now.getHours()).padStart(2, '0');
@@ -25,6 +61,18 @@ function getCurrentTimeString(): string {
 
 function getWeekdayString(): string {
   return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date());
+}
+
+function compactPreview(value: string, maxLength = 180): string {
+  const singleLine = value.replace(/\s+/g, ' ').trim();
+  return singleLine.length > maxLength ? `${singleLine.slice(0, maxLength - 1)}…` : singleLine;
+}
+
+function normalizeMarker(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 function vaultAgentTemplate(): string {
@@ -401,44 +449,292 @@ export function appendDailyLog(vaultRoot: string, entry: string, marker?: string
   return dailyPath;
 }
 
-export function resolveScope({
+export function createDailyLogMarker(parts: string[]): string {
+  return `<!-- agent-bootstrap:${parts.map(normalizeMarker).join(':')} -->`;
+}
+
+function createEmptyIndex(projectSlug: string, projectType: string): ProjectMemoryIndex {
+  return {
+    project: {
+      slug: projectSlug,
+      projectType,
+      updatedAt: getIsoTimestamp(),
+    },
+    recent: {
+      tasks: [],
+      decisions: [],
+      research: [],
+      notes: [],
+      daily: [],
+    },
+  };
+}
+
+export function getProjectMemoryIndexPath(projectRoot: string): string {
+  return path.join(projectRoot, 'Artifacts', 'memory-index.json');
+}
+
+export function readProjectMemoryIndex(projectRoot: string, projectSlug: string, projectType: string): ProjectMemoryIndex {
+  const indexPath = getProjectMemoryIndexPath(projectRoot);
+  const raw = readIfExists(indexPath);
+  if (!raw) {
+    return createEmptyIndex(projectSlug, projectType);
+  }
+
+  try {
+    return JSON.parse(raw) as ProjectMemoryIndex;
+  } catch {
+    return createEmptyIndex(projectSlug, projectType);
+  }
+}
+
+function pushRecent(items: MemoryIndexRecord[], item: MemoryIndexRecord): MemoryIndexRecord[] {
+  const dedupeKey = `${item.kind}:${item.title}:${item.scope || ''}`;
+  const next = items.filter((existing) => `${existing.kind}:${existing.title}:${existing.scope || ''}` !== dedupeKey);
+  next.unshift(item);
+  return next.slice(0, MAX_INDEX_ITEMS);
+}
+
+export function updateProjectMemoryIndex({
+  projectRoot,
+  projectSlug,
+  projectType,
+  bucket,
+  item,
+}: {
+  projectRoot: string;
+  projectSlug: string;
+  projectType: string;
+  bucket: keyof ProjectMemoryIndex['recent'];
+  item: MemoryIndexRecord;
+}): string {
+  const next = readProjectMemoryIndex(projectRoot, projectSlug, projectType);
+  next.project.updatedAt = getIsoTimestamp();
+  next.recent[bucket] = pushRecent(next.recent[bucket], item);
+  const indexPath = getProjectMemoryIndexPath(projectRoot);
+  ensureDir(path.dirname(indexPath));
+  fs.writeFileSync(indexPath, JSON.stringify(next, null, 2));
+  return indexPath;
+}
+
+export function formatProjectMemoryIndex(index: ProjectMemoryIndex): string {
+  const sections: Array<[string, MemoryIndexRecord[]]> = [
+    ['Recent Tasks', index.recent.tasks],
+    ['Recent Decisions', index.recent.decisions],
+    ['Recent Research', index.recent.research],
+    ['Recent Notes', index.recent.notes],
+    ['Recent Daily Events', index.recent.daily],
+  ];
+
+  const lines = [
+    '# Project Memory Index',
+    '',
+    `- Project: \`${index.project.slug}\``,
+    `- Project type: \`${index.project.projectType}\``,
+    `- Updated: \`${index.project.updatedAt}\``,
+    '',
+  ];
+
+  for (const [label, items] of sections) {
+    lines.push(`## ${label}`);
+    if (items.length === 0) {
+      lines.push('- none');
+      lines.push('');
+      continue;
+    }
+
+    for (const item of items.slice(0, 4)) {
+      const scopeText = item.scope ? ` [${item.scope}]` : '';
+      lines.push(`- ${item.ts}${scopeText} ${item.title}: ${item.preview}`);
+    }
+    lines.push('');
+  }
+
+  return `${lines.join('\n').trimEnd()}\n`;
+}
+
+export function resolveRoutingDecision({
   scope,
   mode,
   title,
   content,
+  projectSlug,
+  repoName,
 }: {
   scope?: string;
   mode: string;
   title?: string;
   content: string;
-}): Exclude<MemoryScope, 'auto'> {
+  projectSlug?: string;
+  repoName?: string;
+}): MemoryRoutingDecision {
   if (scope === 'project' || scope === 'global') {
-    return scope;
+    return {
+      scope,
+      reason: `explicit --scope ${scope}`,
+      scores: { global: scope === 'global' ? 100 : 0, project: scope === 'project' ? 100 : 0 },
+    };
   }
 
   if (mode === 'task' || mode === 'decision') {
-    return 'project';
+    return {
+      scope: 'project',
+      reason: `${mode} entries are always project-scoped`,
+      scores: { global: 0, project: 100 },
+    };
   }
 
   const haystack = `${title || ''}\n${content}`.toLowerCase();
-  const globalSignals = [
-    'cross-project',
-    'across projects',
-    'shared',
-    'reusable',
-    'global',
-    'playbook',
-    'template',
-    'standard',
-    'general pattern',
-    'future repos',
-    'future projects',
-    'multi-project',
+  let globalScore = 0;
+  let projectScore = 0;
+  const globalReasons: string[] = [];
+  const projectReasons: string[] = [];
+
+  const globalSignals: Array<[string, number, string]> = [
+    ['cross-project', 5, 'cross-project signal'],
+    ['across projects', 5, 'across-projects signal'],
+    ['future projects', 5, 'future-projects signal'],
+    ['future repos', 5, 'future-repos signal'],
+    ['multi-project', 4, 'multi-project signal'],
+    ['shared', 3, 'shared signal'],
+    ['reusable', 3, 'reusable signal'],
+    ['global', 3, 'global signal'],
+    ['playbook', 4, 'playbook signal'],
+    ['template', 4, 'template signal'],
+    ['standard', 3, 'standard signal'],
+    ['convention', 3, 'convention signal'],
+    ['guideline', 3, 'guideline signal'],
+    ['best practice', 3, 'best-practice signal'],
+    ['team-wide', 4, 'team-wide signal'],
+    ['org-wide', 4, 'org-wide signal'],
   ];
 
-  if (globalSignals.some((signal) => haystack.includes(signal))) {
-    return 'global';
+  for (const [signal, weight, reason] of globalSignals) {
+    if (haystack.includes(signal)) {
+      globalScore += weight;
+      globalReasons.push(reason);
+    }
   }
 
-  return 'project';
+  const projectSignals: Array<[string, number, string]> = [
+    ['this repo', 6, 'this-repo signal'],
+    ['this project', 6, 'this-project signal'],
+    ['current repo', 6, 'current-repo signal'],
+    ['current project', 6, 'current-project signal'],
+    ['project-specific', 6, 'project-specific signal'],
+    ['codebase', 4, 'codebase signal'],
+  ];
+
+  for (const [signal, weight, reason] of projectSignals) {
+    if (haystack.includes(signal)) {
+      projectScore += weight;
+      projectReasons.push(reason);
+    }
+  }
+
+  for (const candidate of [projectSlug, repoName]) {
+    if (candidate) {
+      const normalized = candidate.toLowerCase();
+      if (normalized && haystack.includes(normalized)) {
+        projectScore += 5;
+        projectReasons.push(`project identity signal: ${normalized}`);
+      }
+    }
+  }
+
+  if (/(src\/|app\/|pages\/|components\/|routes\/|lib\/|internal\/)/i.test(haystack)) {
+    projectScore += 4;
+    projectReasons.push('repo-path signal');
+  }
+
+  if (/\b(package\.json|tsconfig\.json|cargo\.toml|go\.mod|requirements\.txt|pom\.xml|dockerfile)\b/i.test(haystack)) {
+    projectScore += 4;
+    projectReasons.push('repo-file signal');
+  }
+
+  if (/`[^`]+`/.test(`${title || ''}\n${content}`) || /\b[a-z0-9_-]+\.[a-z]{2,4}\b/i.test(haystack)) {
+    projectScore += 2;
+    projectReasons.push('code-or-file reference signal');
+  }
+
+  if (/\b(module|feature|flow|endpoint|handler|schema|migration|bug|checkout|payment)\b/i.test(haystack)) {
+    projectScore += 1;
+    projectReasons.push('implementation-detail signal');
+  }
+
+  if (projectScore >= globalScore) {
+    return {
+      scope: 'project',
+      reason: projectReasons.length > 0
+        ? `project signals outranked global signals: ${projectReasons.join(', ')}`
+        : 'defaulted to project scope',
+      scores: { global: globalScore, project: projectScore },
+    };
+  }
+
+  return {
+    scope: 'global',
+    reason: globalReasons.length > 0
+      ? `global signals outranked project signals: ${globalReasons.join(', ')}`
+      : 'defaulted to global scope',
+    scores: { global: globalScore, project: projectScore },
+  };
+}
+
+export function resolveScope({
+  scope,
+  mode,
+  title,
+  content,
+  projectSlug,
+  repoName,
+}: {
+  scope?: string;
+  mode: string;
+  title?: string;
+  content: string;
+  projectSlug?: string;
+  repoName?: string;
+}): Exclude<MemoryScope, 'auto'> {
+  return resolveRoutingDecision({ scope, mode, title, content, projectSlug, repoName }).scope;
+}
+
+export function buildMemoryLogMarker({
+  kind,
+  projectSlug,
+  title,
+  scope,
+}: {
+  kind: string;
+  projectSlug: string;
+  title: string;
+  scope?: string;
+}): string {
+  return createDailyLogMarker([kind, projectSlug, scope || 'project', title, getTodayString()]);
+}
+
+export function createMemoryIndexRecord({
+  kind,
+  title,
+  preview,
+  scope,
+  path: recordPath,
+  reason,
+}: {
+  kind: MemoryIndexRecord['kind'];
+  title: string;
+  preview: string;
+  scope?: 'project' | 'global';
+  path?: string;
+  reason?: string;
+}): MemoryIndexRecord {
+  return {
+    ts: getIsoTimestamp(),
+    kind,
+    title,
+    preview: compactPreview(preview),
+    scope,
+    path: recordPath,
+    reason,
+  };
 }

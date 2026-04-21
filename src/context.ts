@@ -1,6 +1,13 @@
 import path from 'node:path';
 import { findRepoRoot, readIfExists } from './fs-utils';
-import { appendDailyLog, ensureDailyNote } from './vault';
+import {
+  appendDailyLog,
+  createDailyLogMarker,
+  ensureDailyNote,
+  formatProjectMemoryIndex,
+  getDailyNotePath,
+  readProjectMemoryIndex,
+} from './vault';
 
 export interface RepoConfig {
   vault_root: string;
@@ -38,7 +45,7 @@ export function getContext({ repoRoot }: { repoRoot?: string }): string {
   appendDailyLog(
     config.vault_root,
     `Session started for \`${config.project_slug}\``,
-    `<!-- agent-bootstrap:session:${config.project_slug}:${new Date().toISOString().slice(0, 13)} -->`,
+    createDailyLogMarker(['session', config.project_slug, new Date().toISOString().slice(0, 13)]),
   );
 
   const sections: Array<[string, string]> = [
@@ -48,17 +55,24 @@ export function getContext({ repoRoot }: { repoRoot?: string }): string {
     ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],
+    ['Project Decisions', path.join(config.project_root, config.decisions_file)],
+    ['Today Daily Note', getDailyNotePath(config.vault_root)],
   ];
+  const memoryIndex = formatProjectMemoryIndex(
+    readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type),
+  );
 
-  return sections
-    .map(([label, filePath]) => {
-      const body = readIfExists(filePath);
-      if (!body) {
-        return null;
-      }
+  return [
+    ...sections
+      .map(([label, filePath]) => {
+        const body = readIfExists(filePath);
+        if (!body) {
+          return null;
+        }
 
-      return `===== ${label} =====\n${body.trimEnd()}\n`;
-    })
-    .filter((value): value is string => Boolean(value))
-    .join('\n');
+        return `===== ${label} =====\n${body.trimEnd()}\n`;
+      })
+      .filter((value): value is string => Boolean(value)),
+    `===== Project Memory Index =====\n${memoryIndex.trimEnd()}\n`,
+  ].join('\n');
 }

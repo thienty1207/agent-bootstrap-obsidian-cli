@@ -77,8 +77,11 @@ That single command will:
 After bootstrap, the generated runtime is designed so the agent can follow the kit without extra user commands:
 
 - `context` ensures today's daily note exists and records a session marker
+- `context` also includes a compact project memory index for faster warmup
 - `task`, `decision`, `research`, and `note` writes also append to today's daily note automatically
 - `research` and `note` entries auto-route to project or global scope by default
+- routing decisions are stored with a `scope_reason`
+- the project capsule keeps an `Artifacts/memory-index.json` summary for fast recall
 - `post-commit` keeps writing commit worklogs into the project capsule
 
 You can also bootstrap an explicit path:

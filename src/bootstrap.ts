@@ -27,7 +27,12 @@ import { getTodayString } from './date';
 import { DEFAULT_PROJECT_TYPE, normalizeProjectType, type ProjectType } from './project-types';
 import { readRepoConfig } from './context';
 import { getKitVersion, getPackageRoot } from './kit';
-import { appendDailyLog, ensureVaultScaffold } from './vault';
+import {
+  appendDailyLog,
+  createMemoryIndexRecord,
+  ensureVaultScaffold,
+  updateProjectMemoryIndex,
+} from './vault';
 
 type BootstrapAction = 'init' | 'new' | 'sync' | 'update' | 'migrate';
 
@@ -185,6 +190,20 @@ function applyBootstrap({
     `Bootstrapped project \`${projectSlug}\` from repo \`${repoName}\``,
     `<!-- agent-bootstrap:bootstrap:${projectSlug}:${today} -->`,
   );
+  updateProjectMemoryIndex({
+    projectRoot,
+    projectSlug,
+    projectType,
+    bucket: 'daily',
+    item: createMemoryIndexRecord({
+      kind: 'daily',
+      title: 'Bootstrap',
+      preview: `Bootstrapped project ${projectSlug} from repo ${repoName}`,
+      scope: 'project',
+      path: path.join(vaultRoot, 'Daily', `${today}.md`),
+      reason: 'bootstrap event',
+    }),
+  });
 
   return {
     action,
