@@ -2,6 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 let cachedVersion: string | null = null;
+let cachedPackageRoot: string | null = null;
+
+const PACKAGE_ROOT_MARKERS = [
+  'package.json',
+  '.github',
+  'docs',
+  'plans',
+] as const;
 
 export const MANAGED_REPO_PATHS = [
   'AGENT.md',
@@ -15,7 +23,27 @@ export const MANAGED_REPO_PATHS = [
 ] as const;
 
 export function getPackageRoot(): string {
-  return path.join(__dirname, '..');
+  if (cachedPackageRoot) {
+    return cachedPackageRoot;
+  }
+
+  let current = path.resolve(__dirname);
+
+  while (true) {
+    if (PACKAGE_ROOT_MARKERS.every((entry) => fs.existsSync(path.join(current, entry)))) {
+      cachedPackageRoot = current;
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+
+    current = parent;
+  }
+
+  throw new Error(`Could not locate the packaged agent-bootstrap assets from ${__dirname}.`);
 }
 
 export function getKitVersion(): string {

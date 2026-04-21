@@ -9,6 +9,13 @@ exports.getKitVersion = getKitVersion;
 const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 let cachedVersion = null;
+let cachedPackageRoot = null;
+const PACKAGE_ROOT_MARKERS = [
+    'package.json',
+    '.github',
+    'docs',
+    'plans',
+];
 exports.MANAGED_REPO_PATHS = [
     'AGENT.md',
     '.github/agents/planner.md',
@@ -20,7 +27,22 @@ exports.MANAGED_REPO_PATHS = [
     '.githooks/post-commit',
 ];
 function getPackageRoot() {
-    return node_path_1.default.join(__dirname, '..');
+    if (cachedPackageRoot) {
+        return cachedPackageRoot;
+    }
+    let current = node_path_1.default.resolve(__dirname);
+    while (true) {
+        if (PACKAGE_ROOT_MARKERS.every((entry) => node_fs_1.default.existsSync(node_path_1.default.join(current, entry)))) {
+            cachedPackageRoot = current;
+            return current;
+        }
+        const parent = node_path_1.default.dirname(current);
+        if (parent === current) {
+            break;
+        }
+        current = parent;
+    }
+    throw new Error(`Could not locate the packaged agent-bootstrap assets from ${__dirname}.`);
 }
 function getKitVersion() {
     if (cachedVersion) {
