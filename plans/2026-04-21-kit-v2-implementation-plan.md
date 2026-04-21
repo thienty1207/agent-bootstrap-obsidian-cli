@@ -24,7 +24,7 @@ Document the target command set:
 - `agent-bootstrap`
 - `agent-bootstrap init`
 - `agent-bootstrap new <type> [path]`
-- `agent-bootstrap config set-vault <path>`
+- `agent-bootstrap config set-vault [path]`
 - `agent-bootstrap config get`
 - `agent-bootstrap projects list`
 - `agent-bootstrap projects show [slug]`

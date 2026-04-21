@@ -33,7 +33,7 @@ The CLI bootstraps new coding projects so they get:
 - Keep exactly one root `AGENT.md` in generated repos.
 - Do not reintroduce `.github/copilot-instructions.md` into generated repos unless explicitly requested.
 - Keep `agent-bootstrap` with no arguments as the default one-command bootstrap path.
-- Keep `agent-bootstrap config set-vault <path>` sufficient to initialize a brand new vault path.
+- Keep `agent-bootstrap config set-vault [path]` sufficient to initialize a brand new vault path, defaulting to the current working directory when omitted.
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
 - Keep `context` loading a compact project memory index so large repos do not require broad vault scans.

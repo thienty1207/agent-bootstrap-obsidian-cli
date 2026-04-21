@@ -4,7 +4,7 @@ const path = require('node:path');
 const repoRoot = path.resolve(__dirname, '..');
 const sourceBin = path.join(repoRoot, 'bin', 'agent-bootstrap.js');
 const sourceDist = path.join(repoRoot, 'dist');
-const runtimeRoot = path.join(repoRoot, '.github', 'agent-bootstrap-runtime');
+const runtimeRoot = path.join(repoRoot, 'runtime', 'agent-bootstrap');
 const runtimeBinDir = path.join(runtimeRoot, 'bin');
 const runtimeDistDir = path.join(runtimeRoot, 'dist');
 

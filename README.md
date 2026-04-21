@@ -1,11 +1,11 @@
-# agent-bootstrap-obsidian-cli
+# @thienty1207/agent-bootstrap
 
 Portable TypeScript CLI for bootstrapping coding projects into an Obsidian-based agent memory system.
 
 The intended user flow stays simple:
 
 1. install the CLI
-2. run `agent-bootstrap config set-vault <path>` once
+2. run `agent-bootstrap config set-vault [path]` once
 3. `cd` into a project and run `agent-bootstrap`
 
 Everything else should be automated by the kit.
@@ -15,11 +15,17 @@ Everything else should be automated by the kit.
 Global install from the GitHub tarball:
 
 ```bash
-npm install -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/tar.gz/refs/heads/main
+npm i -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/tar.gz/refs/heads/main
 ```
 
 Windows note:
 - Avoid `npm install -g github:thienty1207/agent-bootstrap-obsidian-cli` on Windows. npm global Git installs can leave a broken shim for this package path, while the tarball install path works reliably.
+
+Planned short install command after npm publish:
+
+```bash
+npm i -g @thienty1207/agent-bootstrap
+```
 
 ## One-time setup
 
@@ -124,7 +130,7 @@ The default type for `agent-bootstrap` or `agent-bootstrap init` is `tool`.
 agent-bootstrap
 agent-bootstrap init [path] --type <type>
 agent-bootstrap new <type> [path]
-agent-bootstrap config set-vault <path>
+agent-bootstrap config set-vault [path]
 agent-bootstrap config get
 agent-bootstrap projects list
 agent-bootstrap projects show [slug]

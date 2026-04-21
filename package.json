@@ -1,20 +1,24 @@
 {
-  "name": "agent-bootstrap-obsidian-cli",
+  "name": "@thienty1207/agent-bootstrap",
   "version": "0.1.0",
   "description": "Portable Obsidian vault bootstrap CLI for coding projects",
   "files": [
     ".github",
     "docs",
     "plans",
+    "runtime",
     "README.md"
   ],
   "bin": {
-    "agent-bootstrap": "./.github/agent-bootstrap-runtime/bin/agent-bootstrap.js"
+    "agent-bootstrap": "runtime/agent-bootstrap/bin/agent-bootstrap.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/sync-runtime.js",
     "prepublishOnly": "npm run build",
     "test": "npm run build && node --test"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "license": "MIT",
   "devDependencies": {

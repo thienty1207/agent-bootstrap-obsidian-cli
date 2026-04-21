@@ -13,14 +13,20 @@ function makeTempDir(prefix) {
 }
 
 function copyFixtureRepo(targetRoot) {
-  const trackedFiles = spawnSync('git', ['ls-files', '-z'], {
+  const trackedFiles = spawnSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
     cwd: repoRoot,
     encoding: 'utf8',
   });
   assert.equal(trackedFiles.status, 0, trackedFiles.stderr);
 
-  for (const entry of trackedFiles.stdout.split('\0').filter(Boolean)) {
+  const entries = new Set(trackedFiles.stdout.split('\0').filter(Boolean));
+
+  for (const entry of entries) {
     const sourcePath = path.join(repoRoot, entry);
+    if (!fs.existsSync(sourcePath)) {
+      continue;
+    }
+
     const targetPath = path.join(targetRoot, entry);
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.cpSync(sourcePath, targetPath, { recursive: true });
@@ -139,6 +145,7 @@ test('config set-vault stores portable config and init bootstraps current repo',
   assert.ok(fs.existsSync(path.join(repoRoot, 'plans', 'templates', 'feature-implementation-plan.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'commands', 'plan', 'brainstorm.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')));
+  assert.equal(fs.existsSync(path.join(repoRoot, 'runtime')), false);
   assert.ok(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.githooks', 'post-commit')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'vault.config.json')));
