@@ -12,7 +12,13 @@ Everything else should be automated by the kit.
 
 ## Install
 
-Global install from the GitHub tarball:
+Preferred install:
+
+```bash
+npm i -g @tytybill123/agent-bootstrap
+```
+
+Fallback install from the GitHub tarball:
 
 ```bash
 npm i -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/tar.gz/main
@@ -20,11 +26,12 @@ npm i -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/ta
 
 Windows note:
 - Avoid `npm install -g github:thienty1207/agent-bootstrap-obsidian-cli` on Windows. npm global Git installs can leave a broken shim for this package path, while the tarball install path works reliably.
+- Prefer the npm package above for the shortest stable install path.
 
-Short npm install command once the npm package is published:
+Do not use the Git shorthand install on Windows:
 
 ```bash
-npm i -g @tytybill123/agent-bootstrap
+npm install -g github:thienty1207/agent-bootstrap-obsidian-cli
 ```
 
 ## One-time setup
