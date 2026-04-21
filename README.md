@@ -1,4 +1,4 @@
-# @thienty1207/agent-bootstrap
+# @tytybill123/agent-bootstrap
 
 Portable TypeScript CLI for bootstrapping coding projects into an Obsidian-based agent memory system.
 
@@ -21,10 +21,10 @@ npm i -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/ta
 Windows note:
 - Avoid `npm install -g github:thienty1207/agent-bootstrap-obsidian-cli` on Windows. npm global Git installs can leave a broken shim for this package path, while the tarball install path works reliably.
 
-Planned short install command after npm publish:
+Short npm install command once the npm package is published:
 
 ```bash
-npm i -g @thienty1207/agent-bootstrap
+npm i -g @tytybill123/agent-bootstrap
 ```
 
 ## One-time setup
