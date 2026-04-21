@@ -12,11 +12,14 @@ Everything else should be automated by the kit.
 
 ## Install
 
-Global install from GitHub:
+Global install from the GitHub tarball:
 
 ```bash
-npm install -g github:thienty1207/agent-bootstrap-obsidian-cli
+npm install -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/tar.gz/refs/heads/main
 ```
+
+Windows note:
+- Avoid `npm install -g github:thienty1207/agent-bootstrap-obsidian-cli` on Windows. npm global Git installs can leave a broken shim for this package path, while the tarball install path works reliably.
 
 ## One-time setup
 
@@ -24,6 +27,12 @@ Set your vault root once on each machine:
 
 ```bash
 agent-bootstrap config set-vault "C:\Users\Ty\Ho Thien Ty"
+```
+
+If you are already inside the folder you want to use as the vault root, the path is optional:
+
+```bash
+agent-bootstrap config set-vault
 ```
 
 Ubuntu example:

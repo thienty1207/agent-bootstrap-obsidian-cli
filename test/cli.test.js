@@ -12,33 +12,17 @@ function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
 }
 
-function toGitFileUrl(filePath) {
-  const normalized = filePath.replace(/\\/g, '/');
-  return `git+file://${normalized.startsWith('/') ? '' : '/'}${normalized}`;
-}
-
 function copyFixtureRepo(targetRoot) {
-  const entries = [
-    '.github',
-    'bin',
-    'dist',
-    'docs',
-    'plans',
-    'src',
-    'AGENT.md',
-    'README.md',
-    'package.json',
-    'package-lock.json',
-    'tsconfig.json',
-  ];
+  const trackedFiles = spawnSync('git', ['ls-files', '-z'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(trackedFiles.status, 0, trackedFiles.stderr);
 
-  for (const entry of entries) {
+  for (const entry of trackedFiles.stdout.split('\0').filter(Boolean)) {
     const sourcePath = path.join(repoRoot, entry);
-    if (!fs.existsSync(sourcePath)) {
-      continue;
-    }
-
     const targetPath = path.join(targetRoot, entry);
+    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.cpSync(sourcePath, targetPath, { recursive: true });
   }
 }
@@ -107,6 +91,22 @@ test('config set-vault initializes a portable vault skeleton on an empty path', 
   const dailySettings = JSON.parse(readFile(path.join(vaultRoot, '.obsidian', 'daily-notes.json')));
   assert.equal(dailySettings.folder, 'Daily');
   assert.equal(dailySettings.template, 'Templates/Daily Note');
+});
+
+test('config set-vault uses the current working directory when no path is provided', () => {
+  const root = makeTempDir('agent-bootstrap-vault-cwd-');
+  const vaultRoot = path.join(root, 'vault-root');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(vaultRoot, { recursive: true });
+
+  const result = runCli(['config', 'set-vault'], { configHome, cwd: vaultRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const config = parseJson(runCli(['config', 'get'], { configHome, cwd: vaultRoot }).stdout);
+  assert.equal(config.vaultRoot, vaultRoot);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'AGENTS.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'Projects', '_template', 'README.md')), true);
 });
 
 test('config set-vault stores portable config and init bootstraps current repo', () => {
@@ -643,7 +643,7 @@ test('daily note logging deduplicates repeated note writes with the same title',
   assert.equal(occurrences, 1);
 });
 
-test('global git install succeeds from a prebuilt local git repo', { timeout: 120000 }, () => {
+test('global tarball install succeeds from a packed local repo snapshot', { timeout: 120000 }, () => {
   const root = makeTempDir('agent-bootstrap-global-install-');
   const packageRepo = path.join(root, 'package-repo');
   const prefix = path.join(root, 'prefix');
@@ -683,9 +683,20 @@ test('global git install succeeds from a prebuilt local git repo', { timeout: 12
   });
   assert.equal(git.status, 0, git.stderr);
 
+  const pack = spawnSync('npm pack --silent', {
+    cwd: packageRepo,
+    encoding: 'utf8',
+    shell: true,
+  });
+  assert.equal(pack.status, 0, pack.stderr || pack.stdout);
+
+  const tarballName = pack.stdout.trim().split(/\r?\n/).pop();
+  assert.ok(tarballName);
+
+  const tarballPath = path.join(packageRepo, tarballName);
   const installCommand = process.platform === 'win32'
-    ? `npm install -g ${toGitFileUrl(packageRepo)} --prefix "${prefix}"`
-    : `npm install -g '${toGitFileUrl(packageRepo)}' --prefix '${prefix}'`;
+    ? `npm install -g "${tarballPath}" --prefix "${prefix}"`
+    : `npm install -g '${tarballPath}' --prefix '${prefix}'`;
 
   const result = spawnSync(installCommand, {
     cwd: root,
@@ -698,4 +709,23 @@ test('global git install succeeds from a prebuilt local git repo', { timeout: 12
   });
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const smoke = process.platform === 'win32'
+    ? spawnSync('cmd.exe', [
+      '/d',
+      '/s',
+      '/c',
+      path.join(prefix, 'agent-bootstrap.cmd'),
+      'config',
+      'get',
+    ], {
+      cwd: root,
+      encoding: 'utf8',
+    })
+    : spawnSync(path.join(prefix, 'bin', 'agent-bootstrap'), ['config', 'get'], {
+      cwd: root,
+      encoding: 'utf8',
+    });
+
+  assert.equal(smoke.status, 0, smoke.stderr || smoke.stdout);
 });

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { loadConfig, saveConfig } from './config';
 import { getContext } from './context';
 import { initProject, migrateProject, newProject, syncProject, updateProject } from './bootstrap';
@@ -42,15 +43,12 @@ function writeJson(value: unknown): void {
 function handleConfig(rest: string[]): void {
   const [subcommand, maybePath] = rest;
   if (subcommand === 'set-vault') {
-    if (!maybePath) {
-      throw new Error('Usage: agent-bootstrap config set-vault <path>');
-    }
-
+    const resolvedVaultRoot = path.resolve(maybePath || process.cwd());
     const current = loadConfig();
-    current.vaultRoot = maybePath;
+    current.vaultRoot = resolvedVaultRoot;
     saveConfig(current);
-    ensureVaultScaffold(maybePath);
-    writeJson({ vaultRoot: maybePath, initialized: true });
+    ensureVaultScaffold(resolvedVaultRoot);
+    writeJson({ vaultRoot: resolvedVaultRoot, initialized: true });
     return;
   }
 
