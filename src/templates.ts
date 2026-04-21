@@ -205,6 +205,8 @@ ${typeFocus(projectType).join('\n')}
 - \`agent-bootstrap context\`
 - \`node scripts/agent-memory.js context\`
 
+Running \`context\` should be the first step in a fresh session. It ensures today's daily note exists and records a session marker automatically.
+
 ## Write-back rules
 
 After meaningful work, write back to the vault:
@@ -213,6 +215,12 @@ After meaningful work, write back to the vault:
 - \`Decisions.md\` for technical decisions
 - \`Research/\` for project-specific research
 - global \`Research\` or \`Notes\` for reusable insights
+
+The repo runtime handles the low-friction automation:
+
+- it appends to today's daily note automatically
+- it routes \`research\` and \`note\` entries to project or global scope automatically unless you override \`--scope\`
+- it still supports explicit \`--scope project\` or \`--scope global\` when needed
 
 ## Repo-local runtime
 
@@ -366,6 +374,12 @@ Preferred repo-local runtime:
 
 \`node scripts/agent-memory.js <context|task|decision|research|note>\`
 
+The runtime will:
+
+- ensure today's daily note exists
+- append daily worklog entries automatically
+- auto-route \`research\` and \`note\` entries to project or global scope by default
+
 Global fallback:
 
 \`agent-bootstrap memory <task|decision|research|note> ...\`
@@ -419,6 +433,91 @@ function getTodayString() {
   return \`\${year}-\${month}-\${day}\`;
 }
 
+function getCurrentTimeString() {
+  const now = new Date();
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return \`\${hours}:\${minutes}\`;
+}
+
+function getWeekdayString() {
+  return new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date());
+}
+
+function ensureVaultScaffold(vaultRoot) {
+  const folders = ['Archive', 'Daily', 'Inbox', 'Notes', 'Projects', 'Research', 'Templates', 'Tools'];
+  ensureDir(vaultRoot);
+  for (const folder of folders) {
+    ensureDir(path.join(vaultRoot, folder));
+  }
+
+  ensureDir(path.join(vaultRoot, '.obsidian'));
+
+  const dailyTemplatePath = path.join(vaultRoot, 'Templates', 'Daily Note.md');
+  if (!fs.existsSync(dailyTemplatePath)) {
+    writeFile(dailyTemplatePath, \`# {{date:YYYY-MM-DD dddd}}\\n\\n## Focus\\n- \\n\\n## Notes\\n- \\n\\n## Tasks\\n- [ ] \\n\\n## Agent Log\\n- \\n\\n## Wins\\n- \\n\\n## Tomorrow\\n- \\n\`);
+  }
+
+  const dailySettingsPath = path.join(vaultRoot, '.obsidian', 'daily-notes.json');
+  if (!fs.existsSync(dailySettingsPath)) {
+    writeFile(dailySettingsPath, JSON.stringify({ folder: 'Daily', template: 'Templates/Daily Note' }, null, 2));
+  }
+}
+
+function ensureDailyNote(vaultRoot) {
+  ensureVaultScaffold(vaultRoot);
+  const dailyPath = path.join(vaultRoot, 'Daily', \`\${getTodayString()}.md\`);
+  if (!fs.existsSync(dailyPath)) {
+    writeFile(dailyPath, \`# \${getTodayString()} \${getWeekdayString()}\\n\\n## Focus\\n- \\n\\n## Notes\\n- \\n\\n## Tasks\\n- [ ] \\n\\n## Agent Log\\n\\n## Wins\\n- \\n\\n## Tomorrow\\n- \\n\`);
+  }
+  return dailyPath;
+}
+
+function appendDailyLog(vaultRoot, entry, marker) {
+  const dailyPath = ensureDailyNote(vaultRoot);
+  const existing = readFile(dailyPath) || '';
+  if (marker && existing.includes(marker)) {
+    return dailyPath;
+  }
+
+  let next = existing;
+  if (!next.includes('## Agent Log')) {
+    next = \`\${next.trimEnd()}\\n\\n## Agent Log\\n\`;
+  }
+
+  const line = \`- [\${getCurrentTimeString()}] \${entry}\${marker ? \` \${marker}\` : ''}\`;
+  writeFile(dailyPath, \`\${next.trimEnd()}\\n\${line}\\n\`);
+  return dailyPath;
+}
+
+function resolveScope(mode, title, content, scope) {
+  if (scope === 'project' || scope === 'global') {
+    return scope;
+  }
+
+  if (mode === 'task' || mode === 'decision') {
+    return 'project';
+  }
+
+  const haystack = \`\${title || ''}\\n\${content}\`.toLowerCase();
+  const globalSignals = [
+    'cross-project',
+    'across projects',
+    'shared',
+    'reusable',
+    'global',
+    'playbook',
+    'template',
+    'standard',
+    'general pattern',
+    'future repos',
+    'future projects',
+    'multi-project',
+  ];
+
+  return globalSignals.some((signal) => haystack.includes(signal)) ? 'global' : 'project';
+}
+
 function readRepoConfig(repoRoot) {
   const configPath = path.join(repoRoot, 'vault.config.json');
   const raw = readFile(configPath);
@@ -429,6 +528,13 @@ function readRepoConfig(repoRoot) {
 }
 
 function getContext(repoRoot, config) {
+  ensureDailyNote(config.vault_root);
+  appendDailyLog(
+    config.vault_root,
+    \`Session started for \\\`\${config.project_slug}\\\`\`,
+    \`<!-- agent-bootstrap:session:\${config.project_slug}:\${new Date().toISOString().slice(0, 13)} -->\`,
+  );
+
   const sections = [
     ['Repo AGENT', path.join(repoRoot, 'AGENT.md')],
     ['Vault Bridge', path.join(repoRoot, 'docs', 'vault-memory.md')],
@@ -454,6 +560,7 @@ function appendTask(config, content) {
   const tasksPath = path.join(config.project_root, config.tasks_file);
   const existing = readFile(tasksPath) || '# Tasks\\n';
   fs.writeFileSync(tasksPath, \`\${existing.trimEnd()}\\n\\n- [ ] \${content}\\n\`);
+  appendDailyLog(config.vault_root, \`Task updated for \\\`\${config.project_slug}\\\`: \${content}\`);
   return tasksPath;
 }
 
@@ -463,12 +570,17 @@ function appendDecision(config, title, content) {
   const today = getTodayString();
   const entry = \`\\n## \${today} - \${title}\\n- Context: repo-local agent runtime\\n- Decision: \${content}\\n\`;
   fs.writeFileSync(decisionsPath, \`\${existing.trimEnd()}\\n\${entry}\`);
+  appendDailyLog(config.vault_root, \`Decision recorded for \\\`\${config.project_slug}\\\`: \${title}\`);
   return decisionsPath;
 }
 
-function createNote(config, noteType, title, content, extraTags = []) {
-  const directory = noteType === 'research' ? config.research_dir : config.notes_dir;
-  const targetDir = path.join(config.project_root, directory);
+function createNote(config, noteType, title, content, scope, extraTags = []) {
+  const resolvedScope = resolveScope(noteType, title, content, scope);
+  const baseRoot = resolvedScope === 'global' ? config.vault_root : config.project_root;
+  const directory = noteType === 'research'
+    ? (resolvedScope === 'global' ? 'Research' : config.research_dir)
+    : (resolvedScope === 'global' ? 'Notes' : config.notes_dir);
+  const targetDir = path.join(baseRoot, directory);
   ensureDir(targetDir);
   const today = getTodayString();
   const safeTitle = title.replace(/[<>:"/\\\\|?*\\u0000-\\u001F]/g, '-').replace(/\\s+/g, ' ').trim();
@@ -476,7 +588,11 @@ function createNote(config, noteType, title, content, extraTags = []) {
     ? \`tags:\\n\${extraTags.map((tag) => \`  - \${tag}\`).join('\\n')}\\n\`
     : '';
   const notePath = path.join(targetDir, \`\${today} \${safeTitle}.md\`);
-  writeFile(notePath, \`---\\ntype: \${noteType}\\nproject: \${config.project_slug}\\nproject_type: \${config.project_type}\\ncreated: \${today}\\n\${tags}---\\n\\n# \${title}\\n\\n\${content}\\n\`);
+  writeFile(notePath, \`---\\ntype: \${noteType}\\nscope: \${resolvedScope}\\nproject: \${resolvedScope === 'global' ? '' : config.project_slug}\\nproject_type: \${config.project_type}\\ncreated: \${today}\\nupdated: \${today}\\nstatus: draft\\n\${tags}---\\n\\n# \${title}\\n\\n\${content}\\n\`);
+  appendDailyLog(
+    config.vault_root,
+    \`\${noteType === 'research' ? 'Research' : 'Note'} captured [\${resolvedScope}] for \\\`\${config.project_slug}\\\`: \${title}\`,
+  );
   return notePath;
 }
 
@@ -504,7 +620,7 @@ function parseFlags(argv) {
   return { rest, options };
 }
 
-function writeMemory(repoRoot, config, mode, content, title) {
+function writeMemory(repoRoot, config, mode, content, title, scope) {
   switch (mode) {
     case 'task':
       return appendTask(config, content);
@@ -518,7 +634,7 @@ function writeMemory(repoRoot, config, mode, content, title) {
       if (!title) {
         throw new Error(\`Title is required for \${mode} mode.\`);
       }
-      return createNote(config, mode, title, content);
+      return createNote(config, mode, title, content, scope);
     case 'post-commit': {
       let sha = '';
       let subject = '';
@@ -540,7 +656,7 @@ function writeMemory(repoRoot, config, mode, content, title) {
         body ? \`- Body: \${body.replace(/\\r?\\n+/g, ' / ')}\` : '- Body: n/a',
         '- Source: git post-commit hook',
       ].join('\\n');
-      return createNote(config, 'note', noteTitle, noteBody, ['commit-log']);
+      return createNote(config, 'note', noteTitle, noteBody, 'project', ['commit-log']);
     }
     default:
       throw new Error(\`Unsupported mode: \${mode}\`);
@@ -559,11 +675,11 @@ function main(argv) {
   }
 
   if (command === 'post-commit') {
-    process.stdout.write(\`\${writeMemory(repoRoot, config, 'post-commit')}\\n\`);
+    process.stdout.write(\`\${writeMemory(repoRoot, config, 'post-commit', '', '', 'project')}\\n\`);
     return;
   }
 
-  process.stdout.write(\`\${writeMemory(repoRoot, config, command, maybeContent, options.title)}\\n\`);
+  process.stdout.write(\`\${writeMemory(repoRoot, config, command, maybeContent, options.title, options.scope)}\\n\`);
 }
 
 try {

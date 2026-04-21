@@ -27,6 +27,7 @@ import { getTodayString } from './date';
 import { DEFAULT_PROJECT_TYPE, normalizeProjectType, type ProjectType } from './project-types';
 import { readRepoConfig } from './context';
 import { getKitVersion, getPackageRoot } from './kit';
+import { appendDailyLog, ensureVaultScaffold } from './vault';
 
 type BootstrapAction = 'init' | 'new' | 'sync' | 'update' | 'migrate';
 
@@ -114,6 +115,7 @@ function applyBootstrap({
   const kitVersion = getKitVersion();
 
   ensureDir(repoRoot);
+  ensureVaultScaffold(vaultRoot);
 
   if (syncVault) {
     copyTemplateIfPresent(vaultRoot, projectRoot);
@@ -177,6 +179,12 @@ function applyBootstrap({
     vaultRoot,
     vaultProjectRoot: projectRoot,
   });
+
+  appendDailyLog(
+    vaultRoot,
+    `Bootstrapped project \`${projectSlug}\` from repo \`${repoName}\``,
+    `<!-- agent-bootstrap:bootstrap:${projectSlug}:${today} -->`,
+  );
 
   return {
     action,

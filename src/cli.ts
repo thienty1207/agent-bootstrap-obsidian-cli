@@ -4,6 +4,7 @@ import { initProject, migrateProject, newProject, syncProject, updateProject } f
 import { writeMemory } from './memory';
 import { listProjects, showProject } from './projects';
 import { runDoctor } from './doctor';
+import { ensureVaultScaffold } from './vault';
 
 interface ParsedArgs {
   rest: string[];
@@ -48,7 +49,8 @@ function handleConfig(rest: string[]): void {
     const current = loadConfig();
     current.vaultRoot = maybePath;
     saveConfig(current);
-    writeJson({ vaultRoot: maybePath });
+    ensureVaultScaffold(maybePath);
+    writeJson({ vaultRoot: maybePath, initialized: true });
     return;
   }
 
@@ -63,7 +65,7 @@ function handleConfig(rest: string[]): void {
 function handleMemory(rest: string[], options: Record<string, string>): void {
   const [mode, content] = rest;
   if (!mode || !content) {
-    throw new Error('Usage: agent-bootstrap memory <task|decision|research|note> <content> [--title "..."]');
+    throw new Error('Usage: agent-bootstrap memory <task|decision|research|note> <content> [--title "..."] [--scope auto|project|global]');
   }
 
   process.stdout.write(`${writeMemory({
@@ -71,6 +73,7 @@ function handleMemory(rest: string[], options: Record<string, string>): void {
     mode,
     title: options.title,
     content,
+    scope: options.scope,
   })}\n`);
 }
 

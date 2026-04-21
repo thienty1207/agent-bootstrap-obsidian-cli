@@ -9,12 +9,14 @@ This repo builds the portable TypeScript `agent-bootstrap` CLI.
 The CLI bootstraps new coding projects so they get:
 
 - an external Obsidian vault bridge
+- automatic vault skeleton setup from `config set-vault`
 - root-level workspace instructions
 - a generated `.github/` agent workspace
 - `docs/`, `plans/`, and local runtime helpers
 - typed project kits (`web`, `api`, `tool`, `desktop`, `mobile`, `fullstack`)
 - machine-local project registry and repo diagnostics
 - lifecycle commands for legacy repos and kit refreshes (`migrate`, `update`, `sync`)
+- automatic daily-note touches and project/global memory routing through the repo runtime
 
 ## Important structure
 
@@ -31,7 +33,9 @@ The CLI bootstraps new coding projects so they get:
 - Keep exactly one root `AGENT.md` in generated repos.
 - Do not reintroduce `.github/copilot-instructions.md` into generated repos unless explicitly requested.
 - Keep `agent-bootstrap` with no arguments as the default one-command bootstrap path.
+- Keep `agent-bootstrap config set-vault <path>` sufficient to initialize a brand new vault path.
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
+- Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
 - Keep `doctor` actionable: when something is missing, it should point users to `update` or `sync`.
 - Verify bootstrap behavior through `test/cli.test.js` and real smoke tests before claiming completion.
 

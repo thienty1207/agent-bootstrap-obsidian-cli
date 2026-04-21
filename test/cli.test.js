@@ -44,6 +44,39 @@ function parseJson(stdout) {
   return JSON.parse(stdout.trim());
 }
 
+function getTodayString() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+test('config set-vault initializes a portable vault skeleton on an empty path', () => {
+  const root = makeTempDir('agent-bootstrap-vault-init-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'workspace');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  const result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'AGENTS.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'Daily')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'Templates', 'Daily Note.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'Projects', '_template', 'README.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'Research')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'Notes')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, '.obsidian', 'core-plugins.json')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, '.obsidian', 'daily-notes.json')), true);
+
+  const dailySettings = JSON.parse(readFile(path.join(vaultRoot, '.obsidian', 'daily-notes.json')));
+  assert.equal(dailySettings.folder, 'Daily');
+  assert.equal(dailySettings.template, 'Templates/Daily Note');
+});
+
 test('config set-vault stores portable config and init bootstraps current repo', () => {
   const root = makeTempDir('agent-bootstrap-cli-');
   const vaultRoot = path.join(root, 'vault');
@@ -409,4 +442,60 @@ test('doctor reports actionable missing paths and suggested repair commands', ()
   assert.ok(doctor.missing.repoPaths.includes('docs/project-map.md'));
   assert.ok(doctor.missing.repoPaths.includes('scripts/agent-memory.js'));
   assert.ok(doctor.suggestedCommands.includes('agent-bootstrap update'));
+});
+
+test('bootstrap and repo-local runtime auto-create daily note and route research to global or project scope', () => {
+  const root = makeTempDir('agent-bootstrap-auto-memory-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+  const today = getTodayString();
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const dailyPath = path.join(vaultRoot, 'Daily', `${today}.md`);
+  assert.equal(fs.existsSync(dailyPath), true);
+  assert.match(readFile(dailyPath), /repo/i);
+
+  const runtimePath = path.join(repoRoot, 'scripts', 'agent-memory.js');
+
+  let runtime = spawnSync(process.execPath, [
+    runtimePath,
+    'research',
+    'Reusable auth pattern shared across projects and future repos',
+    '--title',
+    'Auth pattern playbook',
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(runtime.status, 0, runtime.stderr);
+
+  const globalResearchPath = path.join(vaultRoot, 'Research', `${today} Auth pattern playbook.md`);
+  assert.equal(fs.existsSync(globalResearchPath), true);
+
+  runtime = spawnSync(process.execPath, [
+    runtimePath,
+    'research',
+    'Checkout edge cases specific to this repo checkout flow',
+    '--title',
+    'Checkout flow notes',
+  ], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(runtime.status, 0, runtime.stderr);
+
+  const projectResearchPath = path.join(vaultRoot, 'Projects', 'repo', 'Research', `${today} Checkout flow notes.md`);
+  assert.equal(fs.existsSync(projectResearchPath), true);
+
+  const daily = readFile(dailyPath);
+  assert.match(daily, /Auth pattern playbook/);
+  assert.match(daily, /Checkout flow notes/);
 });

@@ -2,6 +2,14 @@
 
 Portable TypeScript CLI for bootstrapping coding projects into an Obsidian-based agent memory system.
 
+The intended user flow stays simple:
+
+1. install the CLI
+2. run `agent-bootstrap config set-vault <path>` once
+3. `cd` into a project and run `agent-bootstrap`
+
+Everything else should be automated by the kit.
+
 ## Install
 
 Global install from GitHub:
@@ -24,6 +32,20 @@ Ubuntu example:
 agent-bootstrap config set-vault "/home/ty/ObsidianVault"
 ```
 
+If the vault path is empty or does not exist yet, `set-vault` now auto-initializes a portable vault skeleton:
+
+- `Daily`
+- `Templates`
+- `Projects`
+- `Research`
+- `Notes`
+- `Inbox`
+- `Archive`
+- `Tools`
+- root `AGENTS.md`
+- `Projects/_template`
+- `.obsidian` daily note settings
+
 You can also override per-command:
 
 ```bash
@@ -40,6 +62,7 @@ agent-bootstrap
 
 That single command will:
 
+- ensure the vault skeleton exists even on a fresh machine
 - create a project capsule under `Projects/<slug>` in the vault
 - connect the project folder to the vault with `vault.config.json`
 - stamp the current kit version into repo metadata
@@ -48,7 +71,15 @@ That single command will:
 - create `docs/vault-memory.md`
 - create a type-aware `docs/project-map.md`
 - create a repo-local `scripts/agent-memory.js` runtime
+- create or touch today's daily note automatically
 - install a git `post-commit` hook that writes commit worklogs into the vault
+
+After bootstrap, the generated runtime is designed so the agent can follow the kit without extra user commands:
+
+- `context` ensures today's daily note exists and records a session marker
+- `task`, `decision`, `research`, and `note` writes also append to today's daily note automatically
+- `research` and `note` entries auto-route to project or global scope by default
+- `post-commit` keeps writing commit worklogs into the project capsule
 
 You can also bootstrap an explicit path:
 
@@ -151,6 +182,14 @@ node scripts/agent-memory.js decision "Use Cobra CLI" --title "CLI framework cho
 node scripts/agent-memory.js research "Compared image libs" --title "Go image tooling survey"
 node scripts/agent-memory.js note "Implemented first prototype" --title "Prototype notes"
 ```
+
+Routing behavior:
+
+- `task` and `decision` always stay project-scoped
+- `research` and `note` default to auto routing
+- reusable or cross-project material goes to global `Research` or `Notes`
+- project-specific material stays under `Projects/<slug>/...`
+- you can still override with `--scope project` or `--scope global`
 
 The global CLI still exposes the same capabilities:
 

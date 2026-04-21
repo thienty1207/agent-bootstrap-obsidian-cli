@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { findRepoRoot, readIfExists } from './fs-utils';
+import { appendDailyLog, ensureDailyNote } from './vault';
 
 export interface RepoConfig {
   vault_root: string;
@@ -33,6 +34,12 @@ export function resolveRepoRoot(repoRoot?: string): string {
 export function getContext({ repoRoot }: { repoRoot?: string }): string {
   const resolvedRepoRoot = resolveRepoRoot(repoRoot);
   const config = readRepoConfig(resolvedRepoRoot);
+  ensureDailyNote(config.vault_root);
+  appendDailyLog(
+    config.vault_root,
+    `Session started for \`${config.project_slug}\``,
+    `<!-- agent-bootstrap:session:${config.project_slug}:${new Date().toISOString().slice(0, 13)} -->`,
+  );
 
   const sections: Array<[string, string]> = [
     ['Repo AGENT', path.join(resolvedRepoRoot, 'AGENT.md')],
