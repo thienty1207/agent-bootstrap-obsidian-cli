@@ -15,7 +15,7 @@ Everything else should be automated by the kit.
 Global install from the GitHub tarball:
 
 ```bash
-npm i -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/tar.gz/refs/heads/main
+npm i -g https://codeload.github.com/thienty1207/agent-bootstrap-obsidian-cli/tar.gz/main
 ```
 
 Windows note:
