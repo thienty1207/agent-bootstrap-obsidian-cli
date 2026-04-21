@@ -1,6 +1,6 @@
 # agent-bootstrap-obsidian-cli
 
-Portable CLI for bootstrapping coding projects into an Obsidian-based agent memory system.
+Portable TypeScript CLI for bootstrapping coding projects into an Obsidian-based agent memory system.
 
 ## Install
 
@@ -30,7 +30,7 @@ You can also override per-command:
 agent-bootstrap init --vault-root "/home/ty/ObsidianVault"
 ```
 
-## Daily use
+## Quick start
 
 Create a new project folder, enter it, then run:
 
@@ -52,6 +52,69 @@ You can also bootstrap an explicit path:
 
 ```bash
 agent-bootstrap "D:\project\Go\face_gen_tools"
+```
+
+Create a typed project in one command:
+
+```bash
+agent-bootstrap new web "D:\project\nodejs\shop-web"
+agent-bootstrap new api "/home/ty/projects/payments-api"
+agent-bootstrap new tool
+```
+
+Supported project types:
+
+- `web`
+- `api`
+- `tool`
+- `desktop`
+- `mobile`
+- `fullstack`
+
+The default type for `agent-bootstrap` or `agent-bootstrap init` is `tool`.
+
+## Command surface
+
+```bash
+agent-bootstrap
+agent-bootstrap init [path] --type <type>
+agent-bootstrap new <type> [path]
+agent-bootstrap config set-vault <path>
+agent-bootstrap config get
+agent-bootstrap projects list
+agent-bootstrap projects show [slug]
+agent-bootstrap doctor
+agent-bootstrap sync
+agent-bootstrap context
+agent-bootstrap memory <task|decision|research|note> ...
+```
+
+## Project registry
+
+Bootstrapped projects are registered machine-locally at:
+
+- Windows: `%USERPROFILE%\.agent-bootstrap\projects.json`
+- Linux/macOS: `~/.agent-bootstrap/projects.json`
+
+Useful commands:
+
+```bash
+agent-bootstrap projects list
+agent-bootstrap projects show
+```
+
+## Diagnostics and sync
+
+Check the current repo health:
+
+```bash
+agent-bootstrap doctor
+```
+
+Restore missing generated files without clobbering your existing README:
+
+```bash
+agent-bootstrap sync
 ```
 
 ## Agent-only commands
@@ -93,6 +156,8 @@ Supported environment variables:
 ```bash
 npm test
 ```
+
+The test script builds TypeScript to `dist/` before running the test suite.
 
 ## Template source
 

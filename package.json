@@ -4,17 +4,23 @@
   "description": "Portable Obsidian vault bootstrap CLI for coding projects",
   "files": [
     "bin",
+    "dist",
     ".github",
     "docs",
     "plans",
-    "src",
     "README.md"
   ],
   "bin": {
     "agent-bootstrap": "./bin/agent-bootstrap.js"
   },
   "scripts": {
-    "test": "node --test"
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "test": "npm run build && node --test"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.15.29",
+    "typescript": "^5.9.3"
+  }
 }

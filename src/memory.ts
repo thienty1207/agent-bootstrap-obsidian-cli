@@ -1,37 +1,50 @@
-const fs = require('node:fs');
-const path = require('node:path');
-const { findRepoRoot, ensureDir, writeFile } = require('./fs-utils');
-const { readRepoConfig } = require('./context');
-const { getTodayString } = require('./date');
+import fs from 'node:fs';
+import path from 'node:path';
+import { getTodayString } from './date';
+import { ensureDir, findRepoRoot, writeFile } from './fs-utils';
+import { readRepoConfig, type RepoConfig } from './context';
 
-function appendTask(config, content) {
+function appendTask(config: RepoConfig, content: string): string {
   const tasksPath = path.join(config.project_root, config.tasks_file);
   const existing = fs.existsSync(tasksPath) ? fs.readFileSync(tasksPath, 'utf8') : '# Tasks\n';
   fs.writeFileSync(tasksPath, `${existing.trimEnd()}\n\n- [ ] ${content}\n`);
   return tasksPath;
 }
 
-function appendDecision(config, title, content) {
+function appendDecision(config: RepoConfig, title: string, content: string): string {
   const decisionsPath = path.join(config.project_root, config.decisions_file);
   const existing = fs.existsSync(decisionsPath) ? fs.readFileSync(decisionsPath, 'utf8') : '# Decisions\n';
   const today = getTodayString();
-  const entry = `\n## ${today} - ${title}\n- Context: auto write-back from agent-bootstrap CLI\n- Decision: ${content}\n`;
+  const entry = `\n## ${today} - ${title}\n- Context: agent-bootstrap CLI memory command\n- Decision: ${content}\n`;
   fs.writeFileSync(decisionsPath, `${existing.trimEnd()}\n${entry}`);
   return decisionsPath;
 }
 
-function createNote(config, noteType, title, content) {
+function createNote(config: RepoConfig, noteType: 'research' | 'note', title: string, content: string): string {
   const directory = noteType === 'research' ? config.research_dir : config.notes_dir;
   const targetDir = path.join(config.project_root, directory);
   ensureDir(targetDir);
   const today = getTodayString();
   const safeTitle = title.replace(/[<>:"/\\|?*\u0000-\u001F]/g, '-').replace(/\s+/g, ' ').trim();
   const notePath = path.join(targetDir, `${today} ${safeTitle}.md`);
-  writeFile(notePath, `---\ntype: ${noteType}\nproject: ${config.project_slug}\ncreated: ${today}\n---\n\n# ${title}\n\n${content}\n`);
+  writeFile(
+    notePath,
+    `---\ntype: ${noteType}\nproject: ${config.project_slug}\nproject_type: ${config.project_type}\ncreated: ${today}\n---\n\n# ${title}\n\n${content}\n`,
+  );
   return notePath;
 }
 
-function writeMemory({ repoRoot, mode, title, content }) {
+export function writeMemory({
+  repoRoot,
+  mode,
+  title,
+  content,
+}: {
+  repoRoot?: string;
+  mode: string;
+  title?: string;
+  content: string;
+}): string {
   const resolvedRepoRoot = repoRoot ? path.resolve(repoRoot) : findRepoRoot(process.cwd());
   const config = readRepoConfig(resolvedRepoRoot);
 
@@ -53,7 +66,3 @@ function writeMemory({ repoRoot, mode, title, content }) {
       throw new Error(`Unsupported memory mode: ${mode}`);
   }
 }
-
-module.exports = {
-  writeMemory
-};

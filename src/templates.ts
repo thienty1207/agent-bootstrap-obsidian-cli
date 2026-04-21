@@ -1,15 +1,22 @@
-function projectReadmeTemplate(projectSlug, sourcePath, today) {
+import type { ProjectType } from './project-types';
+
+export function projectReadmeTemplate(projectSlug: string, sourcePath: string, today: string, projectType: ProjectType): string {
   return `---
 type: project
+project_type: ${projectType}
 status: active
 created: ${today}
 updated: ${today}
 source_path: ${sourcePath}
 tags:
   - project
+  - ${projectType}
 ---
 
 # ${projectSlug}
+
+## Project Type
+- ${projectType}
 
 ## Source Path
 \`${sourcePath}\`
@@ -48,7 +55,7 @@ tags:
 `;
 }
 
-function tasksTemplate(projectSlug, today) {
+export function tasksTemplate(projectSlug: string, today: string): string {
   return `---
 type: tasks
 project: ${projectSlug}
@@ -74,7 +81,7 @@ tags:
 `;
 }
 
-function decisionsTemplate(projectSlug, today) {
+export function decisionsTemplate(projectSlug: string, today: string): string {
   return `---
 type: decisions
 project: ${projectSlug}
@@ -88,7 +95,7 @@ tags:
 `;
 }
 
-function repoReadmeTemplate(repoName, projectSlug) {
+export function repoReadmeTemplate(repoName: string, projectSlug: string, projectType: ProjectType): string {
   return `# ${repoName}
 
 ${repoName} is a VS Code friendly agent workspace layout.
@@ -96,6 +103,7 @@ ${repoName} is a VS Code friendly agent workspace layout.
 It keeps the agent workspace under \`.github\`, while project-facing documentation and planning live at the repository root.
 
 Project slug: \`${projectSlug}\`
+Project type: \`${projectType}\`
 
 ## Structure
 
@@ -110,14 +118,6 @@ Project slug: \`${projectSlug}\`
 - \`plans/\`: implementation templates and handoff reports
 - \`scripts/\`: repo-local runtime helpers for durable memory write-back
 
-## Intent
-
-This layout combines:
-
-- Karpathy-style coding discipline
-- Superpowers-style workflow orchestration
-- an Obsidian-backed memory bridge that stays outside the source repo
-
 ## Suggested use
 
 1. Read \`AGENT.md\`.
@@ -128,10 +128,50 @@ This layout combines:
 `;
 }
 
-function rootAgentTemplate(vaultRoot, projectRoot) {
+function typeFocus(projectType: ProjectType): string[] {
+  switch (projectType) {
+    case 'web':
+      return [
+        '- prioritize UI entrypoints, routes, API boundaries, auth flow, and deployment surface',
+        '- keep UX, state boundaries, and verification paths explicit',
+      ];
+    case 'api':
+      return [
+        '- prioritize handlers, contracts, auth, persistence boundaries, and rollout safety',
+        '- keep request and response schemas explicit',
+      ];
+    case 'desktop':
+      return [
+        '- prioritize shell, window lifecycle, platform integration, filesystem, and packaging',
+        '- keep OS-specific assumptions explicit',
+      ];
+    case 'mobile':
+      return [
+        '- prioritize navigation, data sync, device permissions, and release channels',
+        '- keep platform-specific behavior explicit',
+      ];
+    case 'fullstack':
+      return [
+        '- prioritize frontend-backend boundaries, shared contracts, auth, and deployment topology',
+        '- keep cross-layer ownership clear',
+      ];
+    case 'tool':
+    default:
+      return [
+        '- prioritize CLI entrypoints, config, filesystem effects, and external tool contracts',
+        '- keep command behavior and safety checks explicit',
+      ];
+  }
+}
+
+export function rootAgentTemplate(vaultRoot: string, projectRoot: string, projectType: ProjectType): string {
   return `# Workspace Agent Guide
 
 Read this file first if you are working in this repository.
+
+## Project type
+
+Project type: ${projectType}
 
 ## External memory
 
@@ -151,6 +191,11 @@ Before meaningful work, read:
 2. \`${vaultRoot}/AGENTS.md\`
 3. \`${projectRoot}/README.md\`
 4. \`${projectRoot}/Tasks.md\`
+5. relevant docs under \`docs/\` and workflows under \`.github/\`
+
+## Type-specific focus
+
+${typeFocus(projectType).join('\n')}
 
 ## Fast paths
 
@@ -177,10 +222,14 @@ After meaningful work, write back to the vault:
 `;
 }
 
-function vaultMemoryDoc(vaultRoot, projectRoot) {
+export function vaultMemoryDoc(vaultRoot: string, projectRoot: string, projectType: ProjectType): string {
   return `# Vault Memory Bridge
 
 This repository is paired with an external Obsidian vault for durable agent memory.
+
+## Project type
+
+- ${projectType}
 
 ## Paths
 
@@ -214,17 +263,10 @@ Preferred repo-local runtime:
 Global fallback:
 
 \`agent-bootstrap memory <task|decision|research|note> ...\`
-
-## Purpose
-
-This split is intentional:
-
-- repository = source code and execution
-- vault = long-term memory, planning, research, and handoff
 `;
 }
 
-function localRuntimeScriptTemplate() {
+export function localRuntimeScriptTemplate(): string {
   return `#!/usr/bin/env node
 
 const fs = require('node:fs');
@@ -327,7 +369,7 @@ function createNote(config, noteType, title, content, extraTags = []) {
     ? \`tags:\\n\${extraTags.map((tag) => \`  - \${tag}\`).join('\\n')}\\n\`
     : '';
   const notePath = path.join(targetDir, \`\${today} \${safeTitle}.md\`);
-  writeFile(notePath, \`---\\ntype: \${noteType}\\nproject: \${config.project_slug}\\ncreated: \${today}\\n\${tags}---\\n\\n# \${title}\\n\\n\${content}\\n\`);
+  writeFile(notePath, \`---\\ntype: \${noteType}\\nproject: \${config.project_slug}\\nproject_type: \${config.project_type}\\ncreated: \${today}\\n\${tags}---\\n\\n# \${title}\\n\\n\${content}\\n\`);
   return notePath;
 }
 
@@ -427,7 +469,7 @@ try {
 `;
 }
 
-function gitPostCommitHookTemplate() {
+export function gitPostCommitHookTemplate(): string {
   return `#!/usr/bin/env sh
 set +e
 
@@ -438,14 +480,3 @@ fi
 exit 0
 `;
 }
-
-module.exports = {
-  projectReadmeTemplate,
-  tasksTemplate,
-  decisionsTemplate,
-  repoReadmeTemplate,
-  rootAgentTemplate,
-  vaultMemoryDoc,
-  localRuntimeScriptTemplate,
-  gitPostCommitHookTemplate
-};

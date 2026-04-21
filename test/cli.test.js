@@ -40,6 +40,10 @@ function readFile(filePath) {
   return fs.readFileSync(filePath, 'utf8');
 }
 
+function parseJson(stdout) {
+  return JSON.parse(stdout.trim());
+}
+
 test('config set-vault stores portable config and init bootstraps current repo', () => {
   const root = makeTempDir('agent-bootstrap-cli-');
   const vaultRoot = path.join(root, 'vault');
@@ -230,4 +234,69 @@ test('post-commit hook writes a durable worklog note into the vault', () => {
   const noteBody = readFile(path.join(notesRoot, worklog));
   assert.match(noteBody, /Initial agent sync/);
   assert.match(noteBody, /git post-commit hook/i);
+});
+
+test('new command bootstraps a typed project and registers it', () => {
+  const root = makeTempDir('agent-bootstrap-new-');
+  const vaultRoot = path.join(root, 'vault');
+  const workspaceRoot = path.join(root, 'workspace');
+  const configHome = path.join(root, 'config-home');
+  const repoRoot = path.join(workspaceRoot, 'shop-web');
+
+  fs.mkdirSync(workspaceRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: workspaceRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['new', 'web', repoRoot], { configHome, cwd: workspaceRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const repoConfig = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
+  assert.equal(repoConfig.project_type, 'web');
+
+  const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
+  assert.match(rootAgent, /Project type: web/i);
+
+  result = runCli(['projects', 'list'], { configHome, cwd: workspaceRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const projects = parseJson(result.stdout);
+  assert.equal(projects.length, 1);
+  assert.equal(projects[0].projectType, 'web');
+  assert.equal(projects[0].repoRoot, repoRoot);
+});
+
+test('doctor reports healthy repo state and sync restores generated files', () => {
+  const root = makeTempDir('agent-bootstrap-doctor-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['new', 'tool', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['doctor'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const doctor = parseJson(result.stdout);
+  assert.equal(doctor.ok, true);
+  assert.equal(doctor.repo.projectType, 'tool');
+  assert.equal(doctor.checks.vaultConfig, true);
+  assert.equal(doctor.checks.agentFile, true);
+  assert.equal(doctor.checks.githubTemplate, true);
+  assert.equal(doctor.checks.docs, true);
+  assert.equal(doctor.checks.plans, true);
+
+  const deletedPath = path.join(repoRoot, 'docs', 'system-architecture.md');
+  fs.rmSync(deletedPath, { force: true });
+  assert.equal(fs.existsSync(deletedPath), false);
+
+  result = runCli(['sync'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.existsSync(deletedPath), true);
 });

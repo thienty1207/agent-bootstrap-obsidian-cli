@@ -1,16 +1,16 @@
-const fs = require('node:fs');
-const path = require('node:path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-function ensureDir(dirPath) {
+export function ensureDir(dirPath: string): void {
   fs.mkdirSync(dirPath, { recursive: true });
 }
 
-function writeFile(filePath, content) {
+export function writeFile(filePath: string, content: string | Buffer): void {
   ensureDir(path.dirname(filePath));
   fs.writeFileSync(filePath, content);
 }
 
-function writeFileIfMissing(filePath, content) {
+export function writeFileIfMissing(filePath: string, content: string | Buffer): void {
   if (fs.existsSync(filePath)) {
     return;
   }
@@ -18,7 +18,7 @@ function writeFileIfMissing(filePath, content) {
   writeFile(filePath, content);
 }
 
-function readIfExists(filePath) {
+export function readIfExists(filePath: string): string | null {
   if (!fs.existsSync(filePath)) {
     return null;
   }
@@ -26,29 +26,7 @@ function readIfExists(filePath) {
   return fs.readFileSync(filePath, 'utf8');
 }
 
-function copyMissingRecursive(sourcePath, targetPath) {
-  if (!fs.existsSync(sourcePath)) {
-    return;
-  }
-
-  const sourceStat = fs.statSync(sourcePath);
-  if (sourceStat.isDirectory()) {
-    ensureDir(targetPath);
-    for (const entry of fs.readdirSync(sourcePath, { withFileTypes: true })) {
-      copyMissingRecursive(
-        path.join(sourcePath, entry.name),
-        path.join(targetPath, entry.name)
-      );
-    }
-    return;
-  }
-
-  if (!fs.existsSync(targetPath)) {
-    writeFile(targetPath, fs.readFileSync(sourcePath));
-  }
-}
-
-function slugify(value) {
+export function slugify(value: string): string {
   const slug = value
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -61,17 +39,17 @@ function slugify(value) {
   return slug;
 }
 
-function escapeRegExp(value) {
+export function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function upsertManagedBlock(existingContent, newBlock) {
-  const start = '<!-- vault-memory-bridge:start -->';
-  const end = '<!-- vault-memory-bridge:end -->';
+export function upsertManagedBlock(existingContent: string, newBlock: string): string {
+  const start = '<!-- agent-bootstrap:start -->';
+  const end = '<!-- agent-bootstrap:end -->';
   const wrappedBlock = `${start}\n${newBlock.trimEnd()}\n${end}`;
 
   if (!existingContent) {
-    return wrappedBlock;
+    return `${wrappedBlock}\n`;
   }
 
   const pattern = new RegExp(`${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}`);
@@ -83,7 +61,7 @@ function upsertManagedBlock(existingContent, newBlock) {
   return `${trimmed}\n\n${wrappedBlock}\n`;
 }
 
-function findRepoRoot(startPath) {
+export function findRepoRoot(startPath: string): string {
   let current = path.resolve(startPath);
 
   while (true) {
@@ -102,14 +80,24 @@ function findRepoRoot(startPath) {
   throw new Error(`Could not find a bootstrapped repo from ${startPath}. Run agent-bootstrap in the project root first.`);
 }
 
-module.exports = {
-  ensureDir,
-  writeFile,
-  writeFileIfMissing,
-  readIfExists,
-  copyMissingRecursive,
-  slugify,
-  upsertManagedBlock,
-  findRepoRoot,
-  escapeRegExp
-};
+export function copyMissingRecursive(sourcePath: string, targetPath: string): void {
+  if (!fs.existsSync(sourcePath)) {
+    return;
+  }
+
+  const sourceStat = fs.statSync(sourcePath);
+  if (sourceStat.isDirectory()) {
+    ensureDir(targetPath);
+    for (const entry of fs.readdirSync(sourcePath, { withFileTypes: true })) {
+      copyMissingRecursive(
+        path.join(sourcePath, entry.name),
+        path.join(targetPath, entry.name),
+      );
+    }
+    return;
+  }
+
+  if (!fs.existsSync(targetPath)) {
+    writeFile(targetPath, fs.readFileSync(sourcePath));
+  }
+}
