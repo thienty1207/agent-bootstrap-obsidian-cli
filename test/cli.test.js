@@ -300,3 +300,113 @@ test('doctor reports healthy repo state and sync restores generated files', () =
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.existsSync(deletedPath), true);
 });
+
+test('typed bootstrap seeds kit metadata and a type-aware project map', () => {
+  const root = makeTempDir('agent-bootstrap-project-map-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['new', 'web', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const repoConfig = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
+  assert.equal(typeof repoConfig.kit_version, 'string');
+  assert.match(repoConfig.kit_version, /^\d+\.\d+\.\d+/);
+
+  const projectMap = readFile(path.join(repoRoot, 'docs', 'project-map.md'));
+  assert.match(projectMap, /Project map/i);
+  assert.match(projectMap, /routes/i);
+  assert.match(projectMap, /deployment/i);
+});
+
+test('update restores repo-local managed assets without clobbering a custom README', () => {
+  const root = makeTempDir('agent-bootstrap-update-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['new', 'tool', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  writeFile(path.join(repoRoot, 'README.md'), '# Custom README\n\nKeep my repo intro.\n');
+  fs.rmSync(path.join(repoRoot, '.github', 'agents', 'planner.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, 'scripts', 'agent-memory.js'), { force: true });
+
+  result = runCli(['update'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const updateReport = parseJson(result.stdout);
+  assert.equal(updateReport.action, 'update');
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')), true);
+  assert.match(readFile(path.join(repoRoot, 'README.md')), /Keep my repo intro\./);
+});
+
+test('migrate upgrades a legacy repo into the single-root-AGENT kit layout', () => {
+  const root = makeTempDir('agent-bootstrap-migrate-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'legacy-repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(path.join(repoRoot, '.github'), { recursive: true });
+  writeFile(path.join(repoRoot, 'README.md'), '# Legacy README\n\nDo not overwrite this.\n');
+  writeFile(path.join(repoRoot, 'AGENTS.md'), '# Legacy root AGENTS\n');
+  writeFile(path.join(repoRoot, '.github', 'AGENT.md'), '# Legacy github AGENT\n');
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['migrate', repoRoot, '--type', 'api'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const migrateReport = parseJson(result.stdout);
+  assert.equal(migrateReport.action, 'migrate');
+  assert.equal(fs.existsSync(path.join(repoRoot, 'vault.config.json')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'AGENT.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'AGENTS.md')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')), false);
+  assert.match(readFile(path.join(repoRoot, 'README.md')), /Do not overwrite this\./);
+});
+
+test('doctor reports actionable missing paths and suggested repair commands', () => {
+  const root = makeTempDir('agent-bootstrap-doctor-actionable-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['config', 'set-vault', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['new', 'desktop', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  fs.rmSync(path.join(repoRoot, '.github', 'agents', 'planner.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, 'docs', 'project-map.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, 'scripts', 'agent-memory.js'), { force: true });
+
+  result = runCli(['doctor'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const doctor = parseJson(result.stdout);
+  assert.equal(doctor.ok, false);
+  assert.equal(doctor.checks.runtimeScript, false);
+  assert.equal(doctor.checks.projectMap, false);
+  assert.match(doctor.repo.kitVersion, /^\d+\.\d+\.\d+/);
+  assert.ok(doctor.missing.repoPaths.includes('.github/agents/planner.md'));
+  assert.ok(doctor.missing.repoPaths.includes('docs/project-map.md'));
+  assert.ok(doctor.missing.repoPaths.includes('scripts/agent-memory.js'));
+  assert.ok(doctor.suggestedCommands.includes('agent-bootstrap update'));
+});

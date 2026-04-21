@@ -18,6 +18,7 @@ import {
   decisionsTemplate,
   repoReadmeTemplate,
   rootAgentTemplate,
+  projectMapTemplate,
   vaultMemoryDoc,
   localRuntimeScriptTemplate,
   gitPostCommitHookTemplate,
@@ -25,6 +26,20 @@ import {
 import { getTodayString } from './date';
 import { DEFAULT_PROJECT_TYPE, normalizeProjectType, type ProjectType } from './project-types';
 import { readRepoConfig } from './context';
+import { getKitVersion, getPackageRoot } from './kit';
+
+type BootstrapAction = 'init' | 'new' | 'sync' | 'update' | 'migrate';
+
+interface BootstrapReport {
+  action: BootstrapAction;
+  repo_root: string;
+  project_slug: string;
+  project_type: ProjectType;
+  vault_project_root: string;
+  git_initialized: boolean;
+  hooks_configured: boolean;
+  kit_version: string;
+}
 
 function copyTemplateIfPresent(vaultRoot: string, projectRoot: string): void {
   const templateRoot = path.join(vaultRoot, 'Projects', '_template');
@@ -34,7 +49,7 @@ function copyTemplateIfPresent(vaultRoot: string, projectRoot: string): void {
 }
 
 function copyRepoScaffold(repoRoot: string): void {
-  const packageRoot = path.join(__dirname, '..');
+  const packageRoot = getPackageRoot();
   const githubDirs = ['agents', 'commands', 'prompts', 'rules', 'skills'];
 
   for (const directory of githubDirs) {
@@ -75,41 +90,41 @@ function configureHooks(repoRoot: string): boolean {
 }
 
 interface ApplyBootstrapOptions {
+  action: BootstrapAction;
   repoRoot: string;
   vaultRoot: string;
   projectSlug: string;
   projectType: ProjectType;
   preserveReadme: boolean;
+  syncVault: boolean;
 }
 
 function applyBootstrap({
+  action,
   repoRoot,
   vaultRoot,
   projectSlug,
   projectType,
   preserveReadme,
-}: ApplyBootstrapOptions): {
-  repo_root: string;
-  project_slug: string;
-  project_type: ProjectType;
-  vault_project_root: string;
-  git_initialized: boolean;
-  hooks_configured: boolean;
-} {
+  syncVault,
+}: ApplyBootstrapOptions): BootstrapReport {
   const projectRoot = path.join(vaultRoot, 'Projects', projectSlug);
   const today = getTodayString();
   const repoName = path.basename(repoRoot);
+  const kitVersion = getKitVersion();
 
   ensureDir(repoRoot);
-  copyTemplateIfPresent(vaultRoot, projectRoot);
 
-  ensureDir(path.join(projectRoot, 'Research'));
-  ensureDir(path.join(projectRoot, 'Notes'));
-  ensureDir(path.join(projectRoot, 'Artifacts'));
+  if (syncVault) {
+    copyTemplateIfPresent(vaultRoot, projectRoot);
+    ensureDir(path.join(projectRoot, 'Research'));
+    ensureDir(path.join(projectRoot, 'Notes'));
+    ensureDir(path.join(projectRoot, 'Artifacts'));
 
-  writeFile(path.join(projectRoot, 'README.md'), projectReadmeTemplate(projectSlug, repoRoot, today, projectType));
-  writeFile(path.join(projectRoot, 'Tasks.md'), tasksTemplate(projectSlug, today));
-  writeFile(path.join(projectRoot, 'Decisions.md'), decisionsTemplate(projectSlug, today));
+    writeFile(path.join(projectRoot, 'README.md'), projectReadmeTemplate(projectSlug, repoRoot, today, projectType));
+    writeFile(path.join(projectRoot, 'Tasks.md'), tasksTemplate(projectSlug, today));
+    writeFile(path.join(projectRoot, 'Decisions.md'), decisionsTemplate(projectSlug, today));
+  }
 
   copyRepoScaffold(repoRoot);
   if (preserveReadme) {
@@ -120,14 +135,14 @@ function applyBootstrap({
   writeFile(path.join(repoRoot, 'scripts', 'agent-memory.js'), localRuntimeScriptTemplate());
 
   const rootAgentPath = path.join(repoRoot, 'AGENT.md');
-  const docsPath = path.join(repoRoot, 'docs', 'vault-memory.md');
-  const agentTemplate = rootAgentTemplate(vaultRoot, projectRoot, projectType);
+  const vaultMemoryPath = path.join(repoRoot, 'docs', 'vault-memory.md');
   const currentRootAgent = fs.existsSync(rootAgentPath)
     ? fs.readFileSync(rootAgentPath, 'utf8')
     : '# Workspace Agent Guide\n';
 
-  writeFile(rootAgentPath, upsertManagedBlock(currentRootAgent, agentTemplate));
-  writeFile(docsPath, vaultMemoryDoc(vaultRoot, projectRoot, projectType));
+  writeFile(rootAgentPath, upsertManagedBlock(currentRootAgent, rootAgentTemplate(vaultRoot, projectRoot, projectType)));
+  writeFile(vaultMemoryPath, vaultMemoryDoc(vaultRoot, projectRoot, projectType));
+  writeFile(path.join(repoRoot, 'docs', 'project-map.md'), projectMapTemplate(repoName, projectSlug, projectType));
 
   fs.rmSync(path.join(repoRoot, 'AGENTS.md'), { force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'AGENT.md'), { force: true });
@@ -143,6 +158,7 @@ function applyBootstrap({
       project_slug: projectSlug,
       project_root: projectRoot,
       project_type: projectType,
+      kit_version: kitVersion,
       tasks_file: 'Tasks.md',
       decisions_file: 'Decisions.md',
       research_dir: 'Research',
@@ -163,12 +179,14 @@ function applyBootstrap({
   });
 
   return {
+    action,
     repo_root: repoRoot,
     project_slug: projectSlug,
     project_type: projectType,
     vault_project_root: projectRoot,
     git_initialized: gitInitialized,
     hooks_configured: hooksConfigured,
+    kit_version: kitVersion,
   };
 }
 
@@ -182,18 +200,20 @@ export function initProject({
   slug?: string;
   vaultRoot?: string;
   projectType?: string;
-}) {
+}): BootstrapReport {
   const repoRoot = path.resolve(projectPath || process.cwd());
   const vaultRoot = resolveVaultRoot(explicitVaultRoot);
   const normalizedType = normalizeProjectType(projectType || DEFAULT_PROJECT_TYPE);
   const projectSlug = slug ? slugify(slug) : slugify(path.basename(repoRoot));
 
   return applyBootstrap({
+    action: 'init',
     repoRoot,
     vaultRoot,
     projectSlug,
     projectType: normalizedType,
     preserveReadme: true,
+    syncVault: true,
   });
 }
 
@@ -207,24 +227,91 @@ export function newProject({
   projectPath?: string;
   slug?: string;
   vaultRoot?: string;
-}) {
-  return initProject({
-    projectType,
-    projectPath,
-    slug,
-    vaultRoot,
+}): BootstrapReport {
+  const repoRoot = path.resolve(projectPath || process.cwd());
+  const resolvedVaultRoot = resolveVaultRoot(vaultRoot);
+  const normalizedType = normalizeProjectType(projectType);
+  const projectSlug = slug ? slugify(slug) : slugify(path.basename(repoRoot));
+
+  return applyBootstrap({
+    action: 'new',
+    repoRoot,
+    vaultRoot: resolvedVaultRoot,
+    projectSlug,
+    projectType: normalizedType,
+    preserveReadme: true,
+    syncVault: true,
   });
 }
 
-export function syncProject({ repoRoot }: { repoRoot?: string } = {}) {
+export function syncProject({ repoRoot }: { repoRoot?: string } = {}): BootstrapReport {
   const resolvedRepoRoot = repoRoot ? path.resolve(repoRoot) : findRepoRoot(process.cwd());
   const config = readRepoConfig(resolvedRepoRoot);
 
   return applyBootstrap({
+    action: 'sync',
     repoRoot: resolvedRepoRoot,
     vaultRoot: config.vault_root,
     projectSlug: config.project_slug,
     projectType: normalizeProjectType(config.project_type),
     preserveReadme: true,
+    syncVault: true,
+  });
+}
+
+export function updateProject({ repoRoot }: { repoRoot?: string } = {}): BootstrapReport {
+  const resolvedRepoRoot = repoRoot ? path.resolve(repoRoot) : findRepoRoot(process.cwd());
+  const config = readRepoConfig(resolvedRepoRoot);
+
+  return applyBootstrap({
+    action: 'update',
+    repoRoot: resolvedRepoRoot,
+    vaultRoot: config.vault_root,
+    projectSlug: config.project_slug,
+    projectType: normalizeProjectType(config.project_type),
+    preserveReadme: true,
+    syncVault: false,
+  });
+}
+
+export function migrateProject({
+  repoRoot,
+  slug,
+  vaultRoot,
+  projectType,
+}: {
+  repoRoot?: string;
+  slug?: string;
+  vaultRoot?: string;
+  projectType?: string;
+} = {}): BootstrapReport {
+  const resolvedRepoRoot = path.resolve(repoRoot || process.cwd());
+  const configPath = path.join(resolvedRepoRoot, 'vault.config.json');
+
+  if (fs.existsSync(configPath)) {
+    const config = readRepoConfig(resolvedRepoRoot);
+    return applyBootstrap({
+      action: 'migrate',
+      repoRoot: resolvedRepoRoot,
+      vaultRoot: vaultRoot ? path.resolve(vaultRoot) : config.vault_root,
+      projectSlug: slug ? slugify(slug) : config.project_slug,
+      projectType: normalizeProjectType(projectType || config.project_type),
+      preserveReadme: true,
+      syncVault: true,
+    });
+  }
+
+  const resolvedVaultRoot = resolveVaultRoot(vaultRoot);
+  const normalizedType = normalizeProjectType(projectType || DEFAULT_PROJECT_TYPE);
+  const projectSlug = slug ? slugify(slug) : slugify(path.basename(resolvedRepoRoot));
+
+  return applyBootstrap({
+    action: 'migrate',
+    repoRoot: resolvedRepoRoot,
+    vaultRoot: resolvedVaultRoot,
+    projectSlug,
+    projectType: normalizedType,
+    preserveReadme: true,
+    syncVault: true,
   });
 }

@@ -42,9 +42,11 @@ That single command will:
 
 - create a project capsule under `Projects/<slug>` in the vault
 - connect the project folder to the vault with `vault.config.json`
+- stamp the current kit version into repo metadata
 - create exactly one root `AGENT.md`
 - scaffold `.github/`, `docs/`, and `plans/` with the FullAgent layout
 - create `docs/vault-memory.md`
+- create a type-aware `docs/project-map.md`
 - create a repo-local `scripts/agent-memory.js` runtime
 - install a git `post-commit` hook that writes commit worklogs into the vault
 
@@ -84,6 +86,8 @@ agent-bootstrap config get
 agent-bootstrap projects list
 agent-bootstrap projects show [slug]
 agent-bootstrap doctor
+agent-bootstrap update
+agent-bootstrap migrate [path] --type <type>
 agent-bootstrap sync
 agent-bootstrap context
 agent-bootstrap memory <task|decision|research|note> ...
@@ -116,6 +120,25 @@ Restore missing generated files without clobbering your existing README:
 ```bash
 agent-bootstrap sync
 ```
+
+Refresh the repo-local kit files from the current CLI version:
+
+```bash
+agent-bootstrap update
+```
+
+Upgrade an older repo into the current single-`AGENT.md` kit layout:
+
+```bash
+agent-bootstrap migrate "D:\project\legacy-api" --type api
+```
+
+`doctor` now reports:
+
+- current repo and vault bridge health
+- missing managed repo paths such as `.github/agents/planner.md` or `scripts/agent-memory.js`
+- missing vault capsule paths such as `Tasks.md`
+- suggested repair commands like `agent-bootstrap update` or `agent-bootstrap sync`
 
 ## Agent-only commands
 
@@ -172,3 +195,5 @@ This repository keeps the reusable template content directly at the root:
 - `plans`
 
 During bootstrap, those directories are copied into the generated project root.
+
+In addition, the CLI generates a managed `docs/project-map.md` per project so a fresh agent session can orient itself faster.

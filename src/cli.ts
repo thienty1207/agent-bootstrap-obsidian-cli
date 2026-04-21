@@ -1,6 +1,6 @@
 import { loadConfig, saveConfig } from './config';
 import { getContext } from './context';
-import { initProject, newProject, syncProject } from './bootstrap';
+import { initProject, migrateProject, newProject, syncProject, updateProject } from './bootstrap';
 import { writeMemory } from './memory';
 import { listProjects, showProject } from './projects';
 import { runDoctor } from './doctor';
@@ -150,6 +150,23 @@ export async function main(argv: string[]): Promise<void> {
   if (command === 'doctor') {
     const { options } = parseFlags(tail);
     writeJson(runDoctor({ repoRoot: options['repo-root'] }));
+    return;
+  }
+
+  if (command === 'update') {
+    const { rest } = parseFlags(tail);
+    writeJson(updateProject({ repoRoot: rest[0] || process.cwd() }));
+    return;
+  }
+
+  if (command === 'migrate') {
+    const { rest, options } = parseFlags(tail);
+    writeJson(migrateProject({
+      repoRoot: rest[0] || process.cwd(),
+      slug: options.slug,
+      vaultRoot: options['vault-root'],
+      projectType: options.type,
+    }));
     return;
   }
 

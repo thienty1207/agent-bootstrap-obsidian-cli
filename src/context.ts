@@ -6,6 +6,7 @@ export interface RepoConfig {
   project_slug: string;
   project_root: string;
   project_type: string;
+  kit_version?: string;
   tasks_file: string;
   decisions_file: string;
   research_dir: string;
@@ -36,6 +37,7 @@ export function getContext({ repoRoot }: { repoRoot?: string }): string {
   const sections: Array<[string, string]> = [
     ['Repo AGENT', path.join(resolvedRepoRoot, 'AGENT.md')],
     ['Vault Bridge', path.join(resolvedRepoRoot, 'docs', 'vault-memory.md')],
+    ['Project Map', path.join(resolvedRepoRoot, 'docs', 'project-map.md')],
     ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],

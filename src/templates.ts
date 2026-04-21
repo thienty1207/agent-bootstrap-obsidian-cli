@@ -108,6 +108,7 @@ Project type: \`${projectType}\`
 ## Structure
 
 - \`AGENT.md\`: main operating contract for AI agents
+- \`docs/project-map.md\`: fast orientation guide for the current project type
 - \`.github/\`
   - \`agents/\`: specialized subagents
   - \`commands/\`: reusable workflow prompts
@@ -124,7 +125,8 @@ Project type: \`${projectType}\`
 2. Pick a specialist from \`.github/agents/\` when the task fits a role.
 3. Use \`.github/commands/\` to kick off repeatable workflows.
 4. Treat \`.github/rules/\` as the guardrails.
-5. Use \`node scripts/agent-memory.js context\` to load repo and vault context.
+5. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
+6. Use \`node scripts/agent-memory.js context\` to load repo and vault context.
 `;
 }
 
@@ -188,10 +190,11 @@ Project capsule:
 Before meaningful work, read:
 
 1. \`docs/vault-memory.md\`
-2. \`${vaultRoot}/AGENTS.md\`
-3. \`${projectRoot}/README.md\`
-4. \`${projectRoot}/Tasks.md\`
-5. relevant docs under \`docs/\` and workflows under \`.github/\`
+2. \`docs/project-map.md\`
+3. \`${vaultRoot}/AGENTS.md\`
+4. \`${projectRoot}/README.md\`
+5. \`${projectRoot}/Tasks.md\`
+6. relevant docs under \`docs/\` and workflows under \`.github/\`
 
 ## Type-specific focus
 
@@ -222,6 +225,108 @@ After meaningful work, write back to the vault:
 `;
 }
 
+function typeHotspots(projectType: ProjectType): string[] {
+  switch (projectType) {
+    case 'web':
+      return [
+        '- routes, page shells, UI state, auth boundaries, and API integrations',
+        '- deployment surface: environment variables, build output, hosting, and preview flow',
+      ];
+    case 'api':
+      return [
+        '- handlers, schemas, auth, persistence boundaries, and external service contracts',
+        '- deployment surface: runtime config, migrations, health checks, and rollout safety',
+      ];
+    case 'desktop':
+      return [
+        '- app shell, window lifecycle, IPC or message boundaries, filesystem access, and packaging',
+        '- deployment surface: installer, signing, updates, and per-platform behavior',
+      ];
+    case 'mobile':
+      return [
+        '- navigation, local state, sync behavior, permissions, and release channel differences',
+        '- deployment surface: build variants, store release flow, and remote config',
+      ];
+    case 'fullstack':
+      return [
+        '- frontend-backend boundaries, shared contracts, auth, and background jobs',
+        '- deployment surface: build pipeline, data migrations, and runtime topology',
+      ];
+    case 'tool':
+    default:
+      return [
+        '- CLI entrypoints, config loading, filesystem effects, and external tool integration',
+        '- deployment surface: packaging, versioning, install path, and shell compatibility',
+      ];
+  }
+}
+
+function typeVerificationPath(projectType: ProjectType): string[] {
+  switch (projectType) {
+    case 'web':
+      return [
+        'load primary routes and confirm the critical user path works end-to-end',
+        'verify form submission, auth, state transitions, and deployment environment assumptions',
+      ];
+    case 'api':
+      return [
+        'exercise the main endpoint flow with real request and response shapes',
+        'verify auth, persistence side effects, and backward-compatible contracts',
+      ];
+    case 'desktop':
+      return [
+        'launch the app, verify window lifecycle, and exercise the main native workflow',
+        'verify filesystem access, settings persistence, and packaging assumptions',
+      ];
+    case 'mobile':
+      return [
+        'exercise the main screen flow and verify navigation and data synchronization',
+        'verify permission prompts, offline behavior, and environment-specific config',
+      ];
+    case 'fullstack':
+      return [
+        'verify the main user flow from UI through API and persistence',
+        'check shared contracts, auth, background work, and deployment assumptions',
+      ];
+    case 'tool':
+    default:
+      return [
+        'run the primary command path and verify outputs, errors, and filesystem effects',
+        'check config loading, defaults, and external tool integration paths',
+      ];
+  }
+}
+
+export function projectMapTemplate(repoName: string, projectSlug: string, projectType: ProjectType): string {
+  return `# Project Map
+
+- Repo: \`${repoName}\`
+- Project slug: \`${projectSlug}\`
+- Project type: \`${projectType}\`
+
+## Primary hotspots
+
+${typeHotspots(projectType).join('\n')}
+
+## Read order
+
+1. \`AGENT.md\`
+2. \`docs/vault-memory.md\`
+3. project entrypoints and docs closest to the current task
+4. vault \`README.md\`, \`Tasks.md\`, and relevant \`Research/\`
+
+## Verification path
+
+${typeVerificationPath(projectType).map((item) => `- ${item}`).join('\n')}
+
+## Operating rule
+
+- keep repo facts in repo docs
+- keep durable progress, research, and decisions in the linked vault capsule
+- prefer updating \`Tasks.md\` and \`Decisions.md\` when the implementation meaningfully changes
+`;
+}
+
 export function vaultMemoryDoc(vaultRoot: string, projectRoot: string, projectType: ProjectType): string {
   return `# Vault Memory Bridge
 
@@ -242,9 +347,10 @@ This repository is paired with an external Obsidian vault for durable agent memo
 Before doing meaningful work in this repo, read:
 
 1. \`AGENT.md\`
-2. \`${vaultRoot}/AGENTS.md\`
-3. \`${projectRoot}/README.md\`
-4. \`${projectRoot}/Tasks.md\`
+2. \`docs/project-map.md\`
+3. \`${vaultRoot}/AGENTS.md\`
+4. \`${projectRoot}/README.md\`
+5. \`${projectRoot}/Tasks.md\`
 
 ## Write-back rules
 
@@ -326,6 +432,7 @@ function getContext(repoRoot, config) {
   const sections = [
     ['Repo AGENT', path.join(repoRoot, 'AGENT.md')],
     ['Vault Bridge', path.join(repoRoot, 'docs', 'vault-memory.md')],
+    ['Project Map', path.join(repoRoot, 'docs', 'project-map.md')],
     ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],
