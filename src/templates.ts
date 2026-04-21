@@ -202,10 +202,9 @@ ${typeFocus(projectType).join('\n')}
 
 ## Fast paths
 
-- \`agent-bootstrap context\`
 - \`node scripts/agent-memory.js context\`
 
-Running \`context\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, and includes the project memory index so the agent does not need to scan the vault manually.
+Running the repo-local \`context\` command should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, and includes the project memory index so the agent does not need to scan the vault manually.
 
 ## Write-back rules
 
@@ -227,10 +226,6 @@ The repo runtime handles the low-friction automation:
 
 - \`node scripts/agent-memory.js <context|task|decision|research|note>\`
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
-
-## Global fallback
-
-\`agent-bootstrap memory <task|decision|research|note> ...\`
 `;
 }
 
@@ -381,10 +376,6 @@ The runtime will:
 - append daily worklog entries automatically
 - auto-route \`research\` and \`note\` entries to project or global scope by default
 - maintain a compact project memory index so \`context\` loads faster and with better recall
-
-Global fallback:
-
-\`agent-bootstrap memory <task|decision|research|note> ...\`
 `;
 }
 

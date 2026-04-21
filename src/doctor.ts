@@ -68,11 +68,13 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
   const suggestedCommands: string[] = [];
 
   if (missingRepoPaths.length > 0 || config.kit_version !== currentKitVersion) {
-    suggestedCommands.push('agent-bootstrap update');
+    suggestedCommands.push('agent-bootstrap init');
   }
 
   if (missingVaultPaths.length > 0 || !registered) {
-    suggestedCommands.push('agent-bootstrap sync');
+    if (!suggestedCommands.includes('agent-bootstrap init')) {
+      suggestedCommands.push('agent-bootstrap init');
+    }
   }
 
   return {
