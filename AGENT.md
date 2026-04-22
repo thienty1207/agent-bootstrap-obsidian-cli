@@ -11,7 +11,7 @@ The CLI bootstraps new coding projects so they get:
 - an external Obsidian vault bridge
 - automatic vault skeleton setup from `setup`
 - root-level workspace instructions
-- a generated `.github/` agent workspace
+- a generated `.agent/` workspace for agent-readable assets
 - `docs/`, `plans/`, and local runtime helpers
 - typed project kits (`web`, `api`, `tool`, `desktop`, `mobile`, `fullstack`)
 - machine-local project registry and repo diagnostics
@@ -22,7 +22,7 @@ The CLI bootstraps new coding projects so they get:
 - `src/`: TypeScript CLI implementation
 - `dist/`: built runtime used by the published CLI
 - `test/`: Node test suite
-- `.github/agents`, `.github/commands`, `.github/rules`, `.github/skills`: template assets copied into generated project roots
+- `.agent/agents`, `.agent/commands`, `.agent/rules`, `.agent/skills`: template assets copied into generated project roots
 - `.github/workflows/`: CI for this CLI repo itself
 - `docs/` and `plans/`: template assets copied into generated project roots
 
@@ -37,6 +37,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep the generated project shape aligned with VS Code/Copilot workspace expectations.
 - Keep exactly one root `AGENT.md` in generated repos.
 - Do not reintroduce `.github/copilot-instructions.md` into generated repos unless explicitly requested.
+- Do not reintroduce legacy agent assets under `.github/agents`, `.github/commands`, `.github/rules`, or `.github/skills`.
 - Keep `agent-bootstrap` with no arguments as the default one-command bootstrap path.
 - Keep `agent-bootstrap setup [path]` sufficient to initialize a brand new vault path, defaulting to the current working directory when omitted.
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
@@ -49,6 +50,6 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 ## Fast path
 
 1. Read `README.md`
-2. Inspect `.github/`, `docs/`, and `plans/`
+2. Inspect `.agent/`, `.github/workflows/`, `docs/`, and `plans/`
 3. Run `npm test`
 4. Confirm `README.md` and `src/cli.ts` still agree on the public command surface

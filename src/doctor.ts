@@ -50,8 +50,8 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
   const checks = {
     vaultConfig: fs.existsSync(path.join(resolvedRepoRoot, 'vault.config.json')),
     agentFile: fs.existsSync(path.join(resolvedRepoRoot, 'AGENT.md')),
-    githubTemplate: fs.existsSync(path.join(resolvedRepoRoot, '.github', 'agents', 'planner.md'))
-      && fs.existsSync(path.join(resolvedRepoRoot, '.github', 'commands', 'plan', 'brainstorm.md')),
+    agentWorkspace: fs.existsSync(path.join(resolvedRepoRoot, '.agent', 'agents', 'planner.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')),
     docs: fs.existsSync(path.join(resolvedRepoRoot, 'docs')),
     plans: fs.existsSync(path.join(resolvedRepoRoot, 'plans')),
     gitAvailable: hasGit(),

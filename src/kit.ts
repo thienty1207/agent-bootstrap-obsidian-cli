@@ -6,15 +6,15 @@ let cachedPackageRoot: string | null = null;
 
 const PACKAGE_ROOT_MARKERS = [
   'package.json',
-  '.github',
+  '.agent',
   'docs',
   'plans',
 ] as const;
 
 export const MANAGED_REPO_PATHS = [
   'AGENT.md',
-  '.github/agents/planner.md',
-  '.github/commands/plan/brainstorm.md',
+  '.agent/agents/planner.md',
+  '.agent/commands/plan/brainstorm.md',
   'docs/vault-memory.md',
   'docs/project-map.md',
   'plans/templates/feature-implementation-plan.md',

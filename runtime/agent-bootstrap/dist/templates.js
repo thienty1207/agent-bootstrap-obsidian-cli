@@ -106,7 +106,7 @@ function repoReadmeTemplate(repoName, projectSlug, projectType) {
 
 ${repoName} is a VS Code friendly agent workspace layout.
 
-It keeps the agent workspace under \`.github\`, while project-facing documentation and planning live at the repository root.
+It keeps the agent workspace under \`.agent\`, while GitHub automation stays under \`.github/workflows\` and project-facing documentation lives at the repository root.
 
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
@@ -117,11 +117,13 @@ Only \`setup\` and \`init\` are public CLI commands for this kit.
 
 - \`AGENT.md\`: main operating contract for AI agents
 - \`docs/project-map.md\`: fast orientation guide for the current project type
-- \`.github/\`
+- \`.agent/\`
   - \`agents/\`: specialized subagents
   - \`commands/\`: reusable workflow prompts
   - \`rules/\`: workflow and quality guardrails
   - \`skills/\`: portable agent/backend integration guidance, core specialist skills, plus the workflow and coding-principles packs
+- \`.github/\`
+  - \`workflows/\`: GitHub Actions and YAML-only automation files
 - \`docs/\`: project documentation and reference notes
 - \`plans/\`: implementation templates and handoff reports
 - \`scripts/\`: repo-local runtime helpers for durable memory write-back
@@ -130,18 +132,18 @@ Only \`setup\` and \`init\` are public CLI commands for this kit.
 
 - \`README.md\` is user-owned and preserved if it already exists.
 - \`AGENT.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
-- \`.github/\`, \`docs/\`, and \`plans/\` template assets are seeded when missing.
+- \`.agent/\`, \`docs/\`, and \`plans/\` template assets are seeded when missing.
 - Rerun \`agent-bootstrap init\` to repair missing managed assets without replacing an existing repo \`README.md\`.
 
 ## Suggested use
 
 1. Read \`AGENT.md\`.
-2. Pick a specialist from \`.github/agents/\` when the task fits a role.
-3. Use \`.github/commands/\` to kick off repeatable workflows.
-4. Treat \`.github/rules/\` as the guardrails.
-5. Use \`.github/skills/agent-api/\` for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
-6. Use the other top-level specialist folders in \`.github/skills/\` for architecture, API, security, database, operations, and modernization tasks.
-7. Keep \`.github/skills/superpowers/\` for workflow discipline and \`.github/skills/andrej-karpathy-skills/\` for coding principles.
+2. Pick a specialist from \`.agent/agents/\` when the task fits a role.
+3. Use \`.agent/commands/\` to kick off repeatable workflows.
+4. Treat \`.agent/rules/\` as the guardrails.
+5. Use \`.agent/skills/agent-api/\` for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
+6. Use the other top-level specialist folders in \`.agent/skills/\` for architecture, API, security, database, operations, and modernization tasks.
+7. Keep \`.agent/skills/superpowers/\` for workflow discipline and \`.agent/skills/andrej-karpathy-skills/\` for coding principles.
 8. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
 9. Use \`node scripts/agent-memory.js context\` to load repo and vault context.
 `;
@@ -212,7 +214,7 @@ Before meaningful work, read:
 3. \`${vaultRoot}/AGENTS.md\`
 4. \`${projectRoot}/README.md\`
 5. \`${projectRoot}/Tasks.md\`
-6. relevant docs under \`docs/\` and workflows under \`.github/\`
+6. relevant docs under \`docs/\`, agent assets under \`.agent/\`, and workflows under \`.github/workflows/\`
 
 ## Type-specific focus
 

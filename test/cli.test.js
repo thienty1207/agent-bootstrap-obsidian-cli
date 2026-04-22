@@ -85,18 +85,18 @@ function readConfigFile(configHome) {
 
 function assertCoreSkillsPresent(repoRoot) {
   for (const skill of coreSkills) {
-    const skillPath = path.join(repoRoot, '.github', 'skills', skill, 'SKILL.md');
+    const skillPath = path.join(repoRoot, '.agent', 'skills', skill, 'SKILL.md');
     assert.equal(fs.existsSync(skillPath), true, `Expected vendored core skill at ${skillPath}`);
   }
 }
 
 function assertPortableSkillsPresent(repoRoot) {
   for (const skill of portableSkills) {
-    const skillRoot = path.join(repoRoot, '.github', 'skills', skill);
+    const skillRoot = path.join(repoRoot, '.agent', 'skills', skill);
     assert.equal(fs.existsSync(path.join(skillRoot, 'SKILL.md')), true, `Expected portable skill at ${skillRoot}`);
   }
 
-  const agentApiRoot = path.join(repoRoot, '.github', 'skills', 'agent-api');
+  const agentApiRoot = path.join(repoRoot, '.agent', 'skills', 'agent-api');
   for (const file of [
     path.join(agentApiRoot, 'references', 'agent-api-architecture.md'),
     path.join(agentApiRoot, 'references', 'provider-capabilities.md'),
@@ -112,6 +112,22 @@ function assertPortableSkillsPresent(repoRoot) {
   ]) {
     assert.equal(fs.existsSync(file), true, `Expected agent-api asset at ${file}`);
   }
+}
+
+function assertAgentWorkspacePresent(repoRoot) {
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'rules', 'plan', 'brainstorm-before-build.md')), true);
+  assertCoreSkillsPresent(repoRoot);
+  assertPortableSkillsPresent(repoRoot);
+}
+
+function assertLegacyGithubAgentAssetsRemoved(repoRoot) {
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'agents')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'commands')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'rules')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'skills')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
 }
 
 function runRuntime(repoRoot, args, options = {}) {
@@ -280,17 +296,15 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'vault-memory.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'code-standards.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'plans', 'templates', 'feature-implementation-plan.md')));
-  assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'commands', 'plan', 'brainstorm.md')));
-  assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')));
-  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
-  assertCoreSkillsPresent(repoRoot);
-  assertPortableSkillsPresent(repoRoot);
+  assertAgentWorkspacePresent(repoRoot);
+  assertLegacyGithubAgentAssetsRemoved(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'runtime')), false);
   assert.ok(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.githooks', 'post-commit')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'vault.config.json')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'README.md')));
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'copilot-instructions.md')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'workflows')), false);
 
   const readme = readFile(path.join(projectRoot, 'README.md'));
   assert.match(readme, /face-gen-tools/);
@@ -298,7 +312,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
 
   const repoReadme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(repoReadme, /face-gen-tools/i);
-  assert.match(repoReadme, /`\.github\/skills\/agent-api\/`/i);
+  assert.match(repoReadme, /`\.agent\/skills\/agent-api\/`/i);
   assert.doesNotMatch(repoReadme, /prompts\//i);
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
@@ -378,8 +392,9 @@ test('bootstrap preserves an existing root README while adding bridge files', ()
   const readme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(readme, /Keep this content\./);
   assert.doesNotMatch(readme, /VS Code friendly agent workspace layout/i);
-  assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')));
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')), false);
+  assertLegacyGithubAgentAssetsRemoved(repoRoot);
 });
 
 test('generated repo docs explain ownership boundaries and the safe repair path', () => {
@@ -502,7 +517,7 @@ test('doctor internal report is healthy and sync helper restores generated files
   assert.equal(doctor.repo.projectType, 'tool');
   assert.equal(doctor.checks.vaultConfig, true);
   assert.equal(doctor.checks.agentFile, true);
-  assert.equal(doctor.checks.githubTemplate, true);
+  assert.equal(doctor.checks.agentWorkspace, true);
   assert.equal(doctor.checks.docs, true);
   assert.equal(doctor.checks.plans, true);
 
@@ -554,17 +569,16 @@ test('update helper restores repo-local managed assets without clobbering a cust
   assert.equal(result.status, 0, result.stderr);
 
   writeFile(path.join(repoRoot, 'README.md'), '# Custom README\n\nKeep my repo intro.\n');
-  fs.rmSync(path.join(repoRoot, '.github', 'agents', 'planner.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.agent', 'agents', 'planner.md'), { force: true });
   fs.rmSync(path.join(repoRoot, 'scripts', 'agent-memory.js'), { force: true });
   writeFile(path.join(repoRoot, '.github', 'prompts', 'legacy-prompt.md'), '# Legacy prompt\n');
 
   const updateReport = withConfigHome(configHome, () => updateProject({ repoRoot }));
   assert.equal(updateReport.action, 'update');
-  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')), true);
-  assertCoreSkillsPresent(repoRoot);
-  assertPortableSkillsPresent(repoRoot);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')), true);
+  assertAgentWorkspacePresent(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
+  assertLegacyGithubAgentAssetsRemoved(repoRoot);
   assert.match(readFile(path.join(repoRoot, 'README.md')), /Keep my repo intro\./);
 });
 
@@ -608,7 +622,7 @@ test('doctor internal report suggests rerunning init for repairable drift', () =
   result = runCli(['init', repoRoot, '--type', 'desktop'], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
 
-  fs.rmSync(path.join(repoRoot, '.github', 'agents', 'planner.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.agent', 'agents', 'planner.md'), { force: true });
   fs.rmSync(path.join(repoRoot, 'docs', 'project-map.md'), { force: true });
   fs.rmSync(path.join(repoRoot, 'scripts', 'agent-memory.js'), { force: true });
 
@@ -617,7 +631,7 @@ test('doctor internal report suggests rerunning init for repairable drift', () =
   assert.equal(doctor.checks.runtimeScript, false);
   assert.equal(doctor.checks.projectMap, false);
   assert.match(doctor.repo.kitVersion, /^\d+\.\d+\.\d+/);
-  assert.ok(doctor.missing.repoPaths.includes('.github/agents/planner.md'));
+  assert.ok(doctor.missing.repoPaths.includes('.agent/agents/planner.md'));
   assert.ok(doctor.missing.repoPaths.includes('docs/project-map.md'));
   assert.ok(doctor.missing.repoPaths.includes('scripts/agent-memory.js'));
   assert.ok(doctor.suggestedCommands.includes('agent-bootstrap init'));
@@ -978,7 +992,8 @@ test('packed install supports setup from the vault cwd and init from the repo cw
   assert.equal(init.status, 0, init.stderr || init.stdout);
   assert.equal(fs.existsSync(path.join(repoRoot, 'AGENT.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'vault-memory.md')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')), true);
+  assertLegacyGithubAgentAssetsRemoved(repoRoot);
 });
 
 test('global install command can be repeated to update the same package', { timeout: 120000 }, () => {

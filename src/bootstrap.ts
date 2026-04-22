@@ -56,14 +56,7 @@ function copyTemplateIfPresent(vaultRoot: string, projectRoot: string): void {
 
 function copyRepoScaffold(repoRoot: string): void {
   const packageRoot = getPackageRoot();
-  const githubDirs = ['agents', 'commands', 'rules', 'skills'];
-
-  for (const directory of githubDirs) {
-    copyMissingRecursive(
-      path.join(packageRoot, '.github', directory),
-      path.join(repoRoot, '.github', directory),
-    );
-  }
+  copyMissingRecursive(path.join(packageRoot, '.agent'), path.join(repoRoot, '.agent'));
 
   copyMissingRecursive(path.join(packageRoot, 'docs'), path.join(repoRoot, 'docs'));
   copyMissingRecursive(path.join(packageRoot, 'plans'), path.join(repoRoot, 'plans'));
@@ -154,6 +147,10 @@ function applyBootstrap({
   fs.rmSync(path.join(repoRoot, 'AGENTS.md'), { force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'AGENT.md'), { force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.github', 'agents'), { recursive: true, force: true });
+  fs.rmSync(path.join(repoRoot, '.github', 'commands'), { recursive: true, force: true });
+  fs.rmSync(path.join(repoRoot, '.github', 'rules'), { recursive: true, force: true });
+  fs.rmSync(path.join(repoRoot, '.github', 'skills'), { recursive: true, force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'prompts'), { recursive: true, force: true });
 
   const gitInitialized = ensureGitRepository(repoRoot);

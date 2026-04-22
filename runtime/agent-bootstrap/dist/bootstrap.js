@@ -28,10 +28,7 @@ function copyTemplateIfPresent(vaultRoot, projectRoot) {
 }
 function copyRepoScaffold(repoRoot) {
     const packageRoot = (0, kit_1.getPackageRoot)();
-    const githubDirs = ['agents', 'commands', 'rules', 'skills'];
-    for (const directory of githubDirs) {
-        (0, fs_utils_1.copyMissingRecursive)(node_path_1.default.join(packageRoot, '.github', directory), node_path_1.default.join(repoRoot, '.github', directory));
-    }
+    (0, fs_utils_1.copyMissingRecursive)(node_path_1.default.join(packageRoot, '.agent'), node_path_1.default.join(repoRoot, '.agent'));
     (0, fs_utils_1.copyMissingRecursive)(node_path_1.default.join(packageRoot, 'docs'), node_path_1.default.join(repoRoot, 'docs'));
     (0, fs_utils_1.copyMissingRecursive)(node_path_1.default.join(packageRoot, 'plans'), node_path_1.default.join(repoRoot, 'plans'));
 }
@@ -90,6 +87,10 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, 'AGENTS.md'), { force: true });
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'AGENT.md'), { force: true });
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
+    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'agents'), { recursive: true, force: true });
+    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'commands'), { recursive: true, force: true });
+    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'rules'), { recursive: true, force: true });
+    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'skills'), { recursive: true, force: true });
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'prompts'), { recursive: true, force: true });
     const gitInitialized = ensureGitRepository(repoRoot);
     const hooksConfigured = gitInitialized ? configureHooks(repoRoot) : false;

@@ -3,7 +3,7 @@
   "version": "0.1.1",
   "description": "Portable Obsidian vault bootstrap CLI for coding projects",
   "files": [
-    ".github",
+    ".agent",
     "docs",
     "plans",
     "runtime",

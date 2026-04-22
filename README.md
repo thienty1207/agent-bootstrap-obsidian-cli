@@ -66,7 +66,7 @@ agent-bootstrap init "D:\project\nodejs\shop-web"
 - create the project capsule under `Projects/<slug>` in the vault
 - connect the repo to the vault with `vault.config.json`
 - create one root `AGENT.md`
-- scaffold `.github/`, `docs/`, and `plans/`
+- scaffold `.agent/`, `docs/`, and `plans/`
 - create `docs/vault-memory.md`
 - create `docs/project-map.md`
 - create `scripts/agent-memory.js`

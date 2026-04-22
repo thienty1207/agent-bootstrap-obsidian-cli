@@ -33,8 +33,8 @@ function runDoctor({ repoRoot } = {}) {
     const checks = {
         vaultConfig: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'vault.config.json')),
         agentFile: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'AGENT.md')),
-        githubTemplate: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.github', 'agents', 'planner.md'))
-            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.github', 'commands', 'plan', 'brainstorm.md')),
+        agentWorkspace: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.agent', 'agents', 'planner.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')),
         docs: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs')),
         plans: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'plans')),
         gitAvailable: hasGit(),
