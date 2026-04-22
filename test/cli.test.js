@@ -9,6 +9,16 @@ const { syncProject, updateProject, migrateProject } = require('../dist/bootstra
 
 const binPath = path.join(__dirname, '..', 'bin', 'agent-bootstrap.js');
 const repoRoot = path.join(__dirname, '..');
+const coreSkills = [
+  'architecture-designer',
+  'api-designer',
+  'devops-engineer',
+  'monitoring-expert',
+  'secure-code-guardian',
+  'database-optimizer',
+  'sql-pro',
+  'legacy-modernizer',
+];
 
 function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -70,6 +80,13 @@ function parseJson(stdout) {
 
 function readConfigFile(configHome) {
   return JSON.parse(readFile(path.join(configHome, 'config.json')));
+}
+
+function assertCoreSkillsPresent(repoRoot) {
+  for (const skill of coreSkills) {
+    const skillPath = path.join(repoRoot, '.github', 'skills', skill, 'SKILL.md');
+    assert.equal(fs.existsSync(skillPath), true, `Expected vendored core skill at ${skillPath}`);
+  }
 }
 
 function runRuntime(repoRoot, args, options = {}) {
@@ -241,6 +258,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'commands', 'plan', 'brainstorm.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')));
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
+  assertCoreSkillsPresent(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'runtime')), false);
   assert.ok(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.githooks', 'post-commit')));
@@ -254,6 +272,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
 
   const repoReadme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(repoReadme, /face-gen-tools/i);
+  assert.match(repoReadme, /top-level specialist folders in `\.github\/skills\/`/i);
   assert.doesNotMatch(repoReadme, /prompts\//i);
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
@@ -516,6 +535,7 @@ test('update helper restores repo-local managed assets without clobbering a cust
   const updateReport = withConfigHome(configHome, () => updateProject({ repoRoot }));
   assert.equal(updateReport.action, 'update');
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')), true);
+  assertCoreSkillsPresent(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
   assert.match(readFile(path.join(repoRoot, 'README.md')), /Keep my repo intro\./);

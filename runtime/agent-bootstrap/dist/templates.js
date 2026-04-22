@@ -121,7 +121,7 @@ Only \`setup\` and \`init\` are public CLI commands for this kit.
   - \`agents/\`: specialized subagents
   - \`commands/\`: reusable workflow prompts
   - \`rules/\`: workflow and quality guardrails
-  - \`skills/\`: upstream skill libraries and deeper guidance
+  - \`skills/\`: core specialist skills plus the workflow and coding-principles packs
 - \`docs/\`: project documentation and reference notes
 - \`plans/\`: implementation templates and handoff reports
 - \`scripts/\`: repo-local runtime helpers for durable memory write-back
@@ -139,8 +139,10 @@ Only \`setup\` and \`init\` are public CLI commands for this kit.
 2. Pick a specialist from \`.github/agents/\` when the task fits a role.
 3. Use \`.github/commands/\` to kick off repeatable workflows.
 4. Treat \`.github/rules/\` as the guardrails.
-5. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
-6. Use \`node scripts/agent-memory.js context\` to load repo and vault context.
+5. Use the top-level specialist folders in \`.github/skills/\` for architecture, API, security, database, operations, and modernization tasks.
+6. Keep \`.github/skills/superpowers/\` for workflow discipline and \`.github/skills/andrej-karpathy-skills/\` for coding principles.
+7. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
+8. Use \`node scripts/agent-memory.js context\` to load repo and vault context.
 `;
 }
 function typeFocus(projectType) {

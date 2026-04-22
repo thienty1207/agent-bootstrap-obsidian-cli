@@ -1,12 +1,27 @@
 # Skills Library
 
-This folder contains the two upstream skill sources requested for FullAgent:
+This folder contains the core skill set shipped with the kit.
+
+## Workflow and principles
 
 - `superpowers/`
 - `andrej-karpathy-skills/`
 
+## Core specialist skills
+
+- `architecture-designer/`
+- `api-designer/`
+- `devops-engineer/`
+- `monitoring-expert/`
+- `secure-code-guardian/`
+- `database-optimizer/`
+- `sql-pro/`
+- `legacy-modernizer/`
+
 ## Notes
 
-- `superpowers/` contains the copied upstream skill folders from `obra/superpowers`.
-- `andrej-karpathy-skills/` contains the copied upstream skill folder from `forrestchang/andrej-karpathy-skills`.
-- `README.upstream.md` files preserve the upstream overview inside each source folder.
+- `superpowers/` stays responsible for workflow, planning, debugging, verification, and execution discipline.
+- `andrej-karpathy-skills/` stays responsible for coding principles and implementation style.
+- The eight top-level specialist folders above are the default non-conflicting core skills for architecture, backend, security, data, operations, and modernization work.
+- The top-level specialist skills were vendored from `Jeffallan/claude-skills`.
+- `README.upstream.md` files preserve upstream overview or source attribution where needed.
