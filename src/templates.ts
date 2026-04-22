@@ -114,7 +114,6 @@ Only \`setup\` and \`init\` are public CLI commands for this kit.
 - \`.github/\`
   - \`agents/\`: specialized subagents
   - \`commands/\`: reusable workflow prompts
-  - \`prompts/\`: prompt packs and assets
   - \`rules/\`: workflow and quality guardrails
   - \`skills/\`: upstream skill libraries and deeper guidance
 - \`docs/\`: project documentation and reference notes

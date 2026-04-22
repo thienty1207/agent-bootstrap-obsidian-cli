@@ -22,7 +22,7 @@ The CLI bootstraps new coding projects so they get:
 - `src/`: TypeScript CLI implementation
 - `dist/`: built runtime used by the published CLI
 - `test/`: Node test suite
-- `.github/agents`, `.github/commands`, `.github/prompts`, `.github/rules`, `.github/skills`: template assets copied into generated project roots
+- `.github/agents`, `.github/commands`, `.github/rules`, `.github/skills`: template assets copied into generated project roots
 - `.github/workflows/`: CI for this CLI repo itself
 - `docs/` and `plans/`: template assets copied into generated project roots
 

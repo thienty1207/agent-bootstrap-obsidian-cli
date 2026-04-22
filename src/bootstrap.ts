@@ -56,7 +56,7 @@ function copyTemplateIfPresent(vaultRoot: string, projectRoot: string): void {
 
 function copyRepoScaffold(repoRoot: string): void {
   const packageRoot = getPackageRoot();
-  const githubDirs = ['agents', 'commands', 'prompts', 'rules', 'skills'];
+  const githubDirs = ['agents', 'commands', 'rules', 'skills'];
 
   for (const directory of githubDirs) {
     copyMissingRecursive(
@@ -154,6 +154,7 @@ function applyBootstrap({
   fs.rmSync(path.join(repoRoot, 'AGENTS.md'), { force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'AGENT.md'), { force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.github', 'prompts'), { recursive: true, force: true });
 
   const gitInitialized = ensureGitRepository(repoRoot);
   const hooksConfigured = gitInitialized ? configureHooks(repoRoot) : false;

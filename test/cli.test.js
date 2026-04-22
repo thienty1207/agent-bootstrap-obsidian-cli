@@ -240,6 +240,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.ok(fs.existsSync(path.join(repoRoot, 'plans', 'templates', 'feature-implementation-plan.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'commands', 'plan', 'brainstorm.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')));
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
   assert.equal(fs.existsSync(path.join(repoRoot, 'runtime')), false);
   assert.ok(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.githooks', 'post-commit')));
@@ -253,6 +254,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
 
   const repoReadme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(repoReadme, /face-gen-tools/i);
+  assert.doesNotMatch(repoReadme, /prompts\//i);
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
   assert.match(rootAgent, /node scripts\/agent-memory\.js context/);
@@ -509,11 +511,13 @@ test('update helper restores repo-local managed assets without clobbering a cust
   writeFile(path.join(repoRoot, 'README.md'), '# Custom README\n\nKeep my repo intro.\n');
   fs.rmSync(path.join(repoRoot, '.github', 'agents', 'planner.md'), { force: true });
   fs.rmSync(path.join(repoRoot, 'scripts', 'agent-memory.js'), { force: true });
+  writeFile(path.join(repoRoot, '.github', 'prompts', 'legacy-prompt.md'), '# Legacy prompt\n');
 
   const updateReport = withConfigHome(configHome, () => updateProject({ repoRoot }));
   assert.equal(updateReport.action, 'update');
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
   assert.match(readFile(path.join(repoRoot, 'README.md')), /Keep my repo intro\./);
 });
 

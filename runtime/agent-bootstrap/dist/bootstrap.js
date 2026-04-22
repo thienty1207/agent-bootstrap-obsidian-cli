@@ -28,7 +28,7 @@ function copyTemplateIfPresent(vaultRoot, projectRoot) {
 }
 function copyRepoScaffold(repoRoot) {
     const packageRoot = (0, kit_1.getPackageRoot)();
-    const githubDirs = ['agents', 'commands', 'prompts', 'rules', 'skills'];
+    const githubDirs = ['agents', 'commands', 'rules', 'skills'];
     for (const directory of githubDirs) {
         (0, fs_utils_1.copyMissingRecursive)(node_path_1.default.join(packageRoot, '.github', directory), node_path_1.default.join(repoRoot, '.github', directory));
     }
@@ -90,6 +90,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, 'AGENTS.md'), { force: true });
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'AGENT.md'), { force: true });
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
+    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'prompts'), { recursive: true, force: true });
     const gitInitialized = ensureGitRepository(repoRoot);
     const hooksConfigured = gitInitialized ? configureHooks(repoRoot) : false;
     (0, fs_utils_1.writeFile)(node_path_1.default.join(repoRoot, 'vault.config.json'), JSON.stringify({
