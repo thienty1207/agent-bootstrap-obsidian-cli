@@ -19,6 +19,7 @@ const coreSkills = [
   'sql-pro',
   'legacy-modernizer',
 ];
+const portableSkills = ['agent-api'];
 
 function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -86,6 +87,30 @@ function assertCoreSkillsPresent(repoRoot) {
   for (const skill of coreSkills) {
     const skillPath = path.join(repoRoot, '.github', 'skills', skill, 'SKILL.md');
     assert.equal(fs.existsSync(skillPath), true, `Expected vendored core skill at ${skillPath}`);
+  }
+}
+
+function assertPortableSkillsPresent(repoRoot) {
+  for (const skill of portableSkills) {
+    const skillRoot = path.join(repoRoot, '.github', 'skills', skill);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'SKILL.md')), true, `Expected portable skill at ${skillRoot}`);
+  }
+
+  const agentApiRoot = path.join(repoRoot, '.github', 'skills', 'agent-api');
+  for (const file of [
+    path.join(agentApiRoot, 'references', 'agent-api-architecture.md'),
+    path.join(agentApiRoot, 'references', 'provider-capabilities.md'),
+    path.join(agentApiRoot, 'references', 'streaming-contract.md'),
+    path.join(agentApiRoot, 'references', 'tool-calling.md'),
+    path.join(agentApiRoot, 'references', 'structured-output.md'),
+    path.join(agentApiRoot, 'references', 'reliability-and-cost.md'),
+    path.join(agentApiRoot, 'references', 'provider-migration.md'),
+    path.join(agentApiRoot, 'python', 'agent-api.md'),
+    path.join(agentApiRoot, 'typescript', 'agent-api.md'),
+    path.join(agentApiRoot, 'go', 'agent-api.md'),
+    path.join(agentApiRoot, 'rust', 'agent-api.md'),
+  ]) {
+    assert.equal(fs.existsSync(file), true, `Expected agent-api asset at ${file}`);
   }
 }
 
@@ -259,6 +284,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')));
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
   assertCoreSkillsPresent(repoRoot);
+  assertPortableSkillsPresent(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'runtime')), false);
   assert.ok(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')));
   assert.ok(fs.existsSync(path.join(repoRoot, '.githooks', 'post-commit')));
@@ -272,7 +298,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
 
   const repoReadme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(repoReadme, /face-gen-tools/i);
-  assert.match(repoReadme, /top-level specialist folders in `\.github\/skills\/`/i);
+  assert.match(repoReadme, /`\.github\/skills\/agent-api\/`/i);
   assert.doesNotMatch(repoReadme, /prompts\//i);
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
@@ -536,6 +562,7 @@ test('update helper restores repo-local managed assets without clobbering a cust
   assert.equal(updateReport.action, 'update');
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')), true);
   assertCoreSkillsPresent(repoRoot);
+  assertPortableSkillsPresent(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'prompts')), false);
   assert.match(readFile(path.join(repoRoot, 'README.md')), /Keep my repo intro\./);

@@ -22,3 +22,9 @@ Vendored specialist skills:
 - `database-optimizer`
 - `sql-pro`
 - `legacy-modernizer`
+
+Portable derived skill:
+
+- `agent-api` was written for this kit using the structure and portability lessons from `https://github.com/anthropics/skills/tree/main/skills/claude-api`
+- the new skill was rewritten to be provider-agnostic and runtime-agnostic, with lightweight guidance for `Python`, `TypeScript`, `Go`, and `Rust`
+- source inspiration is retained here so future updates can compare against the upstream Apache 2.0 skill responsibly
