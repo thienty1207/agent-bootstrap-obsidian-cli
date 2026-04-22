@@ -9,13 +9,12 @@ This repo builds the portable TypeScript `agent-bootstrap` CLI.
 The CLI bootstraps new coding projects so they get:
 
 - an external Obsidian vault bridge
-- automatic vault skeleton setup from `config set-vault`
+- automatic vault skeleton setup from `setup`
 - root-level workspace instructions
 - a generated `.github/` agent workspace
 - `docs/`, `plans/`, and local runtime helpers
 - typed project kits (`web`, `api`, `tool`, `desktop`, `mobile`, `fullstack`)
 - machine-local project registry and repo diagnostics
-- lifecycle commands for legacy repos and kit refreshes (`migrate`, `update`, `sync`)
 - automatic daily-note touches and project/global memory routing through the repo runtime
 
 ## Important structure
@@ -27,17 +26,24 @@ The CLI bootstraps new coding projects so they get:
 - `.github/workflows/`: CI for this CLI repo itself
 - `docs/` and `plans/`: template assets copied into generated project roots
 
+## Public CLI surface
+
+Only `setup` and `init` are public CLI commands.
+
+This source repo also contains lifecycle helper modules such as `syncProject`, `updateProject`, `migrateProject`, and `runDoctor`, but those are contributor-facing source APIs exercised through tests rather than part of the documented global install flow.
+
 ## Working rules
 
 - Keep the generated project shape aligned with VS Code/Copilot workspace expectations.
 - Keep exactly one root `AGENT.md` in generated repos.
 - Do not reintroduce `.github/copilot-instructions.md` into generated repos unless explicitly requested.
 - Keep `agent-bootstrap` with no arguments as the default one-command bootstrap path.
-- Keep `agent-bootstrap config set-vault [path]` sufficient to initialize a brand new vault path, defaulting to the current working directory when omitted.
+- Keep `agent-bootstrap setup [path]` sufficient to initialize a brand new vault path, defaulting to the current working directory when omitted.
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
 - Keep `context` loading a compact project memory index so large repos do not require broad vault scans.
-- Keep `doctor` actionable: when something is missing, it should point users to `update` or `sync`.
+- Treat `README.md` and `src/cli.ts` as the source of truth for the public CLI surface if an older plan file mentions superseded commands.
+- Keep the managed `AGENT.md` block refreshable without overwriting user-written instructions outside the markers.
 - Verify bootstrap behavior through `test/cli.test.js` and real smoke tests before claiming completion.
 
 ## Fast path
@@ -45,4 +51,4 @@ The CLI bootstraps new coding projects so they get:
 1. Read `README.md`
 2. Inspect `.github/`, `docs/`, and `plans/`
 3. Run `npm test`
-4. Use `agent-bootstrap doctor` and `agent-bootstrap projects list` as the operational checkpoints for the end-user flow
+4. Confirm `README.md` and `src/cli.ts` still agree on the public command surface

@@ -145,7 +145,7 @@ function applyBootstrap({
   const vaultMemoryPath = path.join(repoRoot, 'docs', 'vault-memory.md');
   const currentRootAgent = fs.existsSync(rootAgentPath)
     ? fs.readFileSync(rootAgentPath, 'utf8')
-    : '# Workspace Agent Guide\n';
+    : '';
 
   writeFile(rootAgentPath, upsertManagedBlock(currentRootAgent, rootAgentTemplate(vaultRoot, projectRoot, projectType)));
   writeFile(vaultMemoryPath, vaultMemoryDoc(vaultRoot, projectRoot, projectType));

@@ -83,7 +83,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     const vaultMemoryPath = node_path_1.default.join(repoRoot, 'docs', 'vault-memory.md');
     const currentRootAgent = node_fs_1.default.existsSync(rootAgentPath)
         ? node_fs_1.default.readFileSync(rootAgentPath, 'utf8')
-        : '# Workspace Agent Guide\n';
+        : '';
     (0, fs_utils_1.writeFile)(rootAgentPath, (0, fs_utils_1.upsertManagedBlock)(currentRootAgent, (0, templates_1.rootAgentTemplate)(vaultRoot, projectRoot, projectType)));
     (0, fs_utils_1.writeFile)(vaultMemoryPath, (0, templates_1.vaultMemoryDoc)(vaultRoot, projectRoot, projectType));
     (0, fs_utils_1.writeFile)(node_path_1.default.join(repoRoot, 'docs', 'project-map.md'), (0, templates_1.projectMapTemplate)(repoName, projectSlug, projectType));

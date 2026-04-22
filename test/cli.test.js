@@ -199,6 +199,17 @@ test('global CLI rejects internal commands instead of treating them as project p
   }
 });
 
+test('repo docs stay aligned with the limited public CLI surface', () => {
+  const readme = readFile(path.join(repoRoot, 'README.md'));
+  const agentGuide = readFile(path.join(repoRoot, 'AGENT.md'));
+
+  assert.doesNotMatch(agentGuide, /config set-vault/i);
+  assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
+  assert.doesNotMatch(agentGuide, /projects list/i);
+  assert.match(agentGuide, /public cli surface/i);
+  assert.match(readme, /Only `setup` and `init` are public CLI commands\./);
+});
+
 test('setup stores portable config and init bootstraps current repo', () => {
   const root = makeTempDir('agent-bootstrap-cli-');
   const vaultRoot = path.join(root, 'vault');
@@ -322,6 +333,30 @@ test('bootstrap preserves an existing root README while adding bridge files', ()
   assert.doesNotMatch(readme, /VS Code friendly agent workspace layout/i);
   assert.ok(fs.existsSync(path.join(repoRoot, '.github', 'agents', 'planner.md')));
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')), false);
+});
+
+test('generated repo docs explain ownership boundaries and the safe repair path', () => {
+  const root = makeTempDir('agent-bootstrap-owned-assets-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['init'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const agentGuide = readFile(path.join(repoRoot, 'AGENT.md'));
+  const readme = readFile(path.join(repoRoot, 'README.md'));
+
+  assert.match(agentGuide, /managed by agent-bootstrap/i);
+  assert.match(agentGuide, /outside the managed block/i);
+  assert.equal(agentGuide.split('# Workspace Agent Guide').length - 1, 1);
+  assert.match(readme, /rerun `agent-bootstrap init` to repair missing managed assets/i);
+  assert.match(readme, /README\.md.*user-owned and preserved if it already exists/i);
 });
 
 test('post-commit hook writes a durable worklog note into the vault', () => {

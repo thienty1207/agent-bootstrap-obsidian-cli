@@ -111,6 +111,8 @@ It keeps the agent workspace under \`.github\`, while project-facing documentati
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
 
+Only \`setup\` and \`init\` are public CLI commands for this kit.
+
 ## Structure
 
 - \`AGENT.md\`: main operating contract for AI agents
@@ -124,6 +126,13 @@ Project type: \`${projectType}\`
 - \`docs/\`: project documentation and reference notes
 - \`plans/\`: implementation templates and handoff reports
 - \`scripts/\`: repo-local runtime helpers for durable memory write-back
+
+## Ownership Boundaries
+
+- \`README.md\` is user-owned and preserved if it already exists.
+- \`AGENT.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
+- \`.github/\`, \`docs/\`, and \`plans/\` template assets are seeded when missing.
+- Rerun \`agent-bootstrap init\` to repair missing managed assets without replacing an existing repo \`README.md\`.
 
 ## Suggested use
 
@@ -172,6 +181,9 @@ function typeFocus(projectType) {
 }
 function rootAgentTemplate(vaultRoot, projectRoot, projectType) {
     return `# Workspace Agent Guide
+
+This section is managed by agent-bootstrap.
+Put repo-specific instructions outside the managed block so rerunning \`agent-bootstrap init\` can safely refresh the bridge files.
 
 Read this file first if you are working in this repository.
 

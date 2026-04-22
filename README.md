@@ -9,6 +9,9 @@ This package is intentionally documented around 4 user-facing actions only:
 3. initialize a project
 4. uninstall the CLI
 
+Only `setup` and `init` are public CLI commands.
+The source repo also contains contributor-only helper modules for lifecycle repair and diagnostics, but the documented global install flow stays intentionally limited to those two commands.
+
 ## 1. Install or update
 
 Use the same command every time:
@@ -71,6 +74,9 @@ agent-bootstrap init "D:\project\nodejs\shop-web"
 - install a git `post-commit` hook that writes commit worklogs into the vault
 
 Existing repo READMEs are preserved.
+
+Rerunning `agent-bootstrap init` is the supported repair path for missing managed repo assets.
+It refreshes the generated bridge files while leaving an existing repo `README.md` in place.
 
 ## 4. Uninstall
 
