@@ -1,11 +1,12 @@
 import path from 'node:path';
 import { loadConfig, saveConfig } from './config';
 import { initProject } from './bootstrap';
+import { getContext } from './context';
 import { ensureVaultScaffold } from './vault';
 
 const INSTALL_COMMAND = 'npm i -g --force @tytybill123/agent-bootstrap';
 const UNINSTALL_COMMAND = 'npm uninstall -g @tytybill123/agent-bootstrap';
-const PUBLIC_COMMANDS = 'Public commands: setup, init. Use --help for quickstart.';
+const PUBLIC_COMMANDS = 'Public commands: setup, init, context. Use --help for quickstart.';
 
 interface ParsedArgs {
   rest: string[];
@@ -60,12 +61,15 @@ function writeHelp(): void {
       'Set up your Obsidian vault once on each machine:',
       '  agent-bootstrap setup [vault-path]',
       '',
-      'Initialize a project in the current folder or at an explicit path:',
-      '  agent-bootstrap init [project-path]',
-      '',
-      'Remove the CLI if you no longer need it:',
-      `  ${UNINSTALL_COMMAND}`,
-    ].join('\n'),
+        'Initialize a project in the current folder or at an explicit path:',
+        '  agent-bootstrap init [project-path]',
+        '',
+        'Load repo and vault context at the start of an AI agent session:',
+        '  agent-bootstrap context',
+        '',
+        'Remove the CLI if you no longer need it:',
+        `  ${UNINSTALL_COMMAND}`,
+      ].join('\n'),
   );
   process.stdout.write('\n');
 }
@@ -96,6 +100,11 @@ export async function main(argv: string[]): Promise<void> {
       vaultRoot: options['vault-root'],
       projectType: options.type,
     }));
+    return;
+  }
+
+  if (command === 'context') {
+    process.stdout.write(`${getContext({ repoRoot: tail[0] })}\n`);
     return;
   }
 

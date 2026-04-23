@@ -2,15 +2,16 @@
 
 Portable CLI for bootstrapping coding projects into an Obsidian-based agent memory system.
 
-This package is intentionally documented around 4 user-facing actions only:
+This package is intentionally documented around 5 user-facing actions only:
 
 1. install or update the CLI
 2. set up the vault once on a machine
 3. initialize a project
-4. uninstall the CLI
+4. load agent context
+5. uninstall the CLI
 
-Only `setup` and `init` are public CLI commands.
-The source repo also contains contributor-only helper modules for lifecycle repair and diagnostics, but the documented global install flow stays intentionally limited to those two commands.
+Only `setup`, `init`, and `context` are public CLI commands.
+The source repo also contains contributor-only helper modules for lifecycle repair and diagnostics, but the documented global install flow stays intentionally limited to those three commands.
 
 ## 1. Install or update
 
@@ -78,7 +79,17 @@ Existing repo READMEs are preserved.
 Rerunning `agent-bootstrap init` is the supported repair path for missing managed repo assets.
 It refreshes the generated bridge files while leaving an existing repo `README.md` in place.
 
-## 4. Uninstall
+## 4. Load context for AI agents
+
+Run this inside a project after `agent-bootstrap init`:
+
+```bash
+agent-bootstrap context
+```
+
+Use it at the start of a fresh AI agent session, or when you want to verify what the agent should read. It loads the repo guide, `.agent` guide, project map, vault bridge, project tasks, decisions, today's daily note, and the compact memory index.
+
+## 5. Uninstall
 
 ```bash
 npm uninstall -g @tytybill123/agent-bootstrap

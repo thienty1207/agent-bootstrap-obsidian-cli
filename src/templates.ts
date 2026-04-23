@@ -105,7 +105,7 @@ It keeps the agent workspace under \`.agent\`, while GitHub automation stays und
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
 
-Only \`setup\` and \`init\` are public CLI commands for this kit.
+Only \`setup\`, \`init\`, and \`context\` are public CLI commands for this kit.
 
 ## Structure
 
@@ -133,7 +133,7 @@ Only \`setup\` and \`init\` are public CLI commands for this kit.
 ## Suggested use
 
 1. Read \`AGENT.md\`.
-2. Run \`node scripts/agent-memory.js context\` to load repo and vault context automatically.
+2. Run \`agent-bootstrap context\` to load repo and vault context automatically.
 3. Read \`.agent/README.md\` for how \`agents/\`, \`commands/\`, \`rules/\`, and \`skills/\` fit together.
 4. Pick a specialist from \`.agent/agents/\` when the task fits a role.
 5. Use \`.agent/commands/\` to kick off repeatable workflows.
@@ -221,9 +221,9 @@ ${typeFocus(projectType).join('\n')}
 
 ## Fast paths
 
-- \`node scripts/agent-memory.js context\`
+- \`agent-bootstrap context\`
 
-Running the repo-local \`context\` command should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, loads \`README.md\` plus \`.agent/README.md\`, and includes the project memory index so the agent does not need to scan the vault manually.
+Running \`agent-bootstrap context\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, loads \`README.md\` plus \`.agent/README.md\`, and includes the project memory index so the agent does not need to scan the vault manually.
 
 ## Write-back rules
 
@@ -243,7 +243,8 @@ The repo runtime handles the low-friction automation:
 
 ## Repo-local runtime
 
-- \`node scripts/agent-memory.js <context|task|decision|research|note>\`
+- \`agent-bootstrap context\` for read-only session context
+- \`node scripts/agent-memory.js <task|decision|research|note>\` for write-back
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 `;
 }

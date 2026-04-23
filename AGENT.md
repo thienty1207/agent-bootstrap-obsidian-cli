@@ -28,7 +28,7 @@ The CLI bootstraps new coding projects so they get:
 
 ## Public CLI surface
 
-Only `setup` and `init` are public CLI commands.
+Only `setup`, `init`, and `context` are public CLI commands.
 
 This source repo also contains lifecycle helper modules such as `syncProject`, `updateProject`, `migrateProject`, and `runDoctor`, but those are contributor-facing source APIs exercised through tests rather than part of the documented global install flow.
 
@@ -40,6 +40,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Do not reintroduce legacy agent assets under `.github/agents`, `.github/commands`, `.github/rules`, or `.github/skills`.
 - Keep `agent-bootstrap` with no arguments as the default one-command bootstrap path.
 - Keep `agent-bootstrap setup [path]` sufficient to initialize a brand new vault path, defaulting to the current working directory when omitted.
+- Keep `agent-bootstrap context` as the easy public command agents run at the start of a fresh project session.
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
 - Keep `context` loading a compact project memory index so large repos do not require broad vault scans.
@@ -53,3 +54,4 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 2. Inspect `.agent/`, `.github/workflows/`, `docs/`, and `plans/`
 3. Run `npm test`
 4. Confirm `README.md` and `src/cli.ts` still agree on the public command surface
+5. In generated projects, use `agent-bootstrap context` as the first-step context loader for AI sessions

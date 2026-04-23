@@ -1,6 +1,6 @@
 # Agent Workspace Guide
 
-This folder is the local operating kit for AI work in this repo. Read this file after `AGENT.md` and `docs/project-map.md`, or use `node scripts/agent-memory.js context` to load it automatically.
+This folder is the local operating kit for AI work in this repo. Read this file after `AGENT.md` and `docs/project-map.md`, or use `agent-bootstrap context` to load it automatically.
 
 ## How the four folders work together
 
@@ -20,7 +20,7 @@ This folder is the local operating kit for AI work in this repo. Read this file 
 
 ## Default flow
 
-1. Run `node scripts/agent-memory.js context` at the start of a fresh session.
+1. Run `agent-bootstrap context` at the start of a fresh session.
 2. Read the task and choose whether a specialist in `agents/` is useful.
 3. If the task matches a workflow in `commands/`, use that command as the starting script.
 4. Apply the matching files in `rules/` as non-negotiable guardrails.

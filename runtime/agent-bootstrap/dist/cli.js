@@ -7,10 +7,11 @@ exports.main = main;
 const node_path_1 = __importDefault(require("node:path"));
 const config_1 = require("./config");
 const bootstrap_1 = require("./bootstrap");
+const context_1 = require("./context");
 const vault_1 = require("./vault");
 const INSTALL_COMMAND = 'npm i -g --force @tytybill123/agent-bootstrap';
 const UNINSTALL_COMMAND = 'npm uninstall -g @tytybill123/agent-bootstrap';
-const PUBLIC_COMMANDS = 'Public commands: setup, init. Use --help for quickstart.';
+const PUBLIC_COMMANDS = 'Public commands: setup, init, context. Use --help for quickstart.';
 function parseFlags(args) {
     const options = {};
     const rest = [];
@@ -54,6 +55,9 @@ function writeHelp() {
         'Initialize a project in the current folder or at an explicit path:',
         '  agent-bootstrap init [project-path]',
         '',
+        'Load repo and vault context at the start of an AI agent session:',
+        '  agent-bootstrap context',
+        '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
     ].join('\n'));
@@ -81,6 +85,10 @@ async function main(argv) {
             vaultRoot: options['vault-root'],
             projectType: options.type,
         }));
+        return;
+    }
+    if (command === 'context') {
+        process.stdout.write(`${(0, context_1.getContext)({ repoRoot: tail[0] })}\n`);
         return;
     }
     throw new Error(`Unknown command "${command}". ${PUBLIC_COMMANDS}`);

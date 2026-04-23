@@ -230,7 +230,7 @@ test('setup command is a direct alias for configuring the vault root', () => {
   assert.equal(fs.existsSync(path.join(vaultRoot, 'AGENTS.md')), true);
 });
 
-test('--help prints the four-command quickstart flow', () => {
+test('--help prints the quickstart flow', () => {
   const root = makeTempDir('agent-bootstrap-help-');
   const configHome = path.join(root, 'config-home');
   const workspaceRoot = path.join(root, 'workspace');
@@ -242,6 +242,7 @@ test('--help prints the four-command quickstart flow', () => {
   assert.match(result.stdout, /npm i -g --force @tytybill123\/agent-bootstrap/);
   assert.match(result.stdout, /agent-bootstrap setup/);
   assert.match(result.stdout, /agent-bootstrap init/);
+  assert.match(result.stdout, /agent-bootstrap context/);
   assert.match(result.stdout, /npm uninstall -g @tytybill123\/agent-bootstrap/);
 });
 
@@ -252,10 +253,10 @@ test('global CLI rejects internal commands instead of treating them as project p
 
   fs.mkdirSync(workspaceRoot, { recursive: true });
 
-  for (const command of ['context', 'memory', 'doctor', 'update', 'migrate', 'sync', 'projects', 'config', 'new']) {
+  for (const command of ['memory', 'doctor', 'update', 'migrate', 'sync', 'projects', 'config', 'new']) {
     const result = runCli([command], { configHome, cwd: workspaceRoot });
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Public commands: setup, init/i);
+    assert.match(result.stderr, /Public commands: setup, init, context/i);
   }
 });
 
@@ -267,7 +268,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
   assert.match(agentGuide, /public cli surface/i);
-  assert.match(readme, /Only `setup` and `init` are public CLI commands\./);
+  assert.match(readme, /Only `setup`, `init`, and `context` are public CLI commands\./);
 });
 
 test('setup stores portable config and init bootstraps current repo', () => {
@@ -318,7 +319,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.doesNotMatch(repoReadme, /prompts\//i);
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
-  assert.match(rootAgent, /node scripts\/agent-memory\.js context/);
+  assert.match(rootAgent, /agent-bootstrap context/);
   assert.match(rootAgent, /vault/i);
 });
 
@@ -345,6 +346,29 @@ test('context reads repo and vault files from a nested directory', () => {
   assert.match(result.stdout, /Project README/);
   assert.match(result.stdout, /# Tasks/);
   assert.match(result.stdout, /How the four folders work together/i);
+});
+
+test('global context command reads repo and vault files from the current project', () => {
+  const root = makeTempDir('agent-bootstrap-global-context-');
+  const repoRoot = path.join(root, 'repo');
+  const nested = path.join(repoRoot, 'src', 'deep');
+  const vaultRoot = path.join(root, 'vault');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(nested, { recursive: true });
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['init'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['context'], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Repo AGENT/);
+  assert.match(result.stdout, /Repo README/);
+  assert.match(result.stdout, /Agent Workspace Guide/);
+  assert.match(result.stdout, /Vault AGENTS/);
+  assert.match(result.stdout, /Project Memory Index/);
 });
 
 test('daily note log entries stay inside the Agent Log section', () => {
