@@ -6,6 +6,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { runDoctor } = require('../dist/doctor');
 const { syncProject, updateProject, migrateProject } = require('../dist/bootstrap');
+const { syncSeededScaffold } = require('../dist/scaffold');
 
 const binPath = path.join(__dirname, '..', 'bin', 'agent-bootstrap.js');
 const repoRoot = path.join(__dirname, '..');
@@ -115,6 +116,7 @@ function assertPortableSkillsPresent(repoRoot) {
 }
 
 function assertAgentWorkspacePresent(repoRoot) {
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'README.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'rules', 'plan', 'brainstorm-before-build.md')), true);
@@ -337,9 +339,39 @@ test('context reads repo and vault files from a nested directory', () => {
   result = runRuntime(repoRoot, ['context'], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Repo AGENT/);
+  assert.match(result.stdout, /Repo README/);
+  assert.match(result.stdout, /Agent Workspace Guide/);
   assert.match(result.stdout, /Vault AGENTS/);
   assert.match(result.stdout, /Project README/);
   assert.match(result.stdout, /# Tasks/);
+  assert.match(result.stdout, /How the four folders work together/i);
+});
+
+test('daily note log entries stay inside the Agent Log section', () => {
+  const root = makeTempDir('agent-bootstrap-daily-layout-');
+  const repoRoot = path.join(root, 'repo');
+  const vaultRoot = path.join(root, 'vault');
+  const configHome = path.join(root, 'config-home');
+  const dailyPath = path.join(vaultRoot, 'Daily', `${getTodayString()}.md`);
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['init'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const daily = readFile(dailyPath);
+  const agentLogIndex = daily.indexOf('## Agent Log');
+  const winsIndex = daily.indexOf('## Wins');
+  const bootstrapIndex = daily.indexOf('Bootstrapped project');
+
+  assert.notEqual(agentLogIndex, -1);
+  assert.notEqual(winsIndex, -1);
+  assert.notEqual(bootstrapIndex, -1);
+  assert.ok(agentLogIndex < bootstrapIndex, 'expected log entry after Agent Log heading');
+  assert.ok(bootstrapIndex < winsIndex, 'expected log entry before Wins section');
 });
 
 test('memory task appends to project tasks from nested repo path', () => {
@@ -361,6 +393,33 @@ test('memory task appends to project tasks from nested repo path', () => {
 
   const tasks = readFile(path.join(vaultRoot, 'Projects', 'repo', 'Tasks.md'));
   assert.match(tasks, /Append from repo-local runtime/);
+});
+
+test('rerunning init preserves existing vault project memory files', () => {
+  const root = makeTempDir('agent-bootstrap-preserve-vault-memory-');
+  const repoRoot = path.join(root, 'repo');
+  const vaultRoot = path.join(root, 'vault');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['init'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const projectRoot = path.join(vaultRoot, 'Projects', 'repo');
+  writeFile(path.join(projectRoot, 'README.md'), '# Project README\n\nKeep project overview.\n');
+  writeFile(path.join(projectRoot, 'Tasks.md'), '# Tasks\n\n- [ ] Keep this task\n');
+  writeFile(path.join(projectRoot, 'Decisions.md'), '# Decisions\n\n## Keep this decision\n');
+
+  result = runCli(['init'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  assert.match(readFile(path.join(projectRoot, 'README.md')), /Keep project overview/);
+  assert.match(readFile(path.join(projectRoot, 'Tasks.md')), /Keep this task/);
+  assert.match(readFile(path.join(projectRoot, 'Decisions.md')), /Keep this decision/);
 });
 
 test('init fails clearly when no vault root is configured', () => {
@@ -802,6 +861,42 @@ test('daily note logging deduplicates repeated note writes with the same title',
   const daily = readFile(dailyPath);
   const occurrences = daily.split('Deployment checklist').length - 1;
   assert.equal(occurrences, 1);
+});
+
+test('seeded scaffold sync refreshes untouched kit files and preserves customized files', () => {
+  const root = makeTempDir('agent-bootstrap-seeded-sync-');
+  const sourceRoot = path.join(root, 'source');
+  const targetRoot = path.join(root, 'target');
+  const manifestPath = path.join(targetRoot, '.agent-bootstrap-manifest.json');
+
+  writeFile(path.join(sourceRoot, '.agent', 'README.md'), '# Workspace Guide v1\n');
+  writeFile(path.join(sourceRoot, 'docs', 'project-map.md'), '# Project Map v1\n');
+  writeFile(path.join(sourceRoot, 'plans', 'plan.md'), '# Plan v1\n');
+
+  syncSeededScaffold({
+    sourceRoot,
+    targetRoot,
+    manifestPath,
+    seedPaths: ['.agent', 'docs', 'plans'],
+  });
+
+  assert.equal(readFile(path.join(targetRoot, '.agent', 'README.md')), '# Workspace Guide v1\n');
+  assert.equal(readFile(path.join(targetRoot, 'docs', 'project-map.md')), '# Project Map v1\n');
+
+  writeFile(path.join(sourceRoot, '.agent', 'README.md'), '# Workspace Guide v2\n');
+  writeFile(path.join(sourceRoot, 'docs', 'project-map.md'), '# Project Map v2\n');
+  writeFile(path.join(targetRoot, 'docs', 'project-map.md'), '# Custom Project Map\n');
+
+  syncSeededScaffold({
+    sourceRoot,
+    targetRoot,
+    manifestPath,
+    seedPaths: ['.agent', 'docs', 'plans'],
+  });
+
+  assert.equal(readFile(path.join(targetRoot, '.agent', 'README.md')), '# Workspace Guide v2\n');
+  assert.equal(readFile(path.join(targetRoot, 'docs', 'project-map.md')), '# Custom Project Map\n');
+  assert.equal(fs.existsSync(manifestPath), true);
 });
 
 test('global tarball install succeeds from a packed local repo snapshot', { timeout: 120000 }, () => {

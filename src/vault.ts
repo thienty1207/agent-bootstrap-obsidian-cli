@@ -445,7 +445,20 @@ export function appendDailyLog(vaultRoot: string, entry: string, marker?: string
   }
 
   const line = `- [${getCurrentTimeString()}] ${entry}${marker ? ` ${marker}` : ''}`;
-  fs.writeFileSync(dailyPath, `${next.trimEnd()}\n${line}\n`);
+  const headingStart = next.indexOf('## Agent Log');
+  const contentStart = headingStart + '## Agent Log'.length;
+  const rest = next.slice(contentStart);
+  const nextHeadingOffset = rest.search(/\n## /);
+
+  if (nextHeadingOffset === -1) {
+    fs.writeFileSync(dailyPath, `${next.trimEnd()}\n${line}\n`);
+    return dailyPath;
+  }
+
+  const insertAt = contentStart + nextHeadingOffset;
+  const before = next.slice(0, insertAt).trimEnd();
+  const after = next.slice(insertAt).replace(/^\n+/, '\n\n');
+  fs.writeFileSync(dailyPath, `${before}\n${line}${after}`);
   return dailyPath;
 }
 

@@ -400,7 +400,18 @@ function appendDailyLog(vaultRoot, entry, marker) {
         next = `${next.trimEnd()}\n\n## Agent Log\n`;
     }
     const line = `- [${getCurrentTimeString()}] ${entry}${marker ? ` ${marker}` : ''}`;
-    node_fs_1.default.writeFileSync(dailyPath, `${next.trimEnd()}\n${line}\n`);
+    const headingStart = next.indexOf('## Agent Log');
+    const contentStart = headingStart + '## Agent Log'.length;
+    const rest = next.slice(contentStart);
+    const nextHeadingOffset = rest.search(/\n## /);
+    if (nextHeadingOffset === -1) {
+        node_fs_1.default.writeFileSync(dailyPath, `${next.trimEnd()}\n${line}\n`);
+        return dailyPath;
+    }
+    const insertAt = contentStart + nextHeadingOffset;
+    const before = next.slice(0, insertAt).trimEnd();
+    const after = next.slice(insertAt).replace(/^\n+/, '\n\n');
+    node_fs_1.default.writeFileSync(dailyPath, `${before}\n${line}${after}`);
     return dailyPath;
 }
 function createDailyLogMarker(parts) {

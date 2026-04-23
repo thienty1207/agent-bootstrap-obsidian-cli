@@ -28,6 +28,8 @@ function getContext({ repoRoot }) {
         ['Repo AGENT', node_path_1.default.join(resolvedRepoRoot, 'AGENT.md')],
         ['Vault Bridge', node_path_1.default.join(resolvedRepoRoot, 'docs', 'vault-memory.md')],
         ['Project Map', node_path_1.default.join(resolvedRepoRoot, 'docs', 'project-map.md')],
+        ['Repo README', node_path_1.default.join(resolvedRepoRoot, 'README.md')],
+        ['Agent Workspace Guide', node_path_1.default.join(resolvedRepoRoot, '.agent', 'README.md')],
         ['Vault AGENTS', node_path_1.default.join(config.vault_root, 'AGENTS.md')],
         ['Project README', node_path_1.default.join(config.project_root, 'README.md')],
         ['Project Tasks', node_path_1.default.join(config.project_root, config.tasks_file)],

@@ -118,6 +118,7 @@ Only \`setup\` and \`init\` are public CLI commands for this kit.
 - \`AGENT.md\`: main operating contract for AI agents
 - \`docs/project-map.md\`: fast orientation guide for the current project type
 - \`.agent/\`
+  - \`README.md\`: how the local agent workspace fits together
   - \`agents/\`: specialized subagents
   - \`commands/\`: reusable workflow prompts
   - \`rules/\`: workflow and quality guardrails
@@ -131,21 +132,21 @@ Only \`setup\` and \`init\` are public CLI commands for this kit.
 ## Ownership Boundaries
 
 - \`README.md\` is user-owned and preserved if it already exists.
-- \`AGENT.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
-- \`.agent/\`, \`docs/\`, and \`plans/\` template assets are seeded when missing.
-- Rerun \`agent-bootstrap init\` to repair missing managed assets without replacing an existing repo \`README.md\`.
+- \`AGENT.md\`, \`.agent/README.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
+- \`.agent/\`, \`docs/\`, and \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
+- Customized scaffold files are preserved; rerun \`agent-bootstrap init\` to repair missing managed assets and refresh untouched scaffold assets without replacing an existing repo \`README.md\`.
 
 ## Suggested use
 
 1. Read \`AGENT.md\`.
-2. Pick a specialist from \`.agent/agents/\` when the task fits a role.
-3. Use \`.agent/commands/\` to kick off repeatable workflows.
-4. Treat \`.agent/rules/\` as the guardrails.
-5. Use \`.agent/skills/agent-api/\` for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
-6. Use the other top-level specialist folders in \`.agent/skills/\` for architecture, API, security, database, operations, and modernization tasks.
-7. Keep \`.agent/skills/superpowers/\` for workflow discipline and \`.agent/skills/andrej-karpathy-skills/\` for coding principles.
-8. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
-9. Use \`node scripts/agent-memory.js context\` to load repo and vault context.
+2. Run \`node scripts/agent-memory.js context\` to load repo and vault context automatically.
+3. Read \`.agent/README.md\` for how \`agents/\`, \`commands/\`, \`rules/\`, and \`skills/\` fit together.
+4. Pick a specialist from \`.agent/agents/\` when the task fits a role.
+5. Use \`.agent/commands/\` to kick off repeatable workflows.
+6. Treat \`.agent/rules/\` as the guardrails.
+7. Load the narrowest relevant folder in \`.agent/skills/\` only when the task needs deeper domain or workflow guidance.
+8. Use \`.agent/skills/agent-api/\` specifically for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
+9. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
 `;
 }
 function typeFocus(projectType) {
@@ -211,10 +212,12 @@ Before meaningful work, read:
 
 1. \`docs/vault-memory.md\`
 2. \`docs/project-map.md\`
-3. \`${vaultRoot}/AGENTS.md\`
-4. \`${projectRoot}/README.md\`
-5. \`${projectRoot}/Tasks.md\`
-6. relevant docs under \`docs/\`, agent assets under \`.agent/\`, and workflows under \`.github/workflows/\`
+3. \`README.md\`
+4. \`.agent/README.md\`
+5. \`${vaultRoot}/AGENTS.md\`
+6. \`${projectRoot}/README.md\`
+7. \`${projectRoot}/Tasks.md\`
+8. relevant docs under \`docs/\`, targeted agent assets under \`.agent/\`, and workflows under \`.github/workflows/\`
 
 ## Type-specific focus
 
@@ -224,7 +227,7 @@ ${typeFocus(projectType).join('\n')}
 
 - \`node scripts/agent-memory.js context\`
 
-Running the repo-local \`context\` command should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, and includes the project memory index so the agent does not need to scan the vault manually.
+Running the repo-local \`context\` command should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, loads \`README.md\` plus \`.agent/README.md\`, and includes the project memory index so the agent does not need to scan the vault manually.
 
 ## Write-back rules
 
@@ -333,8 +336,10 @@ ${typeHotspots(projectType).join('\n')}
 
 1. \`AGENT.md\`
 2. \`docs/vault-memory.md\`
-3. project entrypoints and docs closest to the current task
-4. vault \`README.md\`, \`Tasks.md\`, and relevant \`Research/\`
+3. \`README.md\`
+4. \`.agent/README.md\`
+5. project entrypoints and docs closest to the current task
+6. vault \`README.md\`, \`Tasks.md\`, and relevant \`Research/\`
 
 ## Verification path
 
@@ -368,9 +373,11 @@ Before doing meaningful work in this repo, read:
 
 1. \`AGENT.md\`
 2. \`docs/project-map.md\`
-3. \`${vaultRoot}/AGENTS.md\`
-4. \`${projectRoot}/README.md\`
-5. \`${projectRoot}/Tasks.md\`
+3. \`README.md\`
+4. \`.agent/README.md\`
+5. \`${vaultRoot}/AGENTS.md\`
+6. \`${projectRoot}/README.md\`
+7. \`${projectRoot}/Tasks.md\`
 
 ## Write-back rules
 
@@ -390,6 +397,7 @@ The runtime will:
 
 - ensure today's daily note exists
 - append daily worklog entries automatically
+- load repo \`README.md\` and \`.agent/README.md\` so the agent understands the local kit
 - auto-route \`research\` and \`note\` entries to project or global scope by default
 - maintain a compact project memory index so \`context\` loads faster and with better recall
 `;
@@ -510,7 +518,20 @@ function appendDailyLog(vaultRoot, entry, marker) {
   }
 
   const line = \`- [\${getCurrentTimeString()}] \${entry}\${marker ? \` \${marker}\` : ''}\`;
-  writeFile(dailyPath, \`\${next.trimEnd()}\\n\${line}\\n\`);
+  const headingStart = next.indexOf('## Agent Log');
+  const contentStart = headingStart + '## Agent Log'.length;
+  const rest = next.slice(contentStart);
+  const nextHeadingOffset = rest.search(/\\n## /);
+
+  if (nextHeadingOffset === -1) {
+    writeFile(dailyPath, \`\${next.trimEnd()}\\n\${line}\\n\`);
+    return dailyPath;
+  }
+
+  const insertAt = contentStart + nextHeadingOffset;
+  const before = next.slice(0, insertAt).trimEnd();
+  const after = next.slice(insertAt).replace(/^\\n+/, '\\n\\n');
+  writeFile(dailyPath, \`\${before}\\n\${line}\${after}\`);
   return dailyPath;
 }
 
@@ -757,6 +778,8 @@ function getContext(repoRoot, config) {
     ['Repo AGENT', path.join(repoRoot, 'AGENT.md')],
     ['Vault Bridge', path.join(repoRoot, 'docs', 'vault-memory.md')],
     ['Project Map', path.join(repoRoot, 'docs', 'project-map.md')],
+    ['Repo README', path.join(repoRoot, 'README.md')],
+    ['Agent Workspace Guide', path.join(repoRoot, '.agent', 'README.md')],
     ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],

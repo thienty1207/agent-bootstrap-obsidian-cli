@@ -9,7 +9,6 @@ import {
   writeFileIfMissing,
   slugify,
   upsertManagedBlock,
-  copyMissingRecursive,
   findRepoRoot,
 } from './fs-utils';
 import {
@@ -27,6 +26,7 @@ import { getTodayString } from './date';
 import { DEFAULT_PROJECT_TYPE, normalizeProjectType, type ProjectType } from './project-types';
 import { readRepoConfig } from './context';
 import { getKitVersion, getPackageRoot } from './kit';
+import { syncSeededScaffold } from './scaffold';
 import {
   appendDailyLog,
   createMemoryIndexRecord,
@@ -35,6 +35,9 @@ import {
 } from './vault';
 
 type BootstrapAction = 'init' | 'new' | 'sync' | 'update' | 'migrate';
+
+const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
+const SEEDED_REPO_PATHS = ['.agent', 'docs', 'plans'];
 
 interface BootstrapReport {
   action: BootstrapAction;
@@ -56,10 +59,12 @@ function copyTemplateIfPresent(vaultRoot: string, projectRoot: string): void {
 
 function copyRepoScaffold(repoRoot: string): void {
   const packageRoot = getPackageRoot();
-  copyMissingRecursive(path.join(packageRoot, '.agent'), path.join(repoRoot, '.agent'));
-
-  copyMissingRecursive(path.join(packageRoot, 'docs'), path.join(repoRoot, 'docs'));
-  copyMissingRecursive(path.join(packageRoot, 'plans'), path.join(repoRoot, 'plans'));
+  syncSeededScaffold({
+    sourceRoot: packageRoot,
+    targetRoot: repoRoot,
+    manifestPath: path.join(repoRoot, SCAFFOLD_MANIFEST_PATH),
+    seedPaths: SEEDED_REPO_PATHS,
+  });
 }
 
 function ensureGitRepository(repoRoot: string): boolean {
@@ -111,6 +116,7 @@ function applyBootstrap({
   const today = getTodayString();
   const repoName = path.basename(repoRoot);
   const kitVersion = getKitVersion();
+  const projectRootAlreadyExisted = fs.existsSync(projectRoot);
 
   ensureDir(repoRoot);
   ensureVaultScaffold(vaultRoot);
@@ -121,9 +127,10 @@ function applyBootstrap({
     ensureDir(path.join(projectRoot, 'Notes'));
     ensureDir(path.join(projectRoot, 'Artifacts'));
 
-    writeFile(path.join(projectRoot, 'README.md'), projectReadmeTemplate(projectSlug, repoRoot, today, projectType));
-    writeFile(path.join(projectRoot, 'Tasks.md'), tasksTemplate(projectSlug, today));
-    writeFile(path.join(projectRoot, 'Decisions.md'), decisionsTemplate(projectSlug, today));
+    const writeVaultFile = projectRootAlreadyExisted ? writeFileIfMissing : writeFile;
+    writeVaultFile(path.join(projectRoot, 'README.md'), projectReadmeTemplate(projectSlug, repoRoot, today, projectType));
+    writeVaultFile(path.join(projectRoot, 'Tasks.md'), tasksTemplate(projectSlug, today));
+    writeVaultFile(path.join(projectRoot, 'Decisions.md'), decisionsTemplate(projectSlug, today));
   }
 
   copyRepoScaffold(repoRoot);

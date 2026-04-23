@@ -52,6 +52,8 @@ export function getContext({ repoRoot }: { repoRoot?: string }): string {
     ['Repo AGENT', path.join(resolvedRepoRoot, 'AGENT.md')],
     ['Vault Bridge', path.join(resolvedRepoRoot, 'docs', 'vault-memory.md')],
     ['Project Map', path.join(resolvedRepoRoot, 'docs', 'project-map.md')],
+    ['Repo README', path.join(resolvedRepoRoot, 'README.md')],
+    ['Agent Workspace Guide', path.join(resolvedRepoRoot, '.agent', 'README.md')],
     ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],

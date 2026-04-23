@@ -19,7 +19,10 @@ const date_1 = require("./date");
 const project_types_1 = require("./project-types");
 const context_1 = require("./context");
 const kit_1 = require("./kit");
+const scaffold_1 = require("./scaffold");
 const vault_1 = require("./vault");
+const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
+const SEEDED_REPO_PATHS = ['.agent', 'docs', 'plans'];
 function copyTemplateIfPresent(vaultRoot, projectRoot) {
     const templateRoot = node_path_1.default.join(vaultRoot, 'Projects', '_template');
     if (node_fs_1.default.existsSync(templateRoot) && !node_fs_1.default.existsSync(projectRoot)) {
@@ -28,9 +31,12 @@ function copyTemplateIfPresent(vaultRoot, projectRoot) {
 }
 function copyRepoScaffold(repoRoot) {
     const packageRoot = (0, kit_1.getPackageRoot)();
-    (0, fs_utils_1.copyMissingRecursive)(node_path_1.default.join(packageRoot, '.agent'), node_path_1.default.join(repoRoot, '.agent'));
-    (0, fs_utils_1.copyMissingRecursive)(node_path_1.default.join(packageRoot, 'docs'), node_path_1.default.join(repoRoot, 'docs'));
-    (0, fs_utils_1.copyMissingRecursive)(node_path_1.default.join(packageRoot, 'plans'), node_path_1.default.join(repoRoot, 'plans'));
+    (0, scaffold_1.syncSeededScaffold)({
+        sourceRoot: packageRoot,
+        targetRoot: repoRoot,
+        manifestPath: node_path_1.default.join(repoRoot, SCAFFOLD_MANIFEST_PATH),
+        seedPaths: SEEDED_REPO_PATHS,
+    });
 }
 function ensureGitRepository(repoRoot) {
     if (node_fs_1.default.existsSync(node_path_1.default.join(repoRoot, '.git'))) {
@@ -57,6 +63,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     const today = (0, date_1.getTodayString)();
     const repoName = node_path_1.default.basename(repoRoot);
     const kitVersion = (0, kit_1.getKitVersion)();
+    const projectRootAlreadyExisted = node_fs_1.default.existsSync(projectRoot);
     (0, fs_utils_1.ensureDir)(repoRoot);
     (0, vault_1.ensureVaultScaffold)(vaultRoot);
     if (syncVault) {
@@ -64,9 +71,10 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Research'));
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Notes'));
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Artifacts'));
-        (0, fs_utils_1.writeFile)(node_path_1.default.join(projectRoot, 'README.md'), (0, templates_1.projectReadmeTemplate)(projectSlug, repoRoot, today, projectType));
-        (0, fs_utils_1.writeFile)(node_path_1.default.join(projectRoot, 'Tasks.md'), (0, templates_1.tasksTemplate)(projectSlug, today));
-        (0, fs_utils_1.writeFile)(node_path_1.default.join(projectRoot, 'Decisions.md'), (0, templates_1.decisionsTemplate)(projectSlug, today));
+        const writeVaultFile = projectRootAlreadyExisted ? fs_utils_1.writeFileIfMissing : fs_utils_1.writeFile;
+        writeVaultFile(node_path_1.default.join(projectRoot, 'README.md'), (0, templates_1.projectReadmeTemplate)(projectSlug, repoRoot, today, projectType));
+        writeVaultFile(node_path_1.default.join(projectRoot, 'Tasks.md'), (0, templates_1.tasksTemplate)(projectSlug, today));
+        writeVaultFile(node_path_1.default.join(projectRoot, 'Decisions.md'), (0, templates_1.decisionsTemplate)(projectSlug, today));
     }
     copyRepoScaffold(repoRoot);
     if (preserveReadme) {
