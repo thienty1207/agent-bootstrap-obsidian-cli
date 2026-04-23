@@ -108,8 +108,12 @@ The first `setup` creates or repairs a portable vault skeleton:
 - `Archive`
 - `Tools`
 - root `AGENTS.md`
+- root `Init.md` as the graph-friendly vault entrypoint for agents
+- folder README hubs that link back to `[[Init]]`
 - `Projects/_template`
 - `.obsidian` daily note settings
+
+`Init.md` is the first Obsidian note to open when you want a map of the vault. It links the main memory areas together so Graph View forms useful clusters instead of isolated notes.
 
 ## Verification
 

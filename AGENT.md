@@ -16,6 +16,7 @@ The CLI bootstraps new coding projects so they get:
 - typed project kits (`web`, `api`, `tool`, `desktop`, `mobile`, `fullstack`)
 - machine-local project registry and repo diagnostics
 - automatic daily-note touches and project/global memory routing through the repo runtime
+- graph-friendly vault memory hubs such as `Init.md` and folder README notes
 
 ## Important structure
 
@@ -44,6 +45,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
 - Keep `context` loading a compact project memory index so large repos do not require broad vault scans.
+- Keep vault scaffold links centered around `Init.md` so Obsidian Graph View and agent memory navigation stay useful as the vault grows.
 - Treat `README.md` and `src/cli.ts` as the source of truth for the public CLI surface if an older plan file mentions superseded commands.
 - Keep the managed `AGENT.md` block refreshable without overwriting user-written instructions outside the markers.
 - Verify bootstrap behavior through `test/cli.test.js` and real smoke tests before claiming completion.

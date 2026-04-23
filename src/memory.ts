@@ -108,7 +108,7 @@ function createScopedNote({
 
   writeFile(
     notePath,
-    `---\ntype: ${noteType}\nscope: ${routing.scope}\nscope_reason: ${routing.reason}\nproject: ${projectValue}\nproject_type: ${config.project_type}\ncreated: ${today}\nupdated: ${today}\nstatus: draft\ntags:\n${tags}\n---\n\n# ${title}\n\n${content}\n`,
+    `---\ntype: ${noteType}\nscope: ${routing.scope}\nscope_reason: ${routing.reason}\nproject: ${projectValue}\nproject_type: ${config.project_type}\ncreated: ${today}\nupdated: ${today}\nstatus: draft\ntags:\n${tags}\n---\n\n# ${title}\n\n## Links\n- Vault: [[Init]]\n- ${routing.scope === 'global' ? 'Global hub' : 'Project'}: ${routing.scope === 'global' ? '[[Research/README|Research]]' : '[[README]]'}\n\n${content}\n`,
   );
 
   updateProjectMemoryIndex({

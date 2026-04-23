@@ -80,20 +80,22 @@ function vaultAgentTemplate(): string {
 
 This vault is a long-lived workspace for daily notes, research, projects, and custom tools.
 
+Start at [[Init]] when opening the vault or when an agent needs a graph-friendly memory map.
+
 The goal is compounding memory:
 - reusable knowledge stays global
 - project-specific knowledge stays inside each project capsule
 - the agent should not create a new vault for every project by default
 
 ## Folder Map
-- \`Inbox\` for quick capture and triage
-- \`Daily\` for daily notes and logs
-- \`Notes\` for evergreen notes and distilled thinking
-- \`Projects\` for active project capsules
-- \`Research\` for global source-based research and synthesized findings
-- \`Tools\` for scripts, automations, agent workflows, and technical documentation
-- \`Archive\` for inactive or completed material
-- \`Templates\` for reusable note templates
+- [[Inbox/README|Inbox]] for quick capture and triage
+- [[Daily/README|Daily]] for daily notes and logs
+- [[Notes/README|Notes]] for evergreen notes and distilled thinking
+- [[Projects/README|Projects]] for active project capsules
+- [[Research/README|Research]] for global source-based research and synthesized findings
+- [[Tools/README|Tools]] for scripts, automations, agent workflows, and technical documentation
+- [[Archive/README|Archive]] for inactive or completed material
+- [[Templates/README|Templates]] for reusable note templates
 
 ## Routing Rules
 - Reusable knowledge that may help multiple projects goes to \`Research\` or \`Notes\`
@@ -181,8 +183,66 @@ Daily note logging should happen automatically through the repo runtime.
 `;
 }
 
+function vaultInitTemplate(): string {
+  return `# Init
+
+This is the graph-friendly entrypoint for the vault and the first note an AI agent should understand.
+
+## Start Here
+- Agent guide: [[AGENTS]]
+- Daily execution log: [[Daily/README|Daily]]
+- Active project memory: [[Projects/README|Projects]]
+- Reusable research: [[Research/README|Research]]
+- Evergreen notes: [[Notes/README|Notes]]
+- Fast capture: [[Inbox/README|Inbox]]
+- Agent tooling: [[Tools/README|Tools]]
+- Reusable templates: [[Templates/README|Templates]]
+- Archived memory: [[Archive/README|Archive]]
+- Project template: [[Projects/_template/README|Project Template]]
+
+## Agent Runtime
+- In a bootstrapped repo, run \`agent-bootstrap context\` first.
+- Keep short-term execution in [[Daily/README|Daily]].
+- Keep durable project facts in [[Projects/README|Projects]].
+- Keep reusable knowledge in [[Research/README|Research]] or [[Notes/README|Notes]].
+
+## Memory Model
+- The vault can grow without a fixed memory ceiling because notes stay on disk.
+- Agents should load compact context first, then open only the narrow notes needed for the task.
+- Stable cross-project learnings should become reusable notes instead of staying buried in daily logs.
+`;
+}
+
+function folderReadmeTemplate(folder: string): string {
+  const descriptions: Record<string, string> = {
+    Archive: 'Inactive or completed material that may still be useful later.',
+    Daily: 'Daily execution logs, session markers, and work summaries.',
+    Inbox: 'Fast capture for unprocessed ideas, notes, and incoming context.',
+    Notes: 'Evergreen notes and distilled knowledge that can help future work.',
+    Projects: 'Project capsules with tasks, decisions, research, notes, and artifacts.',
+    Research: 'Reusable cross-project research, comparisons, and source-based findings.',
+    Templates: 'Reusable templates for daily notes, research notes, and project notes.',
+    Tools: 'Scripts, automations, agent workflows, and technical documentation.',
+  };
+
+  return `# ${folder}
+
+${descriptions[folder] || 'Vault memory folder.'}
+
+## Links
+- Vault entrypoint: [[Init]]
+- Agent guide: [[AGENTS]]
+- Projects: [[Projects/README|Projects]]
+- Research: [[Research/README|Research]]
+- Daily: [[Daily/README|Daily]]
+`;
+}
+
 function dailyTemplate(): string {
   return `# {{date:YYYY-MM-DD dddd}}
+
+Vault: [[Init]]
+Area: [[Daily/README|Daily]]
 
 ## Focus
 - 
@@ -206,6 +266,9 @@ function dailyTemplate(): string {
 
 function renderDailyNote(): string {
   return `# ${getTodayString()} ${getWeekdayString()}
+
+Vault: [[Init]]
+Area: [[Daily/README|Daily]]
 
 ## Focus
 - 
@@ -240,6 +303,10 @@ tags:
 
 # Research Title
 
+## Links
+- Vault: [[Init]]
+- Research hub: [[Research/README|Research]]
+
 ## Question
 - 
 
@@ -263,6 +330,12 @@ tags:
 ---
 
 # Project Name
+
+## Links
+- Vault: [[Init]]
+- Projects hub: [[Projects/README|Projects]]
+- Tasks: [[Tasks]]
+- Decisions: [[Decisions]]
 
 ## Goal
 - 
@@ -288,6 +361,15 @@ tags:
 ---
 
 # Project Name
+
+## Links
+- Vault: [[Init]]
+- Projects hub: [[Projects/README|Projects]]
+- Tasks: [[Tasks]]
+- Decisions: [[Decisions]]
+- Research: [[Research]]
+- Notes: [[Notes]]
+- Artifacts: [[Artifacts]]
 
 ## Project Type
 - 
@@ -316,6 +398,10 @@ tags:
 
 # Tasks
 
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
 ## Now
 - [ ] 
 
@@ -341,6 +427,10 @@ tags:
 ---
 
 # Decisions
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
 `;
 }
 
@@ -406,15 +496,19 @@ export function ensureVaultScaffold(vaultRoot: string): void {
   ensureDir(path.join(vaultRoot, 'Projects', '_template', 'Artifacts'));
 
   writeFileIfMissing(path.join(vaultRoot, 'AGENTS.md'), vaultAgentTemplate());
+  writeFileIfMissing(path.join(vaultRoot, 'Init.md'), vaultInitTemplate());
+  for (const folder of DEFAULT_FOLDERS) {
+    writeFileIfMissing(path.join(vaultRoot, folder, 'README.md'), folderReadmeTemplate(folder));
+  }
   writeFileIfMissing(path.join(vaultRoot, 'Templates', 'Daily Note.md'), dailyTemplate());
   writeFileIfMissing(path.join(vaultRoot, 'Templates', 'Research Note.md'), researchTemplate());
   writeFileIfMissing(path.join(vaultRoot, 'Templates', 'Project Note.md'), projectNoteTemplate());
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'README.md'), projectTemplateReadme());
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Tasks.md'), projectTemplateTasks());
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Decisions.md'), projectTemplateDecisions());
-  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Research', 'README.md'), '# Research\n');
-  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Notes', 'README.md'), '# Notes\n');
-  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Artifacts', 'README.md'), '# Artifacts\n');
+  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Research', 'README.md'), '# Research\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
+  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Notes', 'README.md'), '# Notes\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
+  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Artifacts', 'README.md'), '# Artifacts\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
   writeFileIfMissing(path.join(vaultRoot, '.obsidian', 'core-plugins.json'), corePluginsConfig());
   writeFileIfMissing(path.join(vaultRoot, '.obsidian', 'daily-notes.json'), dailyNotesConfig());
   writeFileIfMissing(path.join(vaultRoot, '.obsidian', 'app.json'), appConfig());

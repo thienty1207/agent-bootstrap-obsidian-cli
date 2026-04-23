@@ -47,6 +47,8 @@ tags:
 - Research that generalizes across projects should be moved to global \`Research\` or \`Notes\`
 
 ## Links
+- [[Init]]
+- [[Projects/README|Projects]]
 - [[Tasks]]
 - [[Decisions]]
 - [[Research]]
@@ -66,6 +68,10 @@ tags:
 ---
 
 # Tasks
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
 
 ## Now
 - [ ] 
@@ -92,6 +98,10 @@ tags:
 ---
 
 # Decisions
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
 `;
 }
 
@@ -211,9 +221,10 @@ Before meaningful work, read:
 3. \`README.md\`
 4. \`.agent/README.md\`
 5. \`${vaultRoot}/AGENTS.md\`
-6. \`${projectRoot}/README.md\`
-7. \`${projectRoot}/Tasks.md\`
-8. relevant docs under \`docs/\`, targeted agent assets under \`.agent/\`, and workflows under \`.github/workflows/\`
+6. \`${vaultRoot}/Init.md\`
+7. \`${projectRoot}/README.md\`
+8. \`${projectRoot}/Tasks.md\`
+9. relevant docs under \`docs/\`, targeted agent assets under \`.agent/\`, and workflows under \`.github/workflows/\`
 
 ## Type-specific focus
 
@@ -365,6 +376,7 @@ This repository is paired with an external Obsidian vault for durable agent memo
 ## Paths
 
 - Vault root: \`${vaultRoot}\`
+- Vault init: \`${vaultRoot}/Init.md\`
 - Vault guide: \`${vaultRoot}/AGENTS.md\`
 - Project capsule: \`${projectRoot}\`
 
@@ -377,8 +389,9 @@ Before doing meaningful work in this repo, read:
 3. \`README.md\`
 4. \`.agent/README.md\`
 5. \`${vaultRoot}/AGENTS.md\`
-6. \`${projectRoot}/README.md\`
-7. \`${projectRoot}/Tasks.md\`
+6. \`${vaultRoot}/Init.md\`
+7. \`${projectRoot}/README.md\`
+8. \`${projectRoot}/Tasks.md\`
 
 ## Write-back rules
 
@@ -487,9 +500,21 @@ function ensureVaultScaffold(vaultRoot) {
 
   ensureDir(path.join(vaultRoot, '.obsidian'));
 
+  const initPath = path.join(vaultRoot, 'Init.md');
+  if (!fs.existsSync(initPath)) {
+    writeFile(initPath, \`# Init\\n\\nThis is the graph-friendly entrypoint for the vault and the first note an AI agent should understand.\\n\\n## Start Here\\n- Agent guide: [[AGENTS]]\\n- Daily execution log: [[Daily/README|Daily]]\\n- Active project memory: [[Projects/README|Projects]]\\n- Reusable research: [[Research/README|Research]]\\n- Evergreen notes: [[Notes/README|Notes]]\\n- Fast capture: [[Inbox/README|Inbox]]\\n- Agent tooling: [[Tools/README|Tools]]\\n- Reusable templates: [[Templates/README|Templates]]\\n- Archived memory: [[Archive/README|Archive]]\\n\\n## Agent Runtime\\n- In a bootstrapped repo, run \\\`agent-bootstrap context\\\` first.\\n- Load compact context first, then open only the narrow notes needed for the task.\\n\`);
+  }
+
+  for (const folder of folders) {
+    const readmePath = path.join(vaultRoot, folder, 'README.md');
+    if (!fs.existsSync(readmePath)) {
+      writeFile(readmePath, \`# \${folder}\\n\\n## Links\\n- Vault entrypoint: [[Init]]\\n- Agent guide: [[AGENTS]]\\n- Projects: [[Projects/README|Projects]]\\n- Research: [[Research/README|Research]]\\n- Daily: [[Daily/README|Daily]]\\n\`);
+    }
+  }
+
   const dailyTemplatePath = path.join(vaultRoot, 'Templates', 'Daily Note.md');
   if (!fs.existsSync(dailyTemplatePath)) {
-    writeFile(dailyTemplatePath, \`# {{date:YYYY-MM-DD dddd}}\\n\\n## Focus\\n- \\n\\n## Notes\\n- \\n\\n## Tasks\\n- [ ] \\n\\n## Agent Log\\n- \\n\\n## Wins\\n- \\n\\n## Tomorrow\\n- \\n\`);
+    writeFile(dailyTemplatePath, \`# {{date:YYYY-MM-DD dddd}}\\n\\nVault: [[Init]]\\nArea: [[Daily/README|Daily]]\\n\\n## Focus\\n- \\n\\n## Notes\\n- \\n\\n## Tasks\\n- [ ] \\n\\n## Agent Log\\n- \\n\\n## Wins\\n- \\n\\n## Tomorrow\\n- \\n\`);
   }
 
   const dailySettingsPath = path.join(vaultRoot, '.obsidian', 'daily-notes.json');
@@ -502,7 +527,7 @@ function ensureDailyNote(vaultRoot) {
   ensureVaultScaffold(vaultRoot);
   const dailyPath = path.join(vaultRoot, 'Daily', \`\${getTodayString()}.md\`);
   if (!fs.existsSync(dailyPath)) {
-    writeFile(dailyPath, \`# \${getTodayString()} \${getWeekdayString()}\\n\\n## Focus\\n- \\n\\n## Notes\\n- \\n\\n## Tasks\\n- [ ] \\n\\n## Agent Log\\n\\n## Wins\\n- \\n\\n## Tomorrow\\n- \\n\`);
+    writeFile(dailyPath, \`# \${getTodayString()} \${getWeekdayString()}\\n\\nVault: [[Init]]\\nArea: [[Daily/README|Daily]]\\n\\n## Focus\\n- \\n\\n## Notes\\n- \\n\\n## Tasks\\n- [ ] \\n\\n## Agent Log\\n\\n## Wins\\n- \\n\\n## Tomorrow\\n- \\n\`);
   }
   return dailyPath;
 }
@@ -782,6 +807,7 @@ function getContext(repoRoot, config) {
     ['Project Map', path.join(repoRoot, 'docs', 'project-map.md')],
     ['Repo README', path.join(repoRoot, 'README.md')],
     ['Agent Workspace Guide', path.join(repoRoot, '.agent', 'README.md')],
+    ['Vault Init', path.join(config.vault_root, 'Init.md')],
     ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],
@@ -876,7 +902,9 @@ function createNote(config, noteType, title, content, scope, extraTags = []) {
     ? \`tags:\\n\${extraTags.map((tag) => \`  - \${tag}\`).join('\\n')}\\n\`
     : '';
   const notePath = path.join(targetDir, \`\${today} \${safeTitle}.md\`);
-  writeFile(notePath, \`---\\ntype: \${noteType}\\nscope: \${resolvedScope}\\nscope_reason: \${routing.reason}\\nproject: \${resolvedScope === 'global' ? '' : config.project_slug}\\nproject_type: \${config.project_type}\\ncreated: \${today}\\nupdated: \${today}\\nstatus: draft\\n\${tags}---\\n\\n# \${title}\\n\\n\${content}\\n\`);
+  const hubLink = resolvedScope === 'global' ? '[[Research/README|Research]]' : '[[README]]';
+  const hubLabel = resolvedScope === 'global' ? 'Global hub' : 'Project';
+  writeFile(notePath, \`---\\ntype: \${noteType}\\nscope: \${resolvedScope}\\nscope_reason: \${routing.reason}\\nproject: \${resolvedScope === 'global' ? '' : config.project_slug}\\nproject_type: \${config.project_type}\\ncreated: \${today}\\nupdated: \${today}\\nstatus: draft\\n\${tags}---\\n\\n# \${title}\\n\\n## Links\\n- Vault: [[Init]]\\n- \${hubLabel}: \${hubLink}\\n\\n\${content}\\n\`);
   updateProjectMemoryIndex({
     projectRoot: config.project_root,
     projectSlug: config.project_slug,

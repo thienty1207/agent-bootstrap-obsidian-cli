@@ -74,7 +74,7 @@ function createScopedNote({ config, repoRoot, noteType, title, content, scope, }
     const notePath = node_path_1.default.join(targetDir, `${today} ${safeTitle}.md`);
     const projectValue = routing.scope === 'global' ? '' : config.project_slug;
     const tags = noteType === 'research' ? '  - research' : '  - note';
-    (0, fs_utils_1.writeFile)(notePath, `---\ntype: ${noteType}\nscope: ${routing.scope}\nscope_reason: ${routing.reason}\nproject: ${projectValue}\nproject_type: ${config.project_type}\ncreated: ${today}\nupdated: ${today}\nstatus: draft\ntags:\n${tags}\n---\n\n# ${title}\n\n${content}\n`);
+    (0, fs_utils_1.writeFile)(notePath, `---\ntype: ${noteType}\nscope: ${routing.scope}\nscope_reason: ${routing.reason}\nproject: ${projectValue}\nproject_type: ${config.project_type}\ncreated: ${today}\nupdated: ${today}\nstatus: draft\ntags:\n${tags}\n---\n\n# ${title}\n\n## Links\n- Vault: [[Init]]\n- ${routing.scope === 'global' ? 'Global hub' : 'Project'}: ${routing.scope === 'global' ? '[[Research/README|Research]]' : '[[README]]'}\n\n${content}\n`);
     (0, vault_1.updateProjectMemoryIndex)({
         projectRoot: config.project_root,
         projectSlug: config.project_slug,

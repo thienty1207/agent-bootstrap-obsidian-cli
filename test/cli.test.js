@@ -185,6 +185,7 @@ test('setup initializes a portable vault skeleton on an empty path', () => {
   assert.equal(result.status, 0, result.stderr);
 
   assert.equal(fs.existsSync(path.join(vaultRoot, 'AGENTS.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultRoot, 'Init.md')), true);
   assert.equal(fs.existsSync(path.join(vaultRoot, 'Daily')), true);
   assert.equal(fs.existsSync(path.join(vaultRoot, 'Templates', 'Daily Note.md')), true);
   assert.equal(fs.existsSync(path.join(vaultRoot, 'Projects', '_template', 'README.md')), true);
@@ -192,6 +193,31 @@ test('setup initializes a portable vault skeleton on an empty path', () => {
   assert.equal(fs.existsSync(path.join(vaultRoot, 'Notes')), true);
   assert.equal(fs.existsSync(path.join(vaultRoot, '.obsidian', 'core-plugins.json')), true);
   assert.equal(fs.existsSync(path.join(vaultRoot, '.obsidian', 'daily-notes.json')), true);
+
+  for (const folder of ['Archive', 'Daily', 'Inbox', 'Notes', 'Projects', 'Research', 'Templates', 'Tools']) {
+    assert.equal(fs.existsSync(path.join(vaultRoot, folder, 'README.md')), true);
+  }
+
+  const init = readFile(path.join(vaultRoot, 'Init.md'));
+  assert.match(init, /\[\[AGENTS\]\]/);
+  assert.match(init, /\[\[Projects\/README\|Projects\]\]/);
+  assert.match(init, /\[\[Daily\/README\|Daily\]\]/);
+  assert.match(init, /\[\[Research\/README\|Research\]\]/);
+  assert.match(init, /agent-bootstrap context/);
+
+  const vaultAgent = readFile(path.join(vaultRoot, 'AGENTS.md'));
+  assert.match(vaultAgent, /\[\[Init\]\]/);
+
+  const dailyTemplate = readFile(path.join(vaultRoot, 'Templates', 'Daily Note.md'));
+  assert.match(dailyTemplate, /\[\[Init\]\]/);
+
+  const projectTemplate = readFile(path.join(vaultRoot, 'Projects', '_template', 'README.md'));
+  assert.match(projectTemplate, /\[\[Init\]\]/);
+  assert.match(projectTemplate, /\[\[Tasks\]\]/);
+  assert.match(projectTemplate, /\[\[Decisions\]\]/);
+
+  const researchTemplate = readFile(path.join(vaultRoot, 'Templates', 'Research Note.md'));
+  assert.match(researchTemplate, /\[\[Init\]\]/);
 
   const dailySettings = JSON.parse(readFile(path.join(vaultRoot, '.obsidian', 'daily-notes.json')));
   assert.equal(dailySettings.folder, 'Daily');
@@ -312,6 +338,10 @@ test('setup stores portable config and init bootstraps current repo', () => {
   const readme = readFile(path.join(projectRoot, 'README.md'));
   assert.match(readme, /face-gen-tools/);
   assert.match(readme, new RegExp(repoRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  assert.match(readme, /\[\[Init\]\]/);
+  assert.match(readme, /\[\[Tasks\]\]/);
+  assert.match(readme, /\[\[Decisions\]\]/);
+  assert.match(readme, /\[\[Research\]\]/);
 
   const repoReadme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(repoReadme, /face-gen-tools/i);
