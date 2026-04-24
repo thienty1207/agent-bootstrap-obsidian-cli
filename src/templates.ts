@@ -205,7 +205,7 @@ This package is intentionally documented around 4 user-facing actions: install/u
   - \`agents/\`: specialized subagents
   - \`commands/\`: reusable workflow prompts
   - \`rules/\`: workflow and quality guardrails
-  - \`skills/\`: portable agent/backend integration guidance, core specialist skills, plus the workflow and coding-principles packs
+  - \`skills/\`: workflow, coding-principles, frontend, React/Next.js performance, agent/backend, and specialist domain guidance
 - \`.github/\`
   - \`workflows/\`: GitHub Actions and YAML-only automation files
 - \`docs/\`: project documentation and reference notes
@@ -228,9 +228,10 @@ This package is intentionally documented around 4 user-facing actions: install/u
 5. Use \`.agent/commands/\` to kick off repeatable workflows.
 6. Treat \`.agent/rules/\` as the guardrails.
 7. Read \`.agent/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs deeper domain or workflow guidance.
-8. Use \`.agent/skills/agent-api/\` specifically for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
-9. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
-10. Do not recursively scan \`.agent/skills\`; the index is the routing surface.
+8. Use \`.agent/skills/frontend-design/\` for UI design/styling and \`.agent/skills/vercel-react-best-practices/\` for React/Next.js performance only when their triggers match.
+9. Use \`.agent/skills/agent-api/\` specifically for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
+10. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
+11. Do not recursively scan \`.agent/skills\`; the index is the routing surface.
 `;
 }
 

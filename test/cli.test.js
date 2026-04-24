@@ -23,6 +23,7 @@ const coreSkills = [
   'legacy-modernizer',
 ];
 const portableSkills = ['agent-api'];
+const frontendSkills = ['frontend-design', 'vercel-react-best-practices'];
 
 function makeTempDir(prefix) {
   return fs.mkdtempSync(path.join(os.tmpdir(), prefix));
@@ -117,6 +118,35 @@ function assertPortableSkillsPresent(repoRoot) {
   }
 }
 
+function assertFrontendSkillsPresent(repoRoot) {
+  const frontendDesignRoot = path.join(repoRoot, '.agent', 'skills', 'frontend-design');
+  const vercelReactRoot = path.join(repoRoot, '.agent', 'skills', 'vercel-react-best-practices');
+
+  for (const skill of frontendSkills) {
+    const skillRoot = path.join(repoRoot, '.agent', 'skills', skill);
+    assert.equal(fs.existsSync(path.join(skillRoot, 'SKILL.md')), true, `Expected frontend skill at ${skillRoot}`);
+  }
+
+  assert.equal(fs.existsSync(path.join(frontendDesignRoot, 'LICENSE.txt')), true);
+  assert.equal(fs.existsSync(path.join(vercelReactRoot, 'metadata.json')), true);
+  assert.equal(fs.existsSync(path.join(vercelReactRoot, 'FULL_GUIDE.upstream.md')), true);
+  assert.equal(fs.existsSync(path.join(vercelReactRoot, 'AGENTS.md')), false);
+
+  for (const rule of [
+    'async-parallel.md',
+    'bundle-barrel-imports.md',
+    'server-cache-react.md',
+    'rerender-memo.md',
+    'rendering-hydration-no-flicker.md',
+  ]) {
+    assert.equal(
+      fs.existsSync(path.join(vercelReactRoot, 'rules', rule)),
+      true,
+      `Expected Vercel React rule asset ${rule}`,
+    );
+  }
+}
+
 function assertAgentWorkspacePresent(repoRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'README.md')), true);
@@ -128,6 +158,7 @@ function assertAgentWorkspacePresent(repoRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'skills', 'INDEX.md')), true);
   assertCoreSkillsPresent(repoRoot);
   assertPortableSkillsPresent(repoRoot);
+  assertFrontendSkillsPresent(repoRoot);
 }
 
 function assertLegacyGithubAgentAssetsRemoved(repoRoot) {
@@ -466,7 +497,10 @@ test('context modes keep compact context narrow and explain context choices', ()
   assert.match(compact.stdout, /Project Facts/);
   assert.doesNotMatch(compact.stdout, /Today Daily Note/);
   assert.doesNotMatch(compact.stdout, /# Test-Driven Development \(TDD\)/);
+  assert.doesNotMatch(compact.stdout, /# Vercel React Best Practices/);
+  assert.doesNotMatch(compact.stdout, /This skill guides creation of distinctive/);
   assert.doesNotMatch(compact.stdout, /README\.upstream\.md/);
+  assert.doesNotMatch(compact.stdout, /FULL_GUIDE\.upstream\.md/);
 
   const defaultContext = runCli(['context'], { configHome, cwd: nested });
   assert.equal(defaultContext.status, 0, defaultContext.stderr);
@@ -1105,6 +1139,49 @@ test('skill routing prevents domain skills from conflicting with workflow skills
   assert.match(superpowersReadme, /verification-before-completion/);
 });
 
+test('frontend domain skills auto-trigger narrowly without expanding compact context', () => {
+  const skillsRoot = path.join(repoRoot, '.agent', 'skills');
+  const skillsIndex = readFile(path.join(skillsRoot, 'INDEX.md'));
+  const frontendDesign = readFile(path.join(skillsRoot, 'frontend-design', 'SKILL.md'));
+  const vercelReact = readFile(path.join(skillsRoot, 'vercel-react-best-practices', 'SKILL.md'));
+
+  assert.match(skillsIndex, /frontend-design/);
+  assert.match(skillsIndex, /vercel-react-best-practices/);
+  assert.match(skillsIndex, /UI creation, redesign, visual polish/);
+  assert.match(skillsIndex, /React\/Next\.js performance, hydration, RSC, bundle, rerender/);
+  assert.match(skillsIndex, /Do not auto-load both frontend domain skills/);
+  assert.match(skillsIndex, /Load only the targeted Vercel rule file/);
+
+  assert.match(frontendDesign, /## Do Not Use/);
+  assert.match(frontendDesign, /bugfix-only/);
+  assert.match(frontendDesign, /existing design system/);
+  assert.match(frontendDesign, /admin, SaaS, dashboard, or operational tool/);
+  assert.match(frontendDesign, /Superpowers and Karpathy remain higher priority/);
+
+  assert.match(vercelReact, /## Do Not Use/);
+  assert.match(vercelReact, /non-React or non-Next\.js/);
+  assert.match(vercelReact, /micro-optimize/);
+  assert.match(vercelReact, /Load only the relevant rule file/);
+  assert.match(vercelReact, /frontend-design/);
+  assert.match(vercelReact, /Superpowers and Karpathy remain higher priority/);
+
+  const nestedAgentGuides = [];
+  const stack = [skillsRoot];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+      } else if (entry.name === 'AGENTS.md') {
+        nestedAgentGuides.push(path.relative(skillsRoot, entryPath));
+      }
+    }
+  }
+
+  assert.deepEqual(nestedAgentGuides, []);
+});
+
 test('skill index covers shipped skills and skill frontmatter is triggerable', () => {
   const skillsRoot = path.join(repoRoot, '.agent', 'skills');
   const skillsIndex = readFile(path.join(skillsRoot, 'INDEX.md'));
@@ -1120,6 +1197,8 @@ test('skill index covers shipped skills and skill frontmatter is triggerable', (
     'database-optimizer',
     'sql-pro',
     'legacy-modernizer',
+    'frontend-design',
+    'vercel-react-best-practices',
   ];
 
   for (const entry of requiredIndexEntries) {

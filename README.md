@@ -166,6 +166,7 @@ The kit keeps user work and AI work consistent through:
 - `.agent/INDEX.md` for routing
 - `.agent/skills/INDEX.md` before loading any skill
 - workflow skill priority for Superpowers and Karpathy-style coding discipline
+- lazy-loaded frontend and React/Next.js performance skills with narrow auto-trigger gates
 - source-backed `Facts.md`
 - unresolved unknowns in `Open Questions.md`
 - short handoffs in `Handoff.md`
