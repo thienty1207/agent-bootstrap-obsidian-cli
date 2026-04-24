@@ -1,6 +1,6 @@
 export const PROJECT_TYPES = [
-  'web',
-  'api',
+  'frontend',
+  'backend',
   'tool',
   'desktop',
   'mobile',
@@ -14,6 +14,14 @@ export const DEFAULT_PROJECT_TYPE: ProjectType = 'tool';
 export function normalizeProjectType(value?: string): ProjectType {
   if (!value) {
     return DEFAULT_PROJECT_TYPE;
+  }
+
+  if (value === 'web') {
+    return 'frontend';
+  }
+
+  if (value === 'api') {
+    return 'backend';
   }
 
   if (PROJECT_TYPES.includes(value as ProjectType)) {

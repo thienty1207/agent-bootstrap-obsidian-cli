@@ -13,7 +13,7 @@ The CLI bootstraps new coding projects so they get:
 - root-level workspace instructions
 - a generated `.agent/` workspace for agent-readable assets
 - `docs/`, `plans/`, and local runtime helpers
-- typed project kits (`web`, `api`, `tool`, `desktop`, `mobile`, `fullstack`)
+- typed project kits (`frontend`, `backend`, `tool`, `desktop`, `mobile`, `fullstack`)
 - machine-local project registry and repo diagnostics
 - automatic daily-note touches and project/global memory routing through the repo runtime
 - graph-friendly vault memory hubs such as `Init.md` and folder README notes

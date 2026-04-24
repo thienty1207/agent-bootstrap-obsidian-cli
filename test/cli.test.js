@@ -6,6 +6,7 @@ const path = require('node:path');
 const { spawnSync } = require('node:child_process');
 const { runDoctor } = require('../dist/doctor');
 const { syncProject, updateProject, migrateProject } = require('../dist/bootstrap');
+const { PROJECT_TYPES, normalizeProjectType } = require('../dist/project-types');
 const { syncSeededScaffold } = require('../dist/scaffold');
 
 const binPath = path.join(__dirname, '..', 'bin', 'agent-bootstrap.js');
@@ -301,9 +302,25 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
   assert.match(agentGuide, /public cli surface/i);
-  assert.match(readme, /This package is intentionally documented around 4 user-facing actions only/);
-  assert.match(readme, /Optional: Load AI Context Manually/);
-  assert.match(readme, /AI agents should run this automatically from `AGENTS\.md`/);
+  assert.match(readme, /public user flow is intentionally kept to 4 actions/);
+  assert.match(readme, /Optional: AI Context/);
+  assert.match(readme, /AI agents should run it automatically from `AGENTS\.md`/);
+  assert.match(readme, /--type frontend/);
+  assert.match(readme, /--type backend/);
+  assert.doesNotMatch(readme, /--type web/);
+  assert.doesNotMatch(readme, /--type api/);
+});
+
+test('project type labels use frontend and backend while preserving legacy aliases', () => {
+  assert.deepEqual(PROJECT_TYPES, ['frontend', 'backend', 'tool', 'desktop', 'mobile', 'fullstack']);
+  assert.equal(normalizeProjectType('frontend'), 'frontend');
+  assert.equal(normalizeProjectType('backend'), 'backend');
+  assert.equal(normalizeProjectType('web'), 'frontend');
+  assert.equal(normalizeProjectType('api'), 'backend');
+  assert.throws(
+    () => normalizeProjectType('website'),
+    /Supported types: frontend, backend, tool, desktop, mobile, fullstack/,
+  );
 });
 
 test('setup stores portable config and init bootstraps current repo', () => {
@@ -663,25 +680,25 @@ test('init bootstraps a typed project and registers it', () => {
   const vaultRoot = path.join(root, 'vault');
   const workspaceRoot = path.join(root, 'workspace');
   const configHome = path.join(root, 'config-home');
-  const repoRoot = path.join(workspaceRoot, 'shop-web');
+  const repoRoot = path.join(workspaceRoot, 'shop-frontend');
 
   fs.mkdirSync(workspaceRoot, { recursive: true });
 
   let result = runCli(['setup', vaultRoot], { configHome, cwd: workspaceRoot });
   assert.equal(result.status, 0, result.stderr);
 
-  result = runCli(['init', repoRoot, '--type', 'web'], { configHome, cwd: workspaceRoot });
+  result = runCli(['init', repoRoot, '--type', 'frontend'], { configHome, cwd: workspaceRoot });
   assert.equal(result.status, 0, result.stderr);
 
   const repoConfig = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
-  assert.equal(repoConfig.project_type, 'web');
+  assert.equal(repoConfig.project_type, 'frontend');
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENTS.md'));
-  assert.match(rootAgent, /Project type: web/i);
+  assert.match(rootAgent, /Project type: frontend/i);
 
   const projects = JSON.parse(readFile(path.join(configHome, 'projects.json')));
   assert.equal(projects.length, 1);
-  assert.equal(projects[0].projectType, 'web');
+  assert.equal(projects[0].projectType, 'frontend');
   assert.equal(projects[0].repoRoot, repoRoot);
 });
 
@@ -728,7 +745,7 @@ test('typed bootstrap seeds kit metadata and a type-aware project map', () => {
   let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
 
-  result = runCli(['init', repoRoot, '--type', 'web'], { configHome, cwd: repoRoot });
+  result = runCli(['init', repoRoot, '--type', 'frontend'], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
 
   const repoConfig = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
@@ -785,7 +802,7 @@ test('migrate helper upgrades a legacy repo into the single-root-AGENTS kit layo
 
   const migrateReport = withConfigHome(configHome, () => migrateProject({
     repoRoot,
-    projectType: 'api',
+    projectType: 'backend',
   }));
   assert.equal(migrateReport.action, 'migrate');
   assert.equal(fs.existsSync(path.join(repoRoot, 'vault.config.json')), true);
@@ -793,6 +810,7 @@ test('migrate helper upgrades a legacy repo into the single-root-AGENTS kit layo
   assert.equal(fs.existsSync(path.join(repoRoot, legacyAgentFile)), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
   assert.match(readFile(path.join(repoRoot, 'AGENTS.md')), /Keep this note\./);
+  assert.match(readFile(path.join(repoRoot, 'AGENTS.md')), /Project type: backend/);
   assert.match(readFile(path.join(repoRoot, 'README.md')), /Do not overwrite this\./);
 });
 

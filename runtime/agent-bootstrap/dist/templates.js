@@ -241,12 +241,12 @@ This package is intentionally documented around 4 user-facing actions: install/u
 }
 function typeFocus(projectType) {
     switch (projectType) {
-        case 'web':
+        case 'frontend':
             return [
                 '- prioritize UI entrypoints, routes, API boundaries, auth flow, and deployment surface',
                 '- keep UX, state boundaries, and verification paths explicit',
             ];
-        case 'api':
+        case 'backend':
             return [
                 '- prioritize handlers, contracts, auth, persistence boundaries, and rollout safety',
                 '- keep request and response schemas explicit',
@@ -366,12 +366,12 @@ The repo runtime handles the low-friction automation:
 }
 function typeHotspots(projectType) {
     switch (projectType) {
-        case 'web':
+        case 'frontend':
             return [
                 '- routes, page shells, UI state, auth boundaries, and API integrations',
                 '- deployment surface: environment variables, build output, hosting, and preview flow',
             ];
-        case 'api':
+        case 'backend':
             return [
                 '- handlers, schemas, auth, persistence boundaries, and external service contracts',
                 '- deployment surface: runtime config, migrations, health checks, and rollout safety',
@@ -401,12 +401,12 @@ function typeHotspots(projectType) {
 }
 function typeVerificationPath(projectType) {
     switch (projectType) {
-        case 'web':
+        case 'frontend':
             return [
                 'load primary routes and confirm the critical user path works end-to-end',
                 'verify form submission, auth, state transitions, and deployment environment assumptions',
             ];
-        case 'api':
+        case 'backend':
             return [
                 'exercise the main endpoint flow with real request and response shapes',
                 'verify auth, persistence side effects, and backward-compatible contracts',

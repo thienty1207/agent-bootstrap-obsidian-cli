@@ -81,6 +81,7 @@ function writeHelp() {
         '',
         'Initialize a project in the current folder or at an explicit path:',
         '  agent-bootstrap init [project-path]',
+        '  agent-bootstrap init [project-path] --type frontend|backend|tool|desktop|mobile|fullstack',
         '',
         'Optional AI context for agents:',
         '  agent-bootstrap context',
