@@ -2,6 +2,8 @@
 
 This folder contains the core skill set shipped with the kit.
 
+Read `INDEX.md` first during normal agent work. It is the compact routing table for choosing one narrow skill without scanning this whole folder.
+
 ## Workflow and principles
 
 - `superpowers/`
@@ -30,4 +32,4 @@ This folder contains the core skill set shipped with the kit.
 - The eight top-level specialist folders above are the default non-conflicting core skills for architecture, backend, security, data, operations, and modernization work.
 - `agent-api/` is intentionally narrower than the other specialist folders so it does not replace architecture, security, database, DevOps, or migration skills.
 - The top-level specialist skills were vendored from `Jeffallan/claude-skills`.
-- `README.upstream.md` files preserve upstream overview or source attribution where needed.
+- `README.upstream.md` files preserve upstream overview or source attribution where needed; they are not normal task context.

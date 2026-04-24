@@ -14,7 +14,7 @@
 
 **Files:**
 - Modify: `README.md`
-- Modify: `AGENT.md`
+- Modify: `AGENTS.md`
 - Create: `plans/2026-04-21-kit-v2-implementation-plan.md`
 
 - [ ] **Step 1: Define the command surface in the plan and docs**
@@ -59,7 +59,7 @@ Test requirements:
 
 - `agent-bootstrap new web <path>` bootstraps the target path
 - generated `vault.config.json` contains `project_type: "web"`
-- root `AGENT.md` mentions the project type
+- root `AGENTS.md` mentions the project type
 
 - [ ] **Step 2: Add a failing test for the machine-local registry**
 
@@ -73,7 +73,7 @@ Test requirements:
 Test requirements:
 
 - `doctor` in a bootstrapped repo reports configured vault root
-- `doctor` confirms the repo has `AGENT.md`, `vault.config.json`, `.github`, `docs`, `plans`
+- `doctor` confirms the repo has `AGENTS.md`, `vault.config.json`, `.github`, `docs`, `plans`
 
 - [ ] **Step 4: Add a failing test for `sync`**
 
@@ -160,7 +160,7 @@ Add a typed set:
 
 - [ ] **Step 3: Seed type-aware instructions**
 
-Generated `AGENT.md` should include:
+Generated `AGENTS.md` should include:
 
 - project type
 - which docs to read first
@@ -223,7 +223,7 @@ Repeated runs should not create duplicate state.
 
 **Files:**
 - Modify: `README.md`
-- Modify: `AGENT.md`
+- Modify: `AGENTS.md`
 
 - [ ] **Step 1: Update install and usage docs**
 
@@ -252,7 +252,7 @@ Expected: all tests pass
 Run a temporary `npm install -g . --prefix <temp>` flow and verify:
 
 - `agent-bootstrap new web <temp-repo>` works
-- generated repo contains one root `AGENT.md`
+- generated repo contains one root `AGENTS.md`
 - generated repo contains `.github/`, `docs/`, `plans/`
 - `projects list` includes the repo
 - `doctor` returns healthy checks

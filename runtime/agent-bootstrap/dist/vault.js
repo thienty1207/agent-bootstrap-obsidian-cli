@@ -334,6 +334,9 @@ tags:
 - Projects hub: [[Projects/README|Projects]]
 - Tasks: [[Tasks]]
 - Decisions: [[Decisions]]
+- Facts: [[Facts]]
+- Open Questions: [[Open Questions]]
+- Handoff: [[Handoff]]
 - Research: [[Research]]
 - Notes: [[Notes]]
 - Artifacts: [[Artifacts]]
@@ -396,6 +399,66 @@ tags:
 ## Links
 - Vault: [[Init]]
 - Project: [[README]]
+`;
+}
+function projectTemplateFacts() {
+    return `---
+type: facts
+project:
+status: active
+updated: {{date:YYYY-MM-DD}}
+tags:
+  - facts
+---
+
+# Facts
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Current Facts
+-
+`;
+}
+function projectTemplateOpenQuestions() {
+    return `---
+type: questions
+project:
+status: active
+updated: {{date:YYYY-MM-DD}}
+tags:
+  - questions
+---
+
+# Open Questions
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Active
+- [ ]
+`;
+}
+function projectTemplateHandoff() {
+    return `---
+type: handoff
+project:
+status: active
+updated: {{date:YYYY-MM-DD}}
+tags:
+  - handoff
+---
+
+# Handoff
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Latest
+- No handoff recorded yet.
 `;
 }
 function corePluginsConfig() {
@@ -464,6 +527,9 @@ function ensureVaultScaffold(vaultRoot) {
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'README.md'), projectTemplateReadme());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Tasks.md'), projectTemplateTasks());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Decisions.md'), projectTemplateDecisions());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Facts.md'), projectTemplateFacts());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Open Questions.md'), projectTemplateOpenQuestions());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Handoff.md'), projectTemplateHandoff());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Research', 'README.md'), '# Research\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Notes', 'README.md'), '# Notes\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Artifacts', 'README.md'), '# Artifacts\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
@@ -520,7 +586,29 @@ function createEmptyIndex(projectSlug, projectType) {
             decisions: [],
             research: [],
             notes: [],
+            facts: [],
+            questions: [],
+            handoffs: [],
             daily: [],
+        },
+    };
+}
+function normalizeMemoryIndex(index, projectSlug, projectType) {
+    return {
+        project: {
+            slug: index.project?.slug || projectSlug,
+            projectType: index.project?.projectType || projectType,
+            updatedAt: index.project?.updatedAt || (0, date_1.getIsoTimestamp)(),
+        },
+        recent: {
+            tasks: index.recent?.tasks || [],
+            decisions: index.recent?.decisions || [],
+            research: index.recent?.research || [],
+            notes: index.recent?.notes || [],
+            facts: index.recent?.facts || [],
+            questions: index.recent?.questions || [],
+            handoffs: index.recent?.handoffs || [],
+            daily: index.recent?.daily || [],
         },
     };
 }
@@ -534,7 +622,7 @@ function readProjectMemoryIndex(projectRoot, projectSlug, projectType) {
         return createEmptyIndex(projectSlug, projectType);
     }
     try {
-        return JSON.parse(raw);
+        return normalizeMemoryIndex(JSON.parse(raw), projectSlug, projectType);
     }
     catch {
         return createEmptyIndex(projectSlug, projectType);
@@ -561,6 +649,9 @@ function formatProjectMemoryIndex(index) {
         ['Recent Decisions', index.recent.decisions],
         ['Recent Research', index.recent.research],
         ['Recent Notes', index.recent.notes],
+        ['Recent Facts', index.recent.facts],
+        ['Recent Questions', index.recent.questions],
+        ['Recent Handoffs', index.recent.handoffs],
         ['Recent Daily Events', index.recent.daily],
     ];
     const lines = [

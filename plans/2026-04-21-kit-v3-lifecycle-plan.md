@@ -15,7 +15,7 @@
 **Files:**
 - Create: `plans/2026-04-21-kit-v3-lifecycle-plan.md`
 - Modify: `README.md`
-- Modify: `AGENT.md`
+- Modify: `AGENTS.md`
 
 - [ ] **Step 1: Lock the command additions**
 

@@ -54,6 +54,76 @@ function appendDecision(config, title, content) {
     (0, vault_1.appendDailyLog)(config.vault_root, `Decision recorded for \`${config.project_slug}\`: ${title}`, (0, vault_1.buildMemoryLogMarker)({ kind: 'decision', projectSlug: config.project_slug, title, scope: 'project' }));
     return decisionsPath;
 }
+function appendFact(config, title, content) {
+    const factsPath = node_path_1.default.join(config.project_root, config.facts_file || 'Facts.md');
+    const existing = node_fs_1.default.existsSync(factsPath) ? node_fs_1.default.readFileSync(factsPath, 'utf8') : '# Facts\n';
+    const today = (0, date_1.getTodayString)();
+    const entry = `\n## ${title}\n- Updated: ${today}\n- Fact: ${content}\n`;
+    node_fs_1.default.writeFileSync(factsPath, `${existing.trimEnd()}\n${entry}`);
+    (0, vault_1.updateProjectMemoryIndex)({
+        projectRoot: config.project_root,
+        projectSlug: config.project_slug,
+        projectType: config.project_type,
+        bucket: 'facts',
+        item: (0, vault_1.createMemoryIndexRecord)({
+            kind: 'fact',
+            title,
+            preview: content,
+            scope: 'project',
+            path: factsPath,
+            reason: 'stable project fact',
+        }),
+    });
+    (0, vault_1.appendDailyLog)(config.vault_root, `Fact recorded for \`${config.project_slug}\`: ${title}`, (0, vault_1.buildMemoryLogMarker)({ kind: 'fact', projectSlug: config.project_slug, title, scope: 'project' }));
+    return factsPath;
+}
+function appendQuestion(config, title, content) {
+    const questionsPath = node_path_1.default.join(config.project_root, config.open_questions_file || 'Open Questions.md');
+    const existing = node_fs_1.default.existsSync(questionsPath) ? node_fs_1.default.readFileSync(questionsPath, 'utf8') : '# Open Questions\n';
+    const today = (0, date_1.getTodayString)();
+    const entry = `\n## ${title}\n- Created: ${today}\n- [ ] ${content}\n`;
+    node_fs_1.default.writeFileSync(questionsPath, `${existing.trimEnd()}\n${entry}`);
+    (0, vault_1.updateProjectMemoryIndex)({
+        projectRoot: config.project_root,
+        projectSlug: config.project_slug,
+        projectType: config.project_type,
+        bucket: 'questions',
+        item: (0, vault_1.createMemoryIndexRecord)({
+            kind: 'question',
+            title,
+            preview: content,
+            scope: 'project',
+            path: questionsPath,
+            reason: 'open question for future verification',
+        }),
+    });
+    (0, vault_1.appendDailyLog)(config.vault_root, `Open question recorded for \`${config.project_slug}\`: ${title}`, (0, vault_1.buildMemoryLogMarker)({ kind: 'question', projectSlug: config.project_slug, title, scope: 'project' }));
+    return questionsPath;
+}
+function appendHandoff(config, content) {
+    const handoffPath = node_path_1.default.join(config.project_root, config.handoff_file || 'Handoff.md');
+    const existing = node_fs_1.default.existsSync(handoffPath) ? node_fs_1.default.readFileSync(handoffPath, 'utf8') : '# Handoff\n';
+    const today = (0, date_1.getTodayString)();
+    const title = 'Session handoff';
+    const entry = `\n## ${today} - ${title}\n${content}\n`;
+    node_fs_1.default.writeFileSync(handoffPath, `${existing.trimEnd()}\n${entry}`);
+    (0, vault_1.updateProjectMemoryIndex)({
+        projectRoot: config.project_root,
+        projectSlug: config.project_slug,
+        projectType: config.project_type,
+        bucket: 'handoffs',
+        item: (0, vault_1.createMemoryIndexRecord)({
+            kind: 'handoff',
+            title,
+            preview: content,
+            scope: 'project',
+            path: handoffPath,
+            reason: 'latest session handoff',
+        }),
+    });
+    (0, vault_1.appendDailyLog)(config.vault_root, `Handoff updated for \`${config.project_slug}\``, (0, vault_1.buildMemoryLogMarker)({ kind: 'handoff', projectSlug: config.project_slug, title, scope: 'project' }));
+    return handoffPath;
+}
 function createScopedNote({ config, repoRoot, noteType, title, content, scope, }) {
     const routing = (0, vault_1.resolveRoutingDecision)({
         scope,
@@ -103,6 +173,18 @@ function writeMemory({ repoRoot, mode, title, content, scope, }) {
                 throw new Error('Title is required for decision mode.');
             }
             return appendDecision(config, title, content);
+        case 'fact':
+            if (!title) {
+                throw new Error('Title is required for fact mode.');
+            }
+            return appendFact(config, title, content);
+        case 'question':
+            if (!title) {
+                throw new Error('Title is required for question mode.');
+            }
+            return appendQuestion(config, title, content);
+        case 'handoff':
+            return appendHandoff(config, content);
         case 'research':
         case 'note':
             if (!title) {

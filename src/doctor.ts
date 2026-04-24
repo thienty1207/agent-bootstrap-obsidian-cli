@@ -41,6 +41,9 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     ['README.md', path.join(config.project_root, 'README.md')],
     [config.tasks_file, path.join(config.project_root, config.tasks_file)],
     [config.decisions_file, path.join(config.project_root, config.decisions_file)],
+    [config.facts_file || 'Facts.md', path.join(config.project_root, config.facts_file || 'Facts.md')],
+    [config.open_questions_file || 'Open Questions.md', path.join(config.project_root, config.open_questions_file || 'Open Questions.md')],
+    [config.handoff_file || 'Handoff.md', path.join(config.project_root, config.handoff_file || 'Handoff.md')],
     [config.research_dir, path.join(config.project_root, config.research_dir)],
     [config.notes_dir, path.join(config.project_root, config.notes_dir)],
   ]
@@ -49,7 +52,7 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
 
   const checks = {
     vaultConfig: fs.existsSync(path.join(resolvedRepoRoot, 'vault.config.json')),
-    agentFile: fs.existsSync(path.join(resolvedRepoRoot, 'AGENT.md')),
+    agentFile: fs.existsSync(path.join(resolvedRepoRoot, 'AGENTS.md')),
     agentWorkspace: fs.existsSync(path.join(resolvedRepoRoot, '.agent', 'agents', 'planner.md'))
       && fs.existsSync(path.join(resolvedRepoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')),
     docs: fs.existsSync(path.join(resolvedRepoRoot, 'docs')),

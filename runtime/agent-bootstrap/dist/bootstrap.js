@@ -75,6 +75,9 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
         writeVaultFile(node_path_1.default.join(projectRoot, 'README.md'), (0, templates_1.projectReadmeTemplate)(projectSlug, repoRoot, today, projectType));
         writeVaultFile(node_path_1.default.join(projectRoot, 'Tasks.md'), (0, templates_1.tasksTemplate)(projectSlug, today));
         writeVaultFile(node_path_1.default.join(projectRoot, 'Decisions.md'), (0, templates_1.decisionsTemplate)(projectSlug, today));
+        writeVaultFile(node_path_1.default.join(projectRoot, 'Facts.md'), (0, templates_1.factsTemplate)(projectSlug, today));
+        writeVaultFile(node_path_1.default.join(projectRoot, 'Open Questions.md'), (0, templates_1.openQuestionsTemplate)(projectSlug, today));
+        writeVaultFile(node_path_1.default.join(projectRoot, 'Handoff.md'), (0, templates_1.handoffTemplate)(projectSlug, today));
     }
     copyRepoScaffold(repoRoot);
     if (preserveReadme) {
@@ -84,16 +87,19 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
         (0, fs_utils_1.writeFile)(node_path_1.default.join(repoRoot, 'README.md'), (0, templates_1.repoReadmeTemplate)(repoName, projectSlug, projectType));
     }
     (0, fs_utils_1.writeFile)(node_path_1.default.join(repoRoot, 'scripts', 'agent-memory.js'), (0, templates_1.localRuntimeScriptTemplate)());
-    const rootAgentPath = node_path_1.default.join(repoRoot, 'AGENT.md');
+    const rootAgentsPath = node_path_1.default.join(repoRoot, 'AGENTS.md');
+    const legacyAgentFile = ['AGENT', 'md'].join('.');
+    const legacyRootAgentPath = node_path_1.default.join(repoRoot, legacyAgentFile);
     const vaultMemoryPath = node_path_1.default.join(repoRoot, 'docs', 'vault-memory.md');
-    const currentRootAgent = node_fs_1.default.existsSync(rootAgentPath)
-        ? node_fs_1.default.readFileSync(rootAgentPath, 'utf8')
-        : '';
-    (0, fs_utils_1.writeFile)(rootAgentPath, (0, fs_utils_1.upsertManagedBlock)(currentRootAgent, (0, templates_1.rootAgentTemplate)(vaultRoot, projectRoot, projectType)));
+    const currentRootAgent = node_fs_1.default.existsSync(rootAgentsPath)
+        ? node_fs_1.default.readFileSync(rootAgentsPath, 'utf8')
+        : (node_fs_1.default.existsSync(legacyRootAgentPath) ? node_fs_1.default.readFileSync(legacyRootAgentPath, 'utf8') : '');
+    (0, fs_utils_1.writeFile)(rootAgentsPath, (0, fs_utils_1.upsertManagedBlock)(currentRootAgent, (0, templates_1.rootAgentTemplate)(vaultRoot, projectRoot, projectType)));
     (0, fs_utils_1.writeFile)(vaultMemoryPath, (0, templates_1.vaultMemoryDoc)(vaultRoot, projectRoot, projectType));
     (0, fs_utils_1.writeFile)(node_path_1.default.join(repoRoot, 'docs', 'project-map.md'), (0, templates_1.projectMapTemplate)(repoName, projectSlug, projectType));
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, 'AGENTS.md'), { force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'AGENT.md'), { force: true });
+    node_fs_1.default.rmSync(legacyRootAgentPath, { force: true });
+    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'AGENTS.md'), { force: true });
+    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', legacyAgentFile), { force: true });
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'agents'), { recursive: true, force: true });
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'commands'), { recursive: true, force: true });
@@ -110,6 +116,9 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
         kit_version: kitVersion,
         tasks_file: 'Tasks.md',
         decisions_file: 'Decisions.md',
+        facts_file: 'Facts.md',
+        open_questions_file: 'Open Questions.md',
+        handoff_file: 'Handoff.md',
         research_dir: 'Research',
         notes_dir: 'Notes',
         runtime_script: 'scripts/agent-memory.js',

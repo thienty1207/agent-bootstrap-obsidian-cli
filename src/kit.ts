@@ -12,11 +12,13 @@ const PACKAGE_ROOT_MARKERS = [
 ] as const;
 
 export const MANAGED_REPO_PATHS = [
-  'AGENT.md',
+  'AGENTS.md',
   '.agent-bootstrap-manifest.json',
+  '.agent/INDEX.md',
   '.agent/README.md',
   '.agent/agents/planner.md',
   '.agent/commands/plan/brainstorm.md',
+  '.agent/skills/INDEX.md',
   'docs/vault-memory.md',
   'docs/project-map.md',
   'plans/templates/feature-implementation-plan.md',

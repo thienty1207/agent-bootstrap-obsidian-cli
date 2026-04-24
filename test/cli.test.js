@@ -10,6 +10,7 @@ const { syncSeededScaffold } = require('../dist/scaffold');
 
 const binPath = path.join(__dirname, '..', 'bin', 'agent-bootstrap.js');
 const repoRoot = path.join(__dirname, '..');
+const legacyAgentFile = ['AGENT', 'md'].join('.');
 const coreSkills = [
   'architecture-designer',
   'api-designer',
@@ -116,15 +117,19 @@ function assertPortableSkillsPresent(repoRoot) {
 }
 
 function assertAgentWorkspacePresent(repoRoot) {
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'README.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'rules', 'plan', 'brainstorm-before-build.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'skills', 'INDEX.md')), true);
   assertCoreSkillsPresent(repoRoot);
   assertPortableSkillsPresent(repoRoot);
 }
 
 function assertLegacyGithubAgentAssetsRemoved(repoRoot) {
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'AGENTS.md')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'agents')), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'commands')), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'rules')), false);
@@ -288,7 +293,7 @@ test('global CLI rejects internal commands instead of treating them as project p
 
 test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
-  const agentGuide = readFile(path.join(repoRoot, 'AGENT.md'));
+  const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
@@ -319,9 +324,12 @@ test('setup stores portable config and init bootstraps current repo', () => {
 
   const projectRoot = path.join(vaultRoot, 'Projects', 'face-gen-tools');
   assert.ok(fs.existsSync(path.join(projectRoot, 'README.md')));
-  assert.ok(fs.existsSync(path.join(repoRoot, 'AGENT.md')));
-  assert.equal(fs.existsSync(path.join(repoRoot, 'AGENTS.md')), false);
-  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')), false);
+  assert.ok(fs.existsSync(path.join(projectRoot, 'Facts.md')));
+  assert.ok(fs.existsSync(path.join(projectRoot, 'Open Questions.md')));
+  assert.ok(fs.existsSync(path.join(projectRoot, 'Handoff.md')));
+  assert.ok(fs.existsSync(path.join(repoRoot, 'AGENTS.md')));
+  assert.equal(fs.existsSync(path.join(repoRoot, legacyAgentFile)), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
   assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'vault-memory.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'code-standards.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'plans', 'templates', 'feature-implementation-plan.md')));
@@ -348,8 +356,10 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(repoReadme, /`\.agent\/skills\/agent-api\/`/i);
   assert.doesNotMatch(repoReadme, /prompts\//i);
 
-  const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
+  const rootAgent = readFile(path.join(repoRoot, 'AGENTS.md'));
   assert.match(rootAgent, /agent-bootstrap context/);
+  assert.match(rootAgent, /\.agent\/skills\/INDEX\.md/);
+  assert.match(rootAgent, /Do not recursively scan `.agent\/skills`/);
   assert.match(rootAgent, /vault/i);
 });
 
@@ -369,11 +379,14 @@ test('context reads repo and vault files from a nested directory', () => {
 
   result = runRuntime(repoRoot, ['context'], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Repo AGENT/);
+  assert.match(result.stdout, /Repo AGENTS/);
   assert.match(result.stdout, /Repo README/);
   assert.match(result.stdout, /Agent Workspace Guide/);
   assert.match(result.stdout, /Vault AGENTS/);
   assert.match(result.stdout, /Project README/);
+  assert.match(result.stdout, /Project Facts/);
+  assert.match(result.stdout, /Project Open Questions/);
+  assert.match(result.stdout, /Project Handoff/);
   assert.match(result.stdout, /# Tasks/);
   assert.match(result.stdout, /How the four folders work together/i);
 });
@@ -394,7 +407,7 @@ test('global context command reads repo and vault files from the current project
 
   result = runCli(['context'], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /Repo AGENT/);
+  assert.match(result.stdout, /Repo AGENTS/);
   assert.match(result.stdout, /Repo README/);
   assert.match(result.stdout, /Agent Workspace Guide/);
   assert.match(result.stdout, /Vault AGENTS/);
@@ -467,6 +480,9 @@ test('rerunning init preserves existing vault project memory files', () => {
   writeFile(path.join(projectRoot, 'README.md'), '# Project README\n\nKeep project overview.\n');
   writeFile(path.join(projectRoot, 'Tasks.md'), '# Tasks\n\n- [ ] Keep this task\n');
   writeFile(path.join(projectRoot, 'Decisions.md'), '# Decisions\n\n## Keep this decision\n');
+  writeFile(path.join(projectRoot, 'Facts.md'), '# Facts\n\n## Keep\n- Durable fact\n');
+  writeFile(path.join(projectRoot, 'Open Questions.md'), '# Open Questions\n\n- [ ] Keep question\n');
+  writeFile(path.join(projectRoot, 'Handoff.md'), '# Handoff\n\nKeep handoff.\n');
 
   result = runCli(['init'], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -474,6 +490,9 @@ test('rerunning init preserves existing vault project memory files', () => {
   assert.match(readFile(path.join(projectRoot, 'README.md')), /Keep project overview/);
   assert.match(readFile(path.join(projectRoot, 'Tasks.md')), /Keep this task/);
   assert.match(readFile(path.join(projectRoot, 'Decisions.md')), /Keep this decision/);
+  assert.match(readFile(path.join(projectRoot, 'Facts.md')), /Durable fact/);
+  assert.match(readFile(path.join(projectRoot, 'Open Questions.md')), /Keep question/);
+  assert.match(readFile(path.join(projectRoot, 'Handoff.md')), /Keep handoff/);
 });
 
 test('init fails clearly when no vault root is configured', () => {
@@ -506,7 +525,7 @@ test('bootstrap preserves an existing root README while adding bridge files', ()
   assert.match(readme, /Keep this content\./);
   assert.doesNotMatch(readme, /VS Code friendly agent workspace layout/i);
   assert.ok(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')));
-  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
 });
 
@@ -524,7 +543,7 @@ test('generated repo docs explain ownership boundaries and the safe repair path'
   result = runCli(['init'], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
 
-  const agentGuide = readFile(path.join(repoRoot, 'AGENT.md'));
+  const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
   const readme = readFile(path.join(repoRoot, 'README.md'));
 
   assert.match(agentGuide, /managed by agent-bootstrap/i);
@@ -602,7 +621,7 @@ test('init bootstraps a typed project and registers it', () => {
   const repoConfig = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
   assert.equal(repoConfig.project_type, 'web');
 
-  const rootAgent = readFile(path.join(repoRoot, 'AGENT.md'));
+  const rootAgent = readFile(path.join(repoRoot, 'AGENTS.md'));
   assert.match(rootAgent, /Project type: web/i);
 
   const projects = JSON.parse(readFile(path.join(configHome, 'projects.json')));
@@ -695,7 +714,7 @@ test('update helper restores repo-local managed assets without clobbering a cust
   assert.match(readFile(path.join(repoRoot, 'README.md')), /Keep my repo intro\./);
 });
 
-test('migrate helper upgrades a legacy repo into the single-root-AGENT kit layout', () => {
+test('migrate helper upgrades a legacy repo into the single-root-AGENTS kit layout', () => {
   const root = makeTempDir('agent-bootstrap-migrate-');
   const vaultRoot = path.join(root, 'vault');
   const repoRoot = path.join(root, 'legacy-repo');
@@ -703,8 +722,8 @@ test('migrate helper upgrades a legacy repo into the single-root-AGENT kit layou
 
   fs.mkdirSync(path.join(repoRoot, '.github'), { recursive: true });
   writeFile(path.join(repoRoot, 'README.md'), '# Legacy README\n\nDo not overwrite this.\n');
-  writeFile(path.join(repoRoot, 'AGENTS.md'), '# Legacy root AGENTS\n');
-  writeFile(path.join(repoRoot, '.github', 'AGENT.md'), '# Legacy github AGENT\n');
+  writeFile(path.join(repoRoot, legacyAgentFile), '# Legacy root agent guide\n\nKeep this note.\n');
+  writeFile(path.join(repoRoot, '.github', legacyAgentFile), '# Legacy github agent guide\n');
 
   let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -715,9 +734,10 @@ test('migrate helper upgrades a legacy repo into the single-root-AGENT kit layou
   }));
   assert.equal(migrateReport.action, 'migrate');
   assert.equal(fs.existsSync(path.join(repoRoot, 'vault.config.json')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'AGENT.md')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'AGENTS.md')), false);
-  assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'AGENT.md')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'AGENTS.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, legacyAgentFile)), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
+  assert.match(readFile(path.join(repoRoot, 'AGENTS.md')), /Keep this note\./);
   assert.match(readFile(path.join(repoRoot, 'README.md')), /Do not overwrite this\./);
 });
 
@@ -878,6 +898,55 @@ test('memory writes build a project memory index and context includes it', () =>
   assert.match(result.stdout, /Project Memory Index/);
   assert.match(result.stdout, /Runtime bridge/);
   assert.match(result.stdout, /Routing strategy/);
+});
+
+test('stable memory writes update project fact question and handoff files', () => {
+  const root = makeTempDir('agent-bootstrap-stable-memory-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['fact', 'Source edits happen in src; dist and runtime dist are generated.', '--title', 'Source of truth']);
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['question', 'Should npm publish wait until the pushed GitHub branch is reviewed?', '--title', 'Publish gate']);
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['handoff', 'Next session should run npm test before publishing 0.1.8.']);
+  assert.equal(result.status, 0, result.stderr);
+
+  const projectRoot = path.join(vaultRoot, 'Projects', 'repo');
+  const facts = readFile(path.join(projectRoot, 'Facts.md'));
+  const questions = readFile(path.join(projectRoot, 'Open Questions.md'));
+  const handoff = readFile(path.join(projectRoot, 'Handoff.md'));
+
+  assert.match(facts, /Source of truth/);
+  assert.match(facts, /Source edits happen in src/);
+  assert.match(questions, /Publish gate/);
+  assert.match(questions, /Should npm publish wait/);
+  assert.match(handoff, /Next session should run npm test/);
+
+  const index = JSON.parse(readFile(path.join(projectRoot, 'Artifacts', 'memory-index.json')));
+  assert.equal(index.recent.facts[0].title, 'Source of truth');
+  assert.equal(index.recent.questions[0].title, 'Publish gate');
+  assert.equal(index.recent.handoffs[0].title, 'Session handoff');
+
+  result = runRuntime(repoRoot, ['context']);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Project Facts/);
+  assert.match(result.stdout, /Source of truth/);
+  assert.match(result.stdout, /Project Open Questions/);
+  assert.match(result.stdout, /Publish gate/);
+  assert.match(result.stdout, /Project Handoff/);
+  assert.match(result.stdout, /Next session should run npm test/);
 });
 
 test('daily note logging deduplicates repeated note writes with the same title', () => {
@@ -1139,7 +1208,8 @@ test('packed install supports setup from the vault cwd and init from the repo cw
     encoding: 'utf8',
   });
   assert.equal(init.status, 0, init.stderr || init.stdout);
-  assert.equal(fs.existsSync(path.join(repoRoot, 'AGENT.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'AGENTS.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, legacyAgentFile)), false);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'vault-memory.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')), true);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);

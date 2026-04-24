@@ -16,7 +16,7 @@ export interface MemoryRoutingDecision {
 
 export interface MemoryIndexRecord {
   ts: string;
-  kind: 'task' | 'decision' | 'research' | 'note' | 'daily';
+  kind: 'task' | 'decision' | 'research' | 'note' | 'daily' | 'fact' | 'question' | 'handoff';
   title: string;
   preview: string;
   scope?: 'project' | 'global';
@@ -35,6 +35,9 @@ export interface ProjectMemoryIndex {
     decisions: MemoryIndexRecord[];
     research: MemoryIndexRecord[];
     notes: MemoryIndexRecord[];
+    facts: MemoryIndexRecord[];
+    questions: MemoryIndexRecord[];
+    handoffs: MemoryIndexRecord[];
     daily: MemoryIndexRecord[];
   };
 }
@@ -367,6 +370,9 @@ tags:
 - Projects hub: [[Projects/README|Projects]]
 - Tasks: [[Tasks]]
 - Decisions: [[Decisions]]
+- Facts: [[Facts]]
+- Open Questions: [[Open Questions]]
+- Handoff: [[Handoff]]
 - Research: [[Research]]
 - Notes: [[Notes]]
 - Artifacts: [[Artifacts]]
@@ -431,6 +437,69 @@ tags:
 ## Links
 - Vault: [[Init]]
 - Project: [[README]]
+`;
+}
+
+function projectTemplateFacts(): string {
+  return `---
+type: facts
+project:
+status: active
+updated: {{date:YYYY-MM-DD}}
+tags:
+  - facts
+---
+
+# Facts
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Current Facts
+-
+`;
+}
+
+function projectTemplateOpenQuestions(): string {
+  return `---
+type: questions
+project:
+status: active
+updated: {{date:YYYY-MM-DD}}
+tags:
+  - questions
+---
+
+# Open Questions
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Active
+- [ ]
+`;
+}
+
+function projectTemplateHandoff(): string {
+  return `---
+type: handoff
+project:
+status: active
+updated: {{date:YYYY-MM-DD}}
+tags:
+  - handoff
+---
+
+# Handoff
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Latest
+- No handoff recorded yet.
 `;
 }
 
@@ -506,6 +575,9 @@ export function ensureVaultScaffold(vaultRoot: string): void {
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'README.md'), projectTemplateReadme());
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Tasks.md'), projectTemplateTasks());
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Decisions.md'), projectTemplateDecisions());
+  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Facts.md'), projectTemplateFacts());
+  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Open Questions.md'), projectTemplateOpenQuestions());
+  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Handoff.md'), projectTemplateHandoff());
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Research', 'README.md'), '# Research\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Notes', 'README.md'), '# Notes\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Artifacts', 'README.md'), '# Artifacts\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
@@ -572,7 +644,30 @@ function createEmptyIndex(projectSlug: string, projectType: string): ProjectMemo
       decisions: [],
       research: [],
       notes: [],
+      facts: [],
+      questions: [],
+      handoffs: [],
       daily: [],
+    },
+  };
+}
+
+function normalizeMemoryIndex(index: ProjectMemoryIndex, projectSlug: string, projectType: string): ProjectMemoryIndex {
+  return {
+    project: {
+      slug: index.project?.slug || projectSlug,
+      projectType: index.project?.projectType || projectType,
+      updatedAt: index.project?.updatedAt || getIsoTimestamp(),
+    },
+    recent: {
+      tasks: index.recent?.tasks || [],
+      decisions: index.recent?.decisions || [],
+      research: index.recent?.research || [],
+      notes: index.recent?.notes || [],
+      facts: index.recent?.facts || [],
+      questions: index.recent?.questions || [],
+      handoffs: index.recent?.handoffs || [],
+      daily: index.recent?.daily || [],
     },
   };
 }
@@ -589,7 +684,7 @@ export function readProjectMemoryIndex(projectRoot: string, projectSlug: string,
   }
 
   try {
-    return JSON.parse(raw) as ProjectMemoryIndex;
+    return normalizeMemoryIndex(JSON.parse(raw) as ProjectMemoryIndex, projectSlug, projectType);
   } catch {
     return createEmptyIndex(projectSlug, projectType);
   }
@@ -630,6 +725,9 @@ export function formatProjectMemoryIndex(index: ProjectMemoryIndex): string {
     ['Recent Decisions', index.recent.decisions],
     ['Recent Research', index.recent.research],
     ['Recent Notes', index.recent.notes],
+    ['Recent Facts', index.recent.facts],
+    ['Recent Questions', index.recent.questions],
+    ['Recent Handoffs', index.recent.handoffs],
     ['Recent Daily Events', index.recent.daily],
   ];
 

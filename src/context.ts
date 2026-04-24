@@ -17,6 +17,9 @@ export interface RepoConfig {
   kit_version?: string;
   tasks_file: string;
   decisions_file: string;
+  facts_file?: string;
+  open_questions_file?: string;
+  handoff_file?: string;
   research_dir: string;
   notes_dir: string;
   runtime_script: string;
@@ -49,7 +52,7 @@ export function getContext({ repoRoot }: { repoRoot?: string }): string {
   );
 
   const sections: Array<[string, string]> = [
-    ['Repo AGENT', path.join(resolvedRepoRoot, 'AGENT.md')],
+    ['Repo AGENTS', path.join(resolvedRepoRoot, 'AGENTS.md')],
     ['Vault Bridge', path.join(resolvedRepoRoot, 'docs', 'vault-memory.md')],
     ['Project Map', path.join(resolvedRepoRoot, 'docs', 'project-map.md')],
     ['Repo README', path.join(resolvedRepoRoot, 'README.md')],
@@ -59,6 +62,9 @@ export function getContext({ repoRoot }: { repoRoot?: string }): string {
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],
     ['Project Decisions', path.join(config.project_root, config.decisions_file)],
+    ['Project Facts', path.join(config.project_root, config.facts_file || 'Facts.md')],
+    ['Project Open Questions', path.join(config.project_root, config.open_questions_file || 'Open Questions.md')],
+    ['Project Handoff', path.join(config.project_root, config.handoff_file || 'Handoff.md')],
     ['Today Daily Note', getDailyNotePath(config.vault_root)],
   ];
   const memoryIndex = formatProjectMemoryIndex(

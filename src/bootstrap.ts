@@ -15,6 +15,9 @@ import {
   projectReadmeTemplate,
   tasksTemplate,
   decisionsTemplate,
+  factsTemplate,
+  openQuestionsTemplate,
+  handoffTemplate,
   repoReadmeTemplate,
   rootAgentTemplate,
   projectMapTemplate,
@@ -131,6 +134,9 @@ function applyBootstrap({
     writeVaultFile(path.join(projectRoot, 'README.md'), projectReadmeTemplate(projectSlug, repoRoot, today, projectType));
     writeVaultFile(path.join(projectRoot, 'Tasks.md'), tasksTemplate(projectSlug, today));
     writeVaultFile(path.join(projectRoot, 'Decisions.md'), decisionsTemplate(projectSlug, today));
+    writeVaultFile(path.join(projectRoot, 'Facts.md'), factsTemplate(projectSlug, today));
+    writeVaultFile(path.join(projectRoot, 'Open Questions.md'), openQuestionsTemplate(projectSlug, today));
+    writeVaultFile(path.join(projectRoot, 'Handoff.md'), handoffTemplate(projectSlug, today));
   }
 
   copyRepoScaffold(repoRoot);
@@ -141,18 +147,21 @@ function applyBootstrap({
   }
   writeFile(path.join(repoRoot, 'scripts', 'agent-memory.js'), localRuntimeScriptTemplate());
 
-  const rootAgentPath = path.join(repoRoot, 'AGENT.md');
+  const rootAgentsPath = path.join(repoRoot, 'AGENTS.md');
+  const legacyAgentFile = ['AGENT', 'md'].join('.');
+  const legacyRootAgentPath = path.join(repoRoot, legacyAgentFile);
   const vaultMemoryPath = path.join(repoRoot, 'docs', 'vault-memory.md');
-  const currentRootAgent = fs.existsSync(rootAgentPath)
-    ? fs.readFileSync(rootAgentPath, 'utf8')
-    : '';
+  const currentRootAgent = fs.existsSync(rootAgentsPath)
+    ? fs.readFileSync(rootAgentsPath, 'utf8')
+    : (fs.existsSync(legacyRootAgentPath) ? fs.readFileSync(legacyRootAgentPath, 'utf8') : '');
 
-  writeFile(rootAgentPath, upsertManagedBlock(currentRootAgent, rootAgentTemplate(vaultRoot, projectRoot, projectType)));
+  writeFile(rootAgentsPath, upsertManagedBlock(currentRootAgent, rootAgentTemplate(vaultRoot, projectRoot, projectType)));
   writeFile(vaultMemoryPath, vaultMemoryDoc(vaultRoot, projectRoot, projectType));
   writeFile(path.join(repoRoot, 'docs', 'project-map.md'), projectMapTemplate(repoName, projectSlug, projectType));
 
-  fs.rmSync(path.join(repoRoot, 'AGENTS.md'), { force: true });
-  fs.rmSync(path.join(repoRoot, '.github', 'AGENT.md'), { force: true });
+  fs.rmSync(legacyRootAgentPath, { force: true });
+  fs.rmSync(path.join(repoRoot, '.github', 'AGENTS.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.github', legacyAgentFile), { force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'agents'), { recursive: true, force: true });
   fs.rmSync(path.join(repoRoot, '.github', 'commands'), { recursive: true, force: true });
@@ -173,6 +182,9 @@ function applyBootstrap({
       kit_version: kitVersion,
       tasks_file: 'Tasks.md',
       decisions_file: 'Decisions.md',
+      facts_file: 'Facts.md',
+      open_questions_file: 'Open Questions.md',
+      handoff_file: 'Handoff.md',
       research_dir: 'Research',
       notes_dir: 'Notes',
       runtime_script: 'scripts/agent-memory.js',

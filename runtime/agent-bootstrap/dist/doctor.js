@@ -25,6 +25,9 @@ function runDoctor({ repoRoot } = {}) {
         ['README.md', node_path_1.default.join(config.project_root, 'README.md')],
         [config.tasks_file, node_path_1.default.join(config.project_root, config.tasks_file)],
         [config.decisions_file, node_path_1.default.join(config.project_root, config.decisions_file)],
+        [config.facts_file || 'Facts.md', node_path_1.default.join(config.project_root, config.facts_file || 'Facts.md')],
+        [config.open_questions_file || 'Open Questions.md', node_path_1.default.join(config.project_root, config.open_questions_file || 'Open Questions.md')],
+        [config.handoff_file || 'Handoff.md', node_path_1.default.join(config.project_root, config.handoff_file || 'Handoff.md')],
         [config.research_dir, node_path_1.default.join(config.project_root, config.research_dir)],
         [config.notes_dir, node_path_1.default.join(config.project_root, config.notes_dir)],
     ]
@@ -32,7 +35,7 @@ function runDoctor({ repoRoot } = {}) {
         .map(([relativePath]) => relativePath);
     const checks = {
         vaultConfig: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'vault.config.json')),
-        agentFile: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'AGENT.md')),
+        agentFile: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'AGENTS.md')),
         agentWorkspace: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.agent', 'agents', 'planner.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')),
         docs: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs')),

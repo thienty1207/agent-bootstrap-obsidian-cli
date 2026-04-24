@@ -66,10 +66,11 @@ agent-bootstrap init "D:\project\nodejs\shop-web"
 
 - create the project capsule under `Projects/<slug>` in the vault
 - connect the repo to the vault with `vault.config.json`
-- create one root `AGENT.md`
+- create one root `AGENTS.md`
 - scaffold `.agent/`, `docs/`, and `plans/`
 - create `docs/vault-memory.md`
 - create `docs/project-map.md`
+- create stable memory files: `Facts.md`, `Open Questions.md`, and `Handoff.md`
 - create `scripts/agent-memory.js`
 - create or touch today's daily note
 - install a git `post-commit` hook that writes commit worklogs into the vault

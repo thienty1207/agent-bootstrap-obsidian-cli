@@ -71,6 +71,100 @@ function appendDecision(config: RepoConfig, title: string, content: string): str
   return decisionsPath;
 }
 
+function appendFact(config: RepoConfig, title: string, content: string): string {
+  const factsPath = path.join(config.project_root, config.facts_file || 'Facts.md');
+  const existing = fs.existsSync(factsPath) ? fs.readFileSync(factsPath, 'utf8') : '# Facts\n';
+  const today = getTodayString();
+  const entry = `\n## ${title}\n- Updated: ${today}\n- Fact: ${content}\n`;
+  fs.writeFileSync(factsPath, `${existing.trimEnd()}\n${entry}`);
+
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'facts',
+    item: createMemoryIndexRecord({
+      kind: 'fact',
+      title,
+      preview: content,
+      scope: 'project',
+      path: factsPath,
+      reason: 'stable project fact',
+    }),
+  });
+
+  appendDailyLog(
+    config.vault_root,
+    `Fact recorded for \`${config.project_slug}\`: ${title}`,
+    buildMemoryLogMarker({ kind: 'fact', projectSlug: config.project_slug, title, scope: 'project' }),
+  );
+
+  return factsPath;
+}
+
+function appendQuestion(config: RepoConfig, title: string, content: string): string {
+  const questionsPath = path.join(config.project_root, config.open_questions_file || 'Open Questions.md');
+  const existing = fs.existsSync(questionsPath) ? fs.readFileSync(questionsPath, 'utf8') : '# Open Questions\n';
+  const today = getTodayString();
+  const entry = `\n## ${title}\n- Created: ${today}\n- [ ] ${content}\n`;
+  fs.writeFileSync(questionsPath, `${existing.trimEnd()}\n${entry}`);
+
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'questions',
+    item: createMemoryIndexRecord({
+      kind: 'question',
+      title,
+      preview: content,
+      scope: 'project',
+      path: questionsPath,
+      reason: 'open question for future verification',
+    }),
+  });
+
+  appendDailyLog(
+    config.vault_root,
+    `Open question recorded for \`${config.project_slug}\`: ${title}`,
+    buildMemoryLogMarker({ kind: 'question', projectSlug: config.project_slug, title, scope: 'project' }),
+  );
+
+  return questionsPath;
+}
+
+function appendHandoff(config: RepoConfig, content: string): string {
+  const handoffPath = path.join(config.project_root, config.handoff_file || 'Handoff.md');
+  const existing = fs.existsSync(handoffPath) ? fs.readFileSync(handoffPath, 'utf8') : '# Handoff\n';
+  const today = getTodayString();
+  const title = 'Session handoff';
+  const entry = `\n## ${today} - ${title}\n${content}\n`;
+  fs.writeFileSync(handoffPath, `${existing.trimEnd()}\n${entry}`);
+
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'handoffs',
+    item: createMemoryIndexRecord({
+      kind: 'handoff',
+      title,
+      preview: content,
+      scope: 'project',
+      path: handoffPath,
+      reason: 'latest session handoff',
+    }),
+  });
+
+  appendDailyLog(
+    config.vault_root,
+    `Handoff updated for \`${config.project_slug}\``,
+    buildMemoryLogMarker({ kind: 'handoff', projectSlug: config.project_slug, title, scope: 'project' }),
+  );
+
+  return handoffPath;
+}
+
 function createScopedNote({
   config,
   repoRoot,
@@ -159,6 +253,18 @@ export function writeMemory({
         throw new Error('Title is required for decision mode.');
       }
       return appendDecision(config, title, content);
+    case 'fact':
+      if (!title) {
+        throw new Error('Title is required for fact mode.');
+      }
+      return appendFact(config, title, content);
+    case 'question':
+      if (!title) {
+        throw new Error('Title is required for question mode.');
+      }
+      return appendQuestion(config, title, content);
+    case 'handoff':
+      return appendHandoff(config, content);
     case 'research':
     case 'note':
       if (!title) {

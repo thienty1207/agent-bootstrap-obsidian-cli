@@ -51,6 +51,9 @@ tags:
 - [[Projects/README|Projects]]
 - [[Tasks]]
 - [[Decisions]]
+- [[Facts]]
+- [[Open Questions]]
+- [[Handoff]]
 - [[Research]]
 - [[Notes]]
 - [[Artifacts]]
@@ -105,6 +108,75 @@ tags:
 `;
 }
 
+export function factsTemplate(projectSlug: string, today: string): string {
+  return `---
+type: facts
+project: ${projectSlug}
+status: active
+updated: ${today}
+tags:
+  - facts
+---
+
+# Facts
+
+Stable project facts that future sessions can trust. Keep each fact short and source it when possible.
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Current Facts
+-
+`;
+}
+
+export function openQuestionsTemplate(projectSlug: string, today: string): string {
+  return `---
+type: questions
+project: ${projectSlug}
+status: active
+updated: ${today}
+tags:
+  - questions
+---
+
+# Open Questions
+
+Unknowns, blockers, and assumptions that need verification. Do not convert guesses into facts.
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Active
+- [ ]
+`;
+}
+
+export function handoffTemplate(projectSlug: string, today: string): string {
+  return `---
+type: handoff
+project: ${projectSlug}
+status: active
+updated: ${today}
+tags:
+  - handoff
+---
+
+# Handoff
+
+Use this as the latest concise handoff for the next AI session.
+
+## Links
+- Vault: [[Init]]
+- Project: [[README]]
+
+## Latest
+- No handoff recorded yet.
+`;
+}
+
 export function repoReadmeTemplate(repoName: string, projectSlug: string, projectType: ProjectType): string {
   return `# ${repoName}
 
@@ -119,9 +191,10 @@ Only \`setup\`, \`init\`, and \`context\` are public CLI commands for this kit.
 
 ## Structure
 
-- \`AGENT.md\`: main operating contract for AI agents
+- \`AGENTS.md\`: main operating contract for AI agents
 - \`docs/project-map.md\`: fast orientation guide for the current project type
 - \`.agent/\`
+  - \`INDEX.md\`: compact routing table for agent assets
   - \`README.md\`: how the local agent workspace fits together
   - \`agents/\`: specialized subagents
   - \`commands/\`: reusable workflow prompts
@@ -136,21 +209,22 @@ Only \`setup\`, \`init\`, and \`context\` are public CLI commands for this kit.
 ## Ownership Boundaries
 
 - \`README.md\` is user-owned and preserved if it already exists.
-- \`AGENT.md\`, \`.agent/README.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
+- \`AGENTS.md\`, \`.agent/README.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
 - \`.agent/\`, \`docs/\`, and \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
 - Customized scaffold files are preserved; rerun \`agent-bootstrap init\` to repair missing managed assets and refresh untouched scaffold assets without replacing an existing repo \`README.md\`.
 
 ## Suggested use
 
-1. Read \`AGENT.md\`.
+1. Read \`AGENTS.md\`.
 2. Run \`agent-bootstrap context\` to load repo and vault context automatically.
-3. Read \`.agent/README.md\` for how \`agents/\`, \`commands/\`, \`rules/\`, and \`skills/\` fit together.
+3. Read \`.agent/README.md\` and \`.agent/INDEX.md\` for how \`agents/\`, \`commands/\`, \`rules/\`, and \`skills/\` fit together.
 4. Pick a specialist from \`.agent/agents/\` when the task fits a role.
 5. Use \`.agent/commands/\` to kick off repeatable workflows.
 6. Treat \`.agent/rules/\` as the guardrails.
-7. Load the narrowest relevant folder in \`.agent/skills/\` only when the task needs deeper domain or workflow guidance.
+7. Read \`.agent/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs deeper domain or workflow guidance.
 8. Use \`.agent/skills/agent-api/\` specifically for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
 9. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
+10. Do not recursively scan \`.agent/skills\`; the index is the routing surface.
 `;
 }
 
@@ -224,7 +298,18 @@ Before meaningful work, read:
 6. \`${vaultRoot}/Init.md\`
 7. \`${projectRoot}/README.md\`
 8. \`${projectRoot}/Tasks.md\`
-9. relevant docs under \`docs/\`, targeted agent assets under \`.agent/\`, and workflows under \`.github/workflows/\`
+9. \`${projectRoot}/Facts.md\`
+10. \`${projectRoot}/Open Questions.md\`
+11. \`${projectRoot}/Handoff.md\`
+12. relevant docs under \`docs/\`, targeted agent assets under \`.agent/\`, and workflows under \`.github/workflows/\`
+
+## Context discipline
+
+- Treat \`src/\` as source of truth; \`dist/\` and \`runtime/agent-bootstrap/dist/\` are generated build outputs.
+- Read \`.agent/INDEX.md\` before choosing agent assets.
+- Read \`.agent/skills/INDEX.md\` before loading any skill.
+- Do not recursively scan \`.agent/skills\`; load one narrow skill only when needed.
+- If a fact is not in repo files, context output, or a cited source, mark it unknown instead of guessing.
 
 ## Type-specific focus
 
@@ -242,6 +327,9 @@ After meaningful work, write back to the vault:
 
 - \`Tasks.md\` for status and next steps
 - \`Decisions.md\` for technical decisions
+- \`Facts.md\` for stable facts future sessions can trust
+- \`Open Questions.md\` for unresolved assumptions and blockers
+- \`Handoff.md\` for the latest concise next-session handoff
 - \`Research/\` for project-specific research
 - global \`Research\` or \`Notes\` for reusable insights
 
@@ -255,7 +343,7 @@ The repo runtime handles the low-friction automation:
 ## Repo-local runtime
 
 - \`agent-bootstrap context\` for read-only session context
-- \`node scripts/agent-memory.js <task|decision|research|note>\` for write-back
+- \`node scripts/agent-memory.js <task|decision|research|note|fact|question|handoff>\` for write-back
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 `;
 }
@@ -345,7 +433,7 @@ ${typeHotspots(projectType).join('\n')}
 
 ## Read order
 
-1. \`AGENT.md\`
+1. \`AGENTS.md\`
 2. \`docs/vault-memory.md\`
 3. \`README.md\`
 4. \`.agent/README.md\`
@@ -359,8 +447,8 @@ ${typeVerificationPath(projectType).map((item) => `- ${item}`).join('\n')}
 ## Operating rule
 
 - keep repo facts in repo docs
-- keep durable progress, research, and decisions in the linked vault capsule
-- prefer updating \`Tasks.md\` and \`Decisions.md\` when the implementation meaningfully changes
+- keep durable progress, research, facts, open questions, handoffs, and decisions in the linked vault capsule
+- prefer updating \`Tasks.md\`, \`Decisions.md\`, \`Facts.md\`, \`Open Questions.md\`, or \`Handoff.md\` when the implementation meaningfully changes
 `;
 }
 
@@ -384,7 +472,7 @@ This repository is paired with an external Obsidian vault for durable agent memo
 
 Before doing meaningful work in this repo, read:
 
-1. \`AGENT.md\`
+1. \`AGENTS.md\`
 2. \`docs/project-map.md\`
 3. \`README.md\`
 4. \`.agent/README.md\`
@@ -392,6 +480,9 @@ Before doing meaningful work in this repo, read:
 6. \`${vaultRoot}/Init.md\`
 7. \`${projectRoot}/README.md\`
 8. \`${projectRoot}/Tasks.md\`
+9. \`${projectRoot}/Facts.md\`
+10. \`${projectRoot}/Open Questions.md\`
+11. \`${projectRoot}/Handoff.md\`
 
 ## Write-back rules
 
@@ -399,13 +490,16 @@ After meaningful work:
 
 - update \`Tasks.md\` for status, handoff, and next actions
 - update \`Decisions.md\` for architecture or implementation decisions
+- update \`Facts.md\` for durable facts backed by repo/context/source evidence
+- update \`Open Questions.md\` for unresolved unknowns instead of guessing
+- update \`Handoff.md\` with the latest concise next-session state
 - create project research notes under \`Research/\` when investigation happens
 - move reusable cross-project insights into the vault's global \`Research\` or \`Notes\`
 - rely on the repo git \`post-commit\` hook to keep a low-friction commit worklog
 
 Preferred repo-local runtime:
 
-\`node scripts/agent-memory.js <context|task|decision|research|note>\`
+\`node scripts/agent-memory.js <context|task|decision|research|note|fact|question|handoff>\`
 
 The runtime will:
 
@@ -582,7 +676,30 @@ function createEmptyIndex(projectSlug, projectType) {
       decisions: [],
       research: [],
       notes: [],
+      facts: [],
+      questions: [],
+      handoffs: [],
       daily: [],
+    },
+  };
+}
+
+function normalizeMemoryIndex(index, projectSlug, projectType) {
+  return {
+    project: {
+      slug: (index.project && index.project.slug) || projectSlug,
+      projectType: (index.project && index.project.projectType) || projectType,
+      updatedAt: (index.project && index.project.updatedAt) || getIsoTimestamp(),
+    },
+    recent: {
+      tasks: (index.recent && index.recent.tasks) || [],
+      decisions: (index.recent && index.recent.decisions) || [],
+      research: (index.recent && index.recent.research) || [],
+      notes: (index.recent && index.recent.notes) || [],
+      facts: (index.recent && index.recent.facts) || [],
+      questions: (index.recent && index.recent.questions) || [],
+      handoffs: (index.recent && index.recent.handoffs) || [],
+      daily: (index.recent && index.recent.daily) || [],
     },
   };
 }
@@ -599,7 +716,7 @@ function readProjectMemoryIndex(projectRoot, projectSlug, projectType) {
   }
 
   try {
-    return JSON.parse(raw);
+    return normalizeMemoryIndex(JSON.parse(raw), projectSlug, projectType);
   } catch {
     return createEmptyIndex(projectSlug, projectType);
   }
@@ -640,6 +757,9 @@ function formatProjectMemoryIndex(index) {
     ['Recent Decisions', index.recent.decisions],
     ['Recent Research', index.recent.research],
     ['Recent Notes', index.recent.notes],
+    ['Recent Facts', index.recent.facts],
+    ['Recent Questions', index.recent.questions],
+    ['Recent Handoffs', index.recent.handoffs],
     ['Recent Daily Events', index.recent.daily],
   ];
 
@@ -802,7 +922,7 @@ function getContext(repoRoot, config) {
   );
 
   const sections = [
-    ['Repo AGENT', path.join(repoRoot, 'AGENT.md')],
+    ['Repo AGENTS', path.join(repoRoot, 'AGENTS.md')],
     ['Vault Bridge', path.join(repoRoot, 'docs', 'vault-memory.md')],
     ['Project Map', path.join(repoRoot, 'docs', 'project-map.md')],
     ['Repo README', path.join(repoRoot, 'README.md')],
@@ -812,6 +932,9 @@ function getContext(repoRoot, config) {
     ['Project README', path.join(config.project_root, 'README.md')],
     ['Project Tasks', path.join(config.project_root, config.tasks_file)],
     ['Project Decisions', path.join(config.project_root, config.decisions_file)],
+    ['Project Facts', path.join(config.project_root, config.facts_file || 'Facts.md')],
+    ['Project Open Questions', path.join(config.project_root, config.open_questions_file || 'Open Questions.md')],
+    ['Project Handoff', path.join(config.project_root, config.handoff_file || 'Handoff.md')],
     ['Today Daily Note', path.join(config.vault_root, 'Daily', \`\${getTodayString()}.md\`)],
   ];
   const memoryIndex = formatProjectMemoryIndex(
@@ -887,6 +1010,91 @@ function appendDecision(config, title, content) {
   return decisionsPath;
 }
 
+function appendFact(config, title, content) {
+  const factsPath = path.join(config.project_root, config.facts_file || 'Facts.md');
+  const existing = readFile(factsPath) || '# Facts\\n';
+  const today = getTodayString();
+  const entry = \`\\n## \${title}\\n- Updated: \${today}\\n- Fact: \${content}\\n\`;
+  fs.writeFileSync(factsPath, \`\${existing.trimEnd()}\\n\${entry}\`);
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'facts',
+    item: createMemoryIndexRecord({
+      kind: 'fact',
+      title,
+      preview: content,
+      scope: 'project',
+      recordPath: factsPath,
+      reason: 'stable project fact',
+    }),
+  });
+  appendDailyLog(
+    config.vault_root,
+    \`Fact recorded for \\\`\${config.project_slug}\\\`: \${title}\`,
+    buildMemoryLogMarker('fact', config.project_slug, title, 'project'),
+  );
+  return factsPath;
+}
+
+function appendQuestion(config, title, content) {
+  const questionsPath = path.join(config.project_root, config.open_questions_file || 'Open Questions.md');
+  const existing = readFile(questionsPath) || '# Open Questions\\n';
+  const today = getTodayString();
+  const entry = \`\\n## \${title}\\n- Created: \${today}\\n- [ ] \${content}\\n\`;
+  fs.writeFileSync(questionsPath, \`\${existing.trimEnd()}\\n\${entry}\`);
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'questions',
+    item: createMemoryIndexRecord({
+      kind: 'question',
+      title,
+      preview: content,
+      scope: 'project',
+      recordPath: questionsPath,
+      reason: 'open question for future verification',
+    }),
+  });
+  appendDailyLog(
+    config.vault_root,
+    \`Open question recorded for \\\`\${config.project_slug}\\\`: \${title}\`,
+    buildMemoryLogMarker('question', config.project_slug, title, 'project'),
+  );
+  return questionsPath;
+}
+
+function appendHandoff(config, content) {
+  const handoffPath = path.join(config.project_root, config.handoff_file || 'Handoff.md');
+  const existing = readFile(handoffPath) || '# Handoff\\n';
+  const today = getTodayString();
+  const title = 'Session handoff';
+  const entry = \`\\n## \${today} - \${title}\\n\${content}\\n\`;
+  fs.writeFileSync(handoffPath, \`\${existing.trimEnd()}\\n\${entry}\`);
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'handoffs',
+    item: createMemoryIndexRecord({
+      kind: 'handoff',
+      title,
+      preview: content,
+      scope: 'project',
+      recordPath: handoffPath,
+      reason: 'latest session handoff',
+    }),
+  });
+  appendDailyLog(
+    config.vault_root,
+    \`Handoff updated for \\\`\${config.project_slug}\\\`\`,
+    buildMemoryLogMarker('handoff', config.project_slug, title, 'project'),
+  );
+  return handoffPath;
+}
+
 function createNote(config, noteType, title, content, scope, extraTags = []) {
   const routing = resolveRoutingDecision(noteType, title, content, scope, config.project_slug, path.basename(findRepoRoot(process.cwd())));
   const resolvedScope = routing.scope;
@@ -960,6 +1168,18 @@ function writeMemory(repoRoot, config, mode, content, title, scope) {
         throw new Error('Title is required for decision mode.');
       }
       return appendDecision(config, title, content);
+    case 'fact':
+      if (!title) {
+        throw new Error('Title is required for fact mode.');
+      }
+      return appendFact(config, title, content);
+    case 'question':
+      if (!title) {
+        throw new Error('Title is required for question mode.');
+      }
+      return appendQuestion(config, title, content);
+    case 'handoff':
+      return appendHandoff(config, content);
     case 'research':
     case 'note':
       if (!title) {

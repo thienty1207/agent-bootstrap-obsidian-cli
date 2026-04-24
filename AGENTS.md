@@ -36,7 +36,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 ## Working rules
 
 - Keep the generated project shape aligned with VS Code/Copilot workspace expectations.
-- Keep exactly one root `AGENT.md` in generated repos.
+- Keep exactly one root `AGENTS.md` in generated repos.
 - Do not reintroduce `.github/copilot-instructions.md` into generated repos unless explicitly requested.
 - Do not reintroduce legacy agent assets under `.github/agents`, `.github/commands`, `.github/rules`, or `.github/skills`.
 - Keep `agent-bootstrap` with no arguments as the default one-command bootstrap path.
@@ -46,14 +46,18 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
 - Keep `context` loading a compact project memory index so large repos do not require broad vault scans.
 - Keep vault scaffold links centered around `Init.md` so Obsidian Graph View and agent memory navigation stay useful as the vault grows.
+- Treat `src/` as the source of truth; `dist/` and `runtime/agent-bootstrap/dist/` are generated build outputs.
+- Do not recursively scan `.agent/skills`; read `.agent/skills/INDEX.md` and load one narrow skill only when needed.
+- Treat older dated files under `plans/` as historical context; do not read them by default unless the task is about lifecycle history.
+- If a fact is not present in repo, context output, or a cited source, mark it unknown instead of guessing.
 - Treat `README.md` and `src/cli.ts` as the source of truth for the public CLI surface if an older plan file mentions superseded commands.
-- Keep the managed `AGENT.md` block refreshable without overwriting user-written instructions outside the markers.
+- Keep the managed `AGENTS.md` block refreshable without overwriting user-written instructions outside the markers.
 - Verify bootstrap behavior through `test/cli.test.js` and real smoke tests before claiming completion.
 
 ## Fast path
 
 1. Read `README.md`
-2. Inspect `.agent/`, `.github/workflows/`, `docs/`, and `plans/`
+2. Read `.agent/README.md` and `.agent/INDEX.md`; list targeted `.agent/agents`, `.agent/commands`, and `.agent/rules` only when needed
 3. Run `npm test`
 4. Confirm `README.md` and `src/cli.ts` still agree on the public command surface
 5. In generated projects, use `agent-bootstrap context` as the first-step context loader for AI sessions

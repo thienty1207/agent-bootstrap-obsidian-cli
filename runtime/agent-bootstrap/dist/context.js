@@ -25,7 +25,7 @@ function getContext({ repoRoot }) {
     (0, vault_1.ensureDailyNote)(config.vault_root);
     (0, vault_1.appendDailyLog)(config.vault_root, `Session started for \`${config.project_slug}\``, (0, vault_1.createDailyLogMarker)(['session', config.project_slug, new Date().toISOString().slice(0, 13)]));
     const sections = [
-        ['Repo AGENT', node_path_1.default.join(resolvedRepoRoot, 'AGENT.md')],
+        ['Repo AGENTS', node_path_1.default.join(resolvedRepoRoot, 'AGENTS.md')],
         ['Vault Bridge', node_path_1.default.join(resolvedRepoRoot, 'docs', 'vault-memory.md')],
         ['Project Map', node_path_1.default.join(resolvedRepoRoot, 'docs', 'project-map.md')],
         ['Repo README', node_path_1.default.join(resolvedRepoRoot, 'README.md')],
@@ -35,6 +35,9 @@ function getContext({ repoRoot }) {
         ['Project README', node_path_1.default.join(config.project_root, 'README.md')],
         ['Project Tasks', node_path_1.default.join(config.project_root, config.tasks_file)],
         ['Project Decisions', node_path_1.default.join(config.project_root, config.decisions_file)],
+        ['Project Facts', node_path_1.default.join(config.project_root, config.facts_file || 'Facts.md')],
+        ['Project Open Questions', node_path_1.default.join(config.project_root, config.open_questions_file || 'Open Questions.md')],
+        ['Project Handoff', node_path_1.default.join(config.project_root, config.handoff_file || 'Handoff.md')],
         ['Today Daily Note', (0, vault_1.getDailyNotePath)(config.vault_root)],
     ];
     const memoryIndex = (0, vault_1.formatProjectMemoryIndex)((0, vault_1.readProjectMemoryIndex)(config.project_root, config.project_slug, config.project_type));
