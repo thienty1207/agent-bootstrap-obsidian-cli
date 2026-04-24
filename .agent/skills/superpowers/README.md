@@ -1,8 +1,32 @@
-# Superpowers Skill Pack
+# Superpowers Workflow Routing Index
 
-This folder is a local copy of the upstream Superpowers skills library.
+Use this file to choose one Superpowers workflow skill. Superpowers controls process discipline; domain skills only add subject-matter guidance after the workflow route is clear.
 
-## Included skills
+## Routing
+
+| Task shape | Load |
+| --- | --- |
+| Feature or bugfix, refactor, or behavior change | `test-driven-development/SKILL.md` |
+| Unexpected behavior or failing test | `systematic-debugging/SKILL.md` |
+| Multi-step requirements need an implementation plan | `writing-plans/SKILL.md` |
+| Executing an existing written plan | `executing-plans/SKILL.md` |
+| Independent tasks can run in the same session | `subagent-driven-development/SKILL.md` |
+| Need isolated feature workspace | `using-git-worktrees/SKILL.md` |
+| Completing major work or preparing integration | `finishing-a-development-branch/SKILL.md` |
+| Before claiming completion, fixed, or passing | `verification-before-completion/SKILL.md` |
+| Requesting review before merge or after major change | `requesting-code-review/SKILL.md` |
+| Receiving review feedback | `receiving-code-review/SKILL.md` |
+| Creating or editing skills | `writing-skills/SKILL.md` |
+| Starting a conversation in a Superpowers-native agent | `using-superpowers/SKILL.md` |
+
+## Priority
+
+- Use Superpowers before domain skills when the task involves planning, debugging, coding, review, verification, or branch finishing.
+- Use Karpathy guidelines as the coding overlay for simplicity, surgical edits, assumptions, and verification criteria.
+- Load a domain skill only after choosing the workflow route.
+- Do not load every Superpowers skill. Pick the one row that matches the immediate workflow.
+
+## Included Skills
 
 - brainstorming
 - dispatching-parallel-agents
@@ -19,4 +43,4 @@ This folder is a local copy of the upstream Superpowers skills library.
 - writing-plans
 - writing-skills
 
-See `README.upstream.md` for the upstream project overview.
+The upstream attribution readme is source attribution only; do not load it during normal task execution.

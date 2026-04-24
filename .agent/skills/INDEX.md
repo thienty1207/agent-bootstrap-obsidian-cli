@@ -4,6 +4,31 @@ Read this file before loading any skill. Load the narrowest matching `SKILL.md`;
 
 Workflow skills have priority over domain skills. When implementation, debugging, planning, review, or verification rules apply, load `superpowers` workflow guidance and `andrej-karpathy-skills/karpathy-guidelines` before the narrower domain skill.
 
+Domain skills do not override Superpowers or Karpathy. Treat domain skills as subject-matter references; keep workflow discipline, test-first behavior, verification, and surgical-edit rules from the workflow layer.
+
+## Decision Matrix
+
+Use this matrix before opening a skill body. Prefer one primary domain skill unless the task explicitly crosses boundaries.
+Quick conflict set: agent-api vs api-designer vs architecture-designer vs secure-code-guardian covers most backend/API/security confusion.
+
+| Task shape | Primary skill | Do not confuse with |
+| --- | --- | --- |
+| Provider/model/agent backend, streaming, tool calls, structured output, provider adapters | `agent-api` | `api-designer` for public REST/GraphQL contracts |
+| Public REST/GraphQL/OpenAPI contract, resource modeling, pagination, versioning, error catalog | `api-designer` | `agent-api` for model-provider integration |
+| System topology, ADRs, service boundaries, scalability tradeoffs | `architecture-designer` | `api-designer` for endpoint contracts |
+| Auth hardening, authorization, OWASP, input validation, session/security review | `secure-code-guardian` | `api-designer` for normal contract design |
+| SQL syntax, joins, CTEs, schema/query authoring | `sql-pro` | `database-optimizer` for measured performance work |
+| Slow queries, EXPLAIN plans, indexes, locks, database tuning | `database-optimizer` | `sql-pro` for general SQL writing |
+| CI/CD, Docker, Kubernetes, Terraform, deployment automation | `devops-engineer` | `monitoring-expert` for observability |
+| Logs, metrics, tracing, alerts, profiling, load tests | `monitoring-expert` | `devops-engineer` for deployment setup |
+| Legacy migration, strangler fig, modernization roadmap | `legacy-modernizer` | `architecture-designer` for greenfield architecture |
+
+### Load Budget
+
+- Default maximum: one workflow route, Karpathy overlay when coding, and one primary domain skill.
+- Add a second domain skill only when the task explicitly needs both surfaces, such as API contract plus auth hardening.
+- If unsure between two domain skills, write the uncertainty to `Open Questions.md` or inspect the nearest repo files before loading both.
+
 | Skill | Use when | Avoid when | Load |
 | --- | --- | --- | --- |
 | `agent-api` | Model-provider adapters, request normalization, streaming, tool calls, structured outputs, retries, usage tracking, provider switching. | General API design, security-only, database-only, infra-only, or workflow-only tasks. | `.agent/skills/agent-api/SKILL.md` |

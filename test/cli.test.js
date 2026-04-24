@@ -1079,6 +1079,32 @@ test('agent indexes enforce workflow skill priority and anti-overthinking rules'
   assert.match(stopOverthinking, /task touches one file/);
 });
 
+test('skill routing prevents domain skills from conflicting with workflow skills', () => {
+  const skillsIndex = readFile(path.join(repoRoot, '.agent', 'skills', 'INDEX.md'));
+  const apiDesigner = readFile(path.join(repoRoot, '.agent', 'skills', 'api-designer', 'SKILL.md'));
+  const superpowersReadme = readFile(path.join(repoRoot, '.agent', 'skills', 'superpowers', 'README.md'));
+
+  assert.match(skillsIndex, /Domain skills do not override Superpowers or Karpathy/);
+  assert.match(skillsIndex, /agent-api vs api-designer vs architecture-designer vs secure-code-guardian/);
+  assert.match(skillsIndex, /Provider\/model\/agent backend/);
+  assert.match(skillsIndex, /Public REST\/GraphQL\/OpenAPI/);
+
+  assert.match(apiDesigner, /## Do Not Use/);
+  assert.match(apiDesigner, /model-provider SDKs/);
+  assert.match(apiDesigner, /internal agent provider layer/);
+  assert.match(apiDesigner, /Workflow, planning, debugging, implementation, or verification discipline/);
+  assert.match(apiDesigner, /related-skills: agent-api, architecture-designer, secure-code-guardian, database-optimizer, devops-engineer, monitoring-expert/);
+  assert.doesNotMatch(apiDesigner, /graphql-architect|fastapi-expert|nestjs-expert|spring-boot-engineer|security-reviewer/);
+
+  assert.match(superpowersReadme, /# Superpowers Workflow Routing Index/);
+  assert.match(superpowersReadme, /Feature or bugfix/);
+  assert.match(superpowersReadme, /test-driven-development/);
+  assert.match(superpowersReadme, /Unexpected behavior or failing test/);
+  assert.match(superpowersReadme, /systematic-debugging/);
+  assert.match(superpowersReadme, /Before claiming completion/);
+  assert.match(superpowersReadme, /verification-before-completion/);
+});
+
 test('skill index covers shipped skills and skill frontmatter is triggerable', () => {
   const skillsRoot = path.join(repoRoot, '.agent', 'skills');
   const skillsIndex = readFile(path.join(skillsRoot, 'INDEX.md'));

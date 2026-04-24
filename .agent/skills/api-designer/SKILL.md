@@ -10,12 +10,29 @@ metadata:
   role: architect
   scope: design
   output-format: specification
-  related-skills: graphql-architect, fastapi-expert, nestjs-expert, spring-boot-engineer, security-reviewer
+  related-skills: agent-api, architecture-designer, secure-code-guardian, database-optimizer, devops-engineer, monitoring-expert
 ---
 
 # API Designer
 
 Senior API architect specializing in REST and GraphQL APIs with comprehensive OpenAPI 3.1 specifications.
+
+## When To Use
+
+- Designing public or product-facing REST and GraphQL contracts.
+- Creating or reviewing OpenAPI specifications.
+- Modeling resources, request/response schemas, pagination, versioning, and error catalogs.
+- Planning backward-compatible API evolution for clients outside the immediate implementation module.
+
+## Do Not Use
+
+- Workflow, planning, debugging, implementation, or verification discipline: use `superpowers/`.
+- Coding style, minimal-edit behavior, or overengineering prevention: use `andrej-karpathy-skills/karpathy-guidelines`.
+- model-provider SDKs, streaming model events, tool calls, structured-output provider adapters, or internal agent provider layer work: use `agent-api/`.
+- System topology, ADRs, broad service boundaries, or scalability architecture outside the API contract: use `architecture-designer/`.
+- Security-only review, auth hardening, authorization, OWASP, or input hardening: use `secure-code-guardian/`.
+- Database schema/query tuning or measured performance work: use `database-optimizer/` and `sql-pro/`.
+- Deployment, CI/CD, infrastructure, monitoring, or incident response: use `devops-engineer/` and `monitoring-expert/`.
 
 ## Core Workflow
 
