@@ -54,11 +54,25 @@ function appendDecision(config, title, content) {
     (0, vault_1.appendDailyLog)(config.vault_root, `Decision recorded for \`${config.project_slug}\`: ${title}`, (0, vault_1.buildMemoryLogMarker)({ kind: 'decision', projectSlug: config.project_slug, title, scope: 'project' }));
     return decisionsPath;
 }
-function appendFact(config, title, content) {
+function normalizeConfidence(confidence) {
+    if (confidence === 'high' || confidence === 'medium' || confidence === 'low') {
+        return confidence;
+    }
+    return 'medium';
+}
+function appendFact(config, title, content, source, confidence) {
     const factsPath = node_path_1.default.join(config.project_root, config.facts_file || 'Facts.md');
     const existing = node_fs_1.default.existsSync(factsPath) ? node_fs_1.default.readFileSync(factsPath, 'utf8') : '# Facts\n';
     const today = (0, date_1.getTodayString)();
-    const entry = `\n## ${title}\n- Updated: ${today}\n- Fact: ${content}\n`;
+    const entry = [
+        '',
+        `## ${title}`,
+        `- Fact: ${content}`,
+        `- Source: ${source?.trim() || 'unspecified'}`,
+        `- Confidence: ${normalizeConfidence(confidence)}`,
+        `- Last verified: ${today}`,
+        '',
+    ].join('\n');
     node_fs_1.default.writeFileSync(factsPath, `${existing.trimEnd()}\n${entry}`);
     (0, vault_1.updateProjectMemoryIndex)({
         projectRoot: config.project_root,
@@ -124,6 +138,22 @@ function appendHandoff(config, content) {
     (0, vault_1.appendDailyLog)(config.vault_root, `Handoff updated for \`${config.project_slug}\``, (0, vault_1.buildMemoryLogMarker)({ kind: 'handoff', projectSlug: config.project_slug, title, scope: 'project' }));
     return handoffPath;
 }
+function compactSessionMemory(config) {
+    const summaryPath = node_path_1.default.join(config.project_root, 'Artifacts', 'session-summary.md');
+    const index = (0, vault_1.readProjectMemoryIndex)(config.project_root, config.project_slug, config.project_type);
+    const summary = [
+        '# Session Summary',
+        '',
+        `- Project: \`${config.project_slug}\``,
+        `- Updated: \`${new Date().toISOString()}\``,
+        '',
+        (0, vault_1.formatProjectMemoryIndex)(index).trimEnd(),
+        '',
+    ].join('\n');
+    (0, fs_utils_1.writeFile)(summaryPath, summary);
+    (0, vault_1.appendDailyLog)(config.vault_root, `Compacted session memory for \`${config.project_slug}\``, (0, vault_1.buildMemoryLogMarker)({ kind: 'compact', projectSlug: config.project_slug, title: 'session-summary', scope: 'project' }));
+    return summaryPath;
+}
 function createScopedNote({ config, repoRoot, noteType, title, content, scope, }) {
     const routing = (0, vault_1.resolveRoutingDecision)({
         scope,
@@ -162,7 +192,7 @@ function createScopedNote({ config, repoRoot, noteType, title, content, scope, }
     (0, vault_1.appendDailyLog)(config.vault_root, `${noteType === 'research' ? 'Research' : 'Note'} captured [${routing.scope}] for \`${config.project_slug}\`: ${title}`, (0, vault_1.buildMemoryLogMarker)({ kind: noteType, projectSlug: config.project_slug, title, scope: routing.scope }));
     return notePath;
 }
-function writeMemory({ repoRoot, mode, title, content, scope, }) {
+function writeMemory({ repoRoot, mode, title, content, scope, source, confidence, }) {
     const resolvedRepoRoot = repoRoot ? node_path_1.default.resolve(repoRoot) : (0, fs_utils_1.findRepoRoot)(process.cwd());
     const config = (0, context_1.readRepoConfig)(resolvedRepoRoot);
     switch (mode) {
@@ -177,7 +207,7 @@ function writeMemory({ repoRoot, mode, title, content, scope, }) {
             if (!title) {
                 throw new Error('Title is required for fact mode.');
             }
-            return appendFact(config, title, content);
+            return appendFact(config, title, content, source, confidence);
         case 'question':
             if (!title) {
                 throw new Error('Title is required for question mode.');
@@ -185,6 +215,8 @@ function writeMemory({ repoRoot, mode, title, content, scope, }) {
             return appendQuestion(config, title, content);
         case 'handoff':
             return appendHandoff(config, content);
+        case 'compact':
+            return compactSessionMemory(config);
         case 'research':
         case 'note':
             if (!title) {

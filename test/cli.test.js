@@ -122,6 +122,8 @@ function assertAgentWorkspacePresent(repoRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'agents', 'planner.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'rules', 'plan', 'brainstorm-before-build.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'rules', 'context', 'unknowns-gate.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'rules', 'context', 'stop-overthinking.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent', 'skills', 'INDEX.md')), true);
   assertCoreSkillsPresent(repoRoot);
   assertPortableSkillsPresent(repoRoot);
@@ -299,7 +301,9 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
   assert.match(agentGuide, /public cli surface/i);
-  assert.match(readme, /Only `setup`, `init`, and `context` are public CLI commands\./);
+  assert.match(readme, /This package is intentionally documented around 4 user-facing actions only/);
+  assert.match(readme, /Optional: Load AI Context Manually/);
+  assert.match(readme, /AI agents should run this automatically from `AGENTS\.md`/);
 });
 
 test('setup stores portable config and init bootstraps current repo', () => {
@@ -357,10 +361,20 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.doesNotMatch(repoReadme, /prompts\//i);
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENTS.md'));
-  assert.match(rootAgent, /agent-bootstrap context/);
+  assert.match(rootAgent, /agent-bootstrap context --compact/);
+  assert.match(rootAgent, /Do not ask the user whether to run it/);
+  assert.match(rootAgent, /agent-bootstrap context --why/);
+  assert.match(rootAgent, /agent-bootstrap context --full/);
   assert.match(rootAgent, /\.agent\/skills\/INDEX\.md/);
+  assert.match(rootAgent, /Workflow skills have priority over domain skills/);
   assert.match(rootAgent, /Do not recursively scan `.agent\/skills`/);
   assert.match(rootAgent, /vault/i);
+
+  const facts = readFile(path.join(projectRoot, 'Facts.md'));
+  assert.match(facts, /- Fact:/);
+  assert.match(facts, /- Source:/);
+  assert.match(facts, /- Confidence: high\|medium\|low/);
+  assert.match(facts, /- Last verified:/);
 });
 
 test('context reads repo and vault files from a nested directory', () => {
@@ -412,6 +426,47 @@ test('global context command reads repo and vault files from the current project
   assert.match(result.stdout, /Agent Workspace Guide/);
   assert.match(result.stdout, /Vault AGENTS/);
   assert.match(result.stdout, /Project Memory Index/);
+});
+
+test('context modes keep compact context narrow and explain context choices', () => {
+  const root = makeTempDir('agent-bootstrap-context-modes-');
+  const repoRoot = path.join(root, 'repo');
+  const nested = path.join(repoRoot, 'src', 'deep');
+  const vaultRoot = path.join(root, 'vault');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(nested, { recursive: true });
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['init'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  const compact = runCli(['context', '--compact'], { configHome, cwd: nested });
+  assert.equal(compact.status, 0, compact.stderr);
+  assert.match(compact.stdout, /Agent Routing Index/);
+  assert.match(compact.stdout, /Skills Routing Index/);
+  assert.match(compact.stdout, /Project Facts/);
+  assert.doesNotMatch(compact.stdout, /Today Daily Note/);
+  assert.doesNotMatch(compact.stdout, /# Test-Driven Development \(TDD\)/);
+  assert.doesNotMatch(compact.stdout, /README\.upstream\.md/);
+
+  const defaultContext = runCli(['context'], { configHome, cwd: nested });
+  assert.equal(defaultContext.status, 0, defaultContext.stderr);
+  assert.equal(defaultContext.stdout, compact.stdout);
+
+  const why = runCli(['context', '--compact', '--why'], { configHome, cwd: nested });
+  assert.equal(why.status, 0, why.stderr);
+  assert.match(why.stdout, /Context mode: compact/);
+  assert.match(why.stdout, /Loaded:/);
+  assert.match(why.stdout, /Skipped:/);
+  assert.match(why.stdout, /\.agent\/skills\/\*\*/);
+  assert.match(why.stdout, /Daily\/\*\*/);
+
+  const full = runCli(['context', '--full'], { configHome, cwd: nested });
+  assert.equal(full.status, 0, full.stderr);
+  assert.match(full.stdout, /Today Daily Note/);
+  assert.ok(full.stdout.length > compact.stdout.length);
 });
 
 test('daily note log entries stay inside the Agent Log section', () => {
@@ -914,7 +969,16 @@ test('stable memory writes update project fact question and handoff files', () =
   result = runCli([], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
 
-  result = runRuntime(repoRoot, ['fact', 'Source edits happen in src; dist and runtime dist are generated.', '--title', 'Source of truth']);
+  result = runRuntime(repoRoot, [
+    'fact',
+    'Source edits happen in src; dist and runtime dist are generated.',
+    '--title',
+    'Source of truth',
+    '--source',
+    'AGENTS.md',
+    '--confidence',
+    'high',
+  ]);
   assert.equal(result.status, 0, result.stderr);
 
   result = runRuntime(repoRoot, ['question', 'Should npm publish wait until the pushed GitHub branch is reviewed?', '--title', 'Publish gate']);
@@ -930,6 +994,9 @@ test('stable memory writes update project fact question and handoff files', () =
 
   assert.match(facts, /Source of truth/);
   assert.match(facts, /Source edits happen in src/);
+  assert.match(facts, /Source: AGENTS\.md/);
+  assert.match(facts, /Confidence: high/);
+  assert.match(facts, /Last verified:/);
   assert.match(questions, /Publish gate/);
   assert.match(questions, /Should npm publish wait/);
   assert.match(handoff, /Next session should run npm test/);
@@ -947,6 +1014,94 @@ test('stable memory writes update project fact question and handoff files', () =
   assert.match(result.stdout, /Publish gate/);
   assert.match(result.stdout, /Project Handoff/);
   assert.match(result.stdout, /Next session should run npm test/);
+});
+
+test('memory compact summarizes session noise into a project artifact', () => {
+  const root = makeTempDir('agent-bootstrap-memory-compact-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['task', 'Keep compact memory useful']);
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['compact']);
+  assert.equal(result.status, 0, result.stderr);
+
+  const summaryPath = path.join(vaultRoot, 'Projects', 'repo', 'Artifacts', 'session-summary.md');
+  assert.equal(fs.existsSync(summaryPath), true);
+  const summary = readFile(summaryPath);
+  assert.match(summary, /# Session Summary/);
+  assert.match(summary, /Recent Tasks/);
+  assert.match(summary, /Keep compact memory useful/);
+});
+
+test('agent indexes enforce workflow skill priority and anti-overthinking rules', () => {
+  const agentIndex = readFile(path.join(repoRoot, '.agent', 'INDEX.md'));
+  const skillsIndex = readFile(path.join(repoRoot, '.agent', 'skills', 'INDEX.md'));
+  const unknownsGate = readFile(path.join(repoRoot, '.agent', 'rules', 'context', 'unknowns-gate.md'));
+  const stopOverthinking = readFile(path.join(repoRoot, '.agent', 'rules', 'context', 'stop-overthinking.md'));
+
+  assert.match(agentIndex, /Run `agent-bootstrap context --compact`/);
+  assert.match(agentIndex, /Skill routing is mandatory/);
+  assert.match(skillsIndex, /Workflow skills have priority over domain skills/);
+  assert.match(skillsIndex, /superpowers/);
+  assert.match(skillsIndex, /karpathy-guidelines/);
+  assert.match(unknownsGate, /Open Questions\.md/);
+  assert.match(unknownsGate, /Do not convert assumptions into facts/);
+  assert.match(stopOverthinking, /Maximum 3 context expansion steps/);
+  assert.match(stopOverthinking, /task touches one file/);
+});
+
+test('skill index covers shipped skills and skill frontmatter is triggerable', () => {
+  const skillsRoot = path.join(repoRoot, '.agent', 'skills');
+  const skillsIndex = readFile(path.join(skillsRoot, 'INDEX.md'));
+  const requiredIndexEntries = [
+    'agent-api',
+    'andrej-karpathy-skills',
+    'superpowers',
+    'architecture-designer',
+    'api-designer',
+    'devops-engineer',
+    'monitoring-expert',
+    'secure-code-guardian',
+    'database-optimizer',
+    'sql-pro',
+    'legacy-modernizer',
+  ];
+
+  for (const entry of requiredIndexEntries) {
+    assert.match(skillsIndex, new RegExp(entry.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  const stack = [skillsRoot];
+  const skillFiles = [];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+      } else if (entry.name === 'SKILL.md') {
+        skillFiles.push(entryPath);
+      }
+    }
+  }
+
+  assert.ok(skillFiles.length > 0);
+  for (const skillFile of skillFiles) {
+    const body = readFile(skillFile);
+    assert.match(body, /^---\r?\n[\s\S]*\bname:/, `Missing name in ${skillFile}`);
+    assert.match(body, /^---\r?\n[\s\S]*\bdescription:/, `Missing description in ${skillFile}`);
+  }
 });
 
 test('daily note logging deduplicates repeated note writes with the same title', () => {

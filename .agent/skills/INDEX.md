@@ -2,6 +2,8 @@
 
 Read this file before loading any skill. Load the narrowest matching `SKILL.md`; do not recursively scan this folder.
 
+Workflow skills have priority over domain skills. When implementation, debugging, planning, review, or verification rules apply, load `superpowers` workflow guidance and `andrej-karpathy-skills/karpathy-guidelines` before the narrower domain skill.
+
 | Skill | Use when | Avoid when | Load |
 | --- | --- | --- | --- |
 | `agent-api` | Model-provider adapters, request normalization, streaming, tool calls, structured outputs, retries, usage tracking, provider switching. | General API design, security-only, database-only, infra-only, or workflow-only tasks. | `.agent/skills/agent-api/SKILL.md` |
@@ -16,4 +18,4 @@ Read this file before loading any skill. Load the narrowest matching `SKILL.md`;
 | `sql-pro` | SQL writing, complex joins, CTEs, window functions, schema/query migration, dialect differences. | Non-SQL persistence or infra tuning. | `.agent/skills/sql-pro/SKILL.md` |
 | `legacy-modernizer` | Incremental modernization, strangler fig, branch by abstraction, monolith decomposition, technical debt roadmaps. | Small isolated refactors. | `.agent/skills/legacy-modernizer/SKILL.md` |
 
-`README.upstream.md` files are source attribution only. Do not load them during normal task execution.
+Upstream attribution readmes are source attribution only. Do not load them during normal task execution.

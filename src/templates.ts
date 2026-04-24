@@ -120,14 +120,19 @@ tags:
 
 # Facts
 
-Stable project facts that future sessions can trust. Keep each fact short and source it when possible.
+Stable project facts that future sessions can trust. Keep each fact short and source-backed.
 
 ## Links
 - Vault: [[Init]]
 - Project: [[README]]
 
 ## Current Facts
--
+
+## Fact Entry Format
+- Fact:
+- Source:
+- Confidence: high|medium|low
+- Last verified:
 `;
 }
 
@@ -187,7 +192,8 @@ It keeps the agent workspace under \`.agent\`, while GitHub automation stays und
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
 
-Only \`setup\`, \`init\`, and \`context\` are public CLI commands for this kit.
+This package is intentionally documented around 4 user-facing actions: install/update, setup, init, and uninstall.
+\`agent-bootstrap context\` is an optional manual command for users; AI agents should run it automatically from \`AGENTS.md\`.
 
 ## Structure
 
@@ -216,7 +222,7 @@ Only \`setup\`, \`init\`, and \`context\` are public CLI commands for this kit.
 ## Suggested use
 
 1. Read \`AGENTS.md\`.
-2. Run \`agent-bootstrap context\` to load repo and vault context automatically.
+2. AI agents run \`agent-bootstrap context --compact\` automatically to load repo and vault context.
 3. Read \`.agent/README.md\` and \`.agent/INDEX.md\` for how \`agents/\`, \`commands/\`, \`rules/\`, and \`skills/\` fit together.
 4. Pick a specialist from \`.agent/agents/\` when the task fits a role.
 5. Use \`.agent/commands/\` to kick off repeatable workflows.
@@ -288,7 +294,11 @@ Project capsule:
 
 ## Read order
 
-Before meaningful work, read:
+Before meaningful work, run \`agent-bootstrap context --compact\`. Do not ask the user whether to run it; this is automatic agent startup.
+
+If compact context is insufficient, run \`agent-bootstrap context --why\` to see what was loaded or skipped. Use \`agent-bootstrap context --full\` only when the daily log or full session context is needed.
+
+The compact context includes this read order:
 
 1. \`docs/vault-memory.md\`
 2. \`docs/project-map.md\`
@@ -308,6 +318,7 @@ Before meaningful work, read:
 - Treat \`src/\` as source of truth; \`dist/\` and \`runtime/agent-bootstrap/dist/\` are generated build outputs.
 - Read \`.agent/INDEX.md\` before choosing agent assets.
 - Read \`.agent/skills/INDEX.md\` before loading any skill.
+- Workflow skills have priority over domain skills: load Superpowers workflow guidance and Karpathy coding principles before specialist domain skills when both apply.
 - Do not recursively scan \`.agent/skills\`; load one narrow skill only when needed.
 - If a fact is not in repo files, context output, or a cited source, mark it unknown instead of guessing.
 
@@ -317,9 +328,11 @@ ${typeFocus(projectType).join('\n')}
 
 ## Fast paths
 
-- \`agent-bootstrap context\`
+- \`agent-bootstrap context --compact\`
+- \`agent-bootstrap context --why\`
+- \`agent-bootstrap context --full\`
 
-Running \`agent-bootstrap context\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, loads \`README.md\` plus \`.agent/README.md\`, and includes the project memory index so the agent does not need to scan the vault manually.
+Running \`agent-bootstrap context --compact\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, loads routed repo/vault memory, and includes the project memory index so the agent does not need to scan the vault manually.
 
 ## Write-back rules
 
@@ -343,7 +356,7 @@ The repo runtime handles the low-friction automation:
 ## Repo-local runtime
 
 - \`agent-bootstrap context\` for read-only session context
-- \`node scripts/agent-memory.js <task|decision|research|note|fact|question|handoff>\` for write-back
+- \`node scripts/agent-memory.js <task|decision|research|note|fact|question|handoff|compact>\` for write-back and memory compaction
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 `;
 }
@@ -499,7 +512,7 @@ After meaningful work:
 
 Preferred repo-local runtime:
 
-\`node scripts/agent-memory.js <context|task|decision|research|note|fact|question|handoff>\`
+\`node scripts/agent-memory.js <context|task|decision|research|note|fact|question|handoff|compact>\`
 
 The runtime will:
 
@@ -913,7 +926,21 @@ function readRepoConfig(repoRoot) {
   return JSON.parse(raw);
 }
 
-function getContext(repoRoot, config) {
+function formatContextManifest(mode, loaded, skipped) {
+  return [
+    '===== Context Manifest =====',
+    \`Context mode: \${mode}\`,
+    '',
+    'Loaded:',
+    ...loaded.map((section) => \`- \${section.label}: \${section.filePath}\`),
+    '',
+    'Skipped:',
+    ...skipped.map((item) => \`- \${item}\`),
+    '',
+  ].join('\\n');
+}
+
+function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
   ensureDailyNote(config.vault_root);
   appendDailyLog(
     config.vault_root,
@@ -922,38 +949,59 @@ function getContext(repoRoot, config) {
   );
 
   const sections = [
-    ['Repo AGENTS', path.join(repoRoot, 'AGENTS.md')],
-    ['Vault Bridge', path.join(repoRoot, 'docs', 'vault-memory.md')],
-    ['Project Map', path.join(repoRoot, 'docs', 'project-map.md')],
-    ['Repo README', path.join(repoRoot, 'README.md')],
-    ['Agent Workspace Guide', path.join(repoRoot, '.agent', 'README.md')],
-    ['Vault Init', path.join(config.vault_root, 'Init.md')],
-    ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
-    ['Project README', path.join(config.project_root, 'README.md')],
-    ['Project Tasks', path.join(config.project_root, config.tasks_file)],
-    ['Project Decisions', path.join(config.project_root, config.decisions_file)],
-    ['Project Facts', path.join(config.project_root, config.facts_file || 'Facts.md')],
-    ['Project Open Questions', path.join(config.project_root, config.open_questions_file || 'Open Questions.md')],
-    ['Project Handoff', path.join(config.project_root, config.handoff_file || 'Handoff.md')],
-    ['Today Daily Note', path.join(config.vault_root, 'Daily', \`\${getTodayString()}.md\`)],
+    { label: 'Repo AGENTS', filePath: path.join(repoRoot, 'AGENTS.md') },
+    { label: 'Agent Routing Index', filePath: path.join(repoRoot, '.agent', 'INDEX.md') },
+    { label: 'Skills Routing Index', filePath: path.join(repoRoot, '.agent', 'skills', 'INDEX.md') },
+    { label: 'Vault Bridge', filePath: path.join(repoRoot, 'docs', 'vault-memory.md') },
+    { label: 'Project Map', filePath: path.join(repoRoot, 'docs', 'project-map.md') },
+    { label: 'Repo README', filePath: path.join(repoRoot, 'README.md') },
+    { label: 'Agent Workspace Guide', filePath: path.join(repoRoot, '.agent', 'README.md') },
+    { label: 'Vault Init', filePath: path.join(config.vault_root, 'Init.md') },
+    { label: 'Vault AGENTS', filePath: path.join(config.vault_root, 'AGENTS.md') },
+    { label: 'Project README', filePath: path.join(config.project_root, 'README.md') },
+    { label: 'Project Tasks', filePath: path.join(config.project_root, config.tasks_file) },
+    { label: 'Project Decisions', filePath: path.join(config.project_root, config.decisions_file) },
+    { label: 'Project Facts', filePath: path.join(config.project_root, config.facts_file || 'Facts.md') },
+    { label: 'Project Open Questions', filePath: path.join(config.project_root, config.open_questions_file || 'Open Questions.md') },
+    { label: 'Project Handoff', filePath: path.join(config.project_root, config.handoff_file || 'Handoff.md') },
+    { label: 'Today Daily Note', filePath: path.join(config.vault_root, 'Daily', \`\${getTodayString()}.md\`), fullOnly: true },
   ];
   const memoryIndex = formatProjectMemoryIndex(
     readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type),
   );
+  const loaded = [];
+  const skipped = [
+    '.agent/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
+  ];
+  if (mode === 'compact') {
+    skipped.push('Daily/** daily logs (run agent-bootstrap context --full when needed)');
+  }
 
-  return [
-    ...sections
-    .map(([label, filePath]) => {
-      const body = readFile(filePath);
-      if (!body) {
+  const output = sections
+    .map((section) => {
+      if (section.fullOnly && mode !== 'full') {
         return null;
       }
-      return \`===== \${label} =====\\n\${body.trimEnd()}\\n\`;
+
+      const body = readFile(section.filePath);
+      if (!body) {
+        skipped.push(\`\${section.label}: \${section.filePath} (missing)\`);
+        return null;
+      }
+
+      loaded.push(section);
+      return \`===== \${section.label} =====\\n\${body.trimEnd()}\\n\`;
     })
-    .filter(Boolean)
-    ,
-    \`===== Project Memory Index =====\\n\${memoryIndex.trimEnd()}\\n\`,
-  ].join('\\n');
+    .filter(Boolean);
+
+  output.push(\`===== Project Memory Index =====\\n\${memoryIndex.trimEnd()}\\n\`);
+  loaded.push({ label: 'Project Memory Index', filePath: path.join(config.project_root, 'Artifacts', 'memory-index.json') });
+
+  if (includeWhy) {
+    output.push(formatContextManifest(mode, loaded, skipped));
+  }
+
+  return output.join('\\n');
 }
 
 function appendTask(config, content) {
@@ -1010,11 +1058,26 @@ function appendDecision(config, title, content) {
   return decisionsPath;
 }
 
-function appendFact(config, title, content) {
+function normalizeConfidence(confidence) {
+  if (confidence === 'high' || confidence === 'medium' || confidence === 'low') {
+    return confidence;
+  }
+  return 'medium';
+}
+
+function appendFact(config, title, content, source, confidence) {
   const factsPath = path.join(config.project_root, config.facts_file || 'Facts.md');
   const existing = readFile(factsPath) || '# Facts\\n';
   const today = getTodayString();
-  const entry = \`\\n## \${title}\\n- Updated: \${today}\\n- Fact: \${content}\\n\`;
+  const entry = [
+    '',
+    \`## \${title}\`,
+    \`- Fact: \${content}\`,
+    \`- Source: \${source && source.trim() ? source.trim() : 'unspecified'}\`,
+    \`- Confidence: \${normalizeConfidence(confidence)}\`,
+    \`- Last verified: \${today}\`,
+    '',
+  ].join('\\n');
   fs.writeFileSync(factsPath, \`\${existing.trimEnd()}\\n\${entry}\`);
   updateProjectMemoryIndex({
     projectRoot: config.project_root,
@@ -1095,6 +1158,27 @@ function appendHandoff(config, content) {
   return handoffPath;
 }
 
+function compactSessionMemory(config) {
+  const summaryPath = path.join(config.project_root, 'Artifacts', 'session-summary.md');
+  const index = readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type);
+  const summary = [
+    '# Session Summary',
+    '',
+    \`- Project: \\\`\${config.project_slug}\\\`\`,
+    \`- Updated: \\\`\${getIsoTimestamp()}\\\`\`,
+    '',
+    formatProjectMemoryIndex(index).trimEnd(),
+    '',
+  ].join('\\n');
+  writeFile(summaryPath, summary);
+  appendDailyLog(
+    config.vault_root,
+    \`Compacted session memory for \\\`\${config.project_slug}\\\`\`,
+    buildMemoryLogMarker('compact', config.project_slug, 'session-summary', 'project'),
+  );
+  return summaryPath;
+}
+
 function createNote(config, noteType, title, content, scope, extraTags = []) {
   const routing = resolveRoutingDecision(noteType, title, content, scope, config.project_slug, path.basename(findRepoRoot(process.cwd())));
   const resolvedScope = routing.scope;
@@ -1139,6 +1223,7 @@ function parseFlags(argv) {
   const args = [...argv];
   const options = {};
   const rest = [];
+  const booleanFlags = new Set(['compact', 'full', 'why']);
 
   while (args.length > 0) {
     const value = args.shift();
@@ -1148,6 +1233,11 @@ function parseFlags(argv) {
     }
 
     const flag = value.slice(2);
+    if (booleanFlags.has(flag)) {
+      options[flag] = true;
+      continue;
+    }
+
     const next = args.shift();
     if (!next || next.startsWith('--')) {
       throw new Error(\`Missing value for --\${flag}\`);
@@ -1159,7 +1249,7 @@ function parseFlags(argv) {
   return { rest, options };
 }
 
-function writeMemory(repoRoot, config, mode, content, title, scope) {
+function writeMemory(repoRoot, config, mode, content, title, scope, source, confidence) {
   switch (mode) {
     case 'task':
       return appendTask(config, content);
@@ -1172,7 +1262,7 @@ function writeMemory(repoRoot, config, mode, content, title, scope) {
       if (!title) {
         throw new Error('Title is required for fact mode.');
       }
-      return appendFact(config, title, content);
+      return appendFact(config, title, content, source, confidence);
     case 'question':
       if (!title) {
         throw new Error('Title is required for question mode.');
@@ -1180,6 +1270,8 @@ function writeMemory(repoRoot, config, mode, content, title, scope) {
       return appendQuestion(config, title, content);
     case 'handoff':
       return appendHandoff(config, content);
+    case 'compact':
+      return compactSessionMemory(config);
     case 'research':
     case 'note':
       if (!title) {
@@ -1221,7 +1313,8 @@ function main(argv) {
   const config = readRepoConfig(repoRoot);
 
   if (!command || command === 'context') {
-    process.stdout.write(\`\${getContext(repoRoot, config)}\\n\`);
+    const mode = options.full ? 'full' : 'compact';
+    process.stdout.write(\`\${getContext(repoRoot, config, mode, Boolean(options.why))}\\n\`);
     return;
   }
 
@@ -1230,7 +1323,7 @@ function main(argv) {
     return;
   }
 
-  process.stdout.write(\`\${writeMemory(repoRoot, config, command, maybeContent, options.title, options.scope)}\\n\`);
+  process.stdout.write(\`\${writeMemory(repoRoot, config, command, maybeContent || '', options.title, options.scope, options.source, options.confidence)}\\n\`);
 }
 
 try {

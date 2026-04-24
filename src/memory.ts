@@ -7,6 +7,8 @@ import {
   appendDailyLog,
   buildMemoryLogMarker,
   createMemoryIndexRecord,
+  formatProjectMemoryIndex,
+  readProjectMemoryIndex,
   resolveRoutingDecision,
   updateProjectMemoryIndex,
 } from './vault';
@@ -71,11 +73,27 @@ function appendDecision(config: RepoConfig, title: string, content: string): str
   return decisionsPath;
 }
 
-function appendFact(config: RepoConfig, title: string, content: string): string {
+function normalizeConfidence(confidence?: string): 'high' | 'medium' | 'low' {
+  if (confidence === 'high' || confidence === 'medium' || confidence === 'low') {
+    return confidence;
+  }
+
+  return 'medium';
+}
+
+function appendFact(config: RepoConfig, title: string, content: string, source?: string, confidence?: string): string {
   const factsPath = path.join(config.project_root, config.facts_file || 'Facts.md');
   const existing = fs.existsSync(factsPath) ? fs.readFileSync(factsPath, 'utf8') : '# Facts\n';
   const today = getTodayString();
-  const entry = `\n## ${title}\n- Updated: ${today}\n- Fact: ${content}\n`;
+  const entry = [
+    '',
+    `## ${title}`,
+    `- Fact: ${content}`,
+    `- Source: ${source?.trim() || 'unspecified'}`,
+    `- Confidence: ${normalizeConfidence(confidence)}`,
+    `- Last verified: ${today}`,
+    '',
+  ].join('\n');
   fs.writeFileSync(factsPath, `${existing.trimEnd()}\n${entry}`);
 
   updateProjectMemoryIndex({
@@ -165,6 +183,29 @@ function appendHandoff(config: RepoConfig, content: string): string {
   return handoffPath;
 }
 
+function compactSessionMemory(config: RepoConfig): string {
+  const summaryPath = path.join(config.project_root, 'Artifacts', 'session-summary.md');
+  const index = readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type);
+  const summary = [
+    '# Session Summary',
+    '',
+    `- Project: \`${config.project_slug}\``,
+    `- Updated: \`${new Date().toISOString()}\``,
+    '',
+    formatProjectMemoryIndex(index).trimEnd(),
+    '',
+  ].join('\n');
+
+  writeFile(summaryPath, summary);
+  appendDailyLog(
+    config.vault_root,
+    `Compacted session memory for \`${config.project_slug}\``,
+    buildMemoryLogMarker({ kind: 'compact', projectSlug: config.project_slug, title: 'session-summary', scope: 'project' }),
+  );
+
+  return summaryPath;
+}
+
 function createScopedNote({
   config,
   repoRoot,
@@ -235,12 +276,16 @@ export function writeMemory({
   title,
   content,
   scope,
+  source,
+  confidence,
 }: {
   repoRoot?: string;
   mode: string;
   title?: string;
   content: string;
   scope?: string;
+  source?: string;
+  confidence?: string;
 }): string {
   const resolvedRepoRoot = repoRoot ? path.resolve(repoRoot) : findRepoRoot(process.cwd());
   const config = readRepoConfig(resolvedRepoRoot);
@@ -257,7 +302,7 @@ export function writeMemory({
       if (!title) {
         throw new Error('Title is required for fact mode.');
       }
-      return appendFact(config, title, content);
+      return appendFact(config, title, content, source, confidence);
     case 'question':
       if (!title) {
         throw new Error('Title is required for question mode.');
@@ -265,6 +310,8 @@ export function writeMemory({
       return appendQuestion(config, title, content);
     case 'handoff':
       return appendHandoff(config, content);
+    case 'compact':
+      return compactSessionMemory(config);
     case 'research':
     case 'note':
       if (!title) {

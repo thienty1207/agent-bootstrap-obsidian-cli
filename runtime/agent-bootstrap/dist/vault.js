@@ -413,12 +413,19 @@ tags:
 
 # Facts
 
+Stable project facts that future sessions can trust. Keep each fact short and source-backed.
+
 ## Links
 - Vault: [[Init]]
 - Project: [[README]]
 
 ## Current Facts
--
+
+## Fact Entry Format
+- Fact:
+- Source:
+- Confidence: high|medium|low
+- Last verified:
 `;
 }
 function projectTemplateOpenQuestions() {

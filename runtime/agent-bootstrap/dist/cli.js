@@ -31,6 +31,33 @@ function parseFlags(args) {
     }
     return { rest, options };
 }
+function parseContextArgs(args) {
+    let repoRoot;
+    let mode = 'compact';
+    let includeWhy = false;
+    for (const value of args) {
+        if (value === '--compact') {
+            mode = 'compact';
+            continue;
+        }
+        if (value === '--full') {
+            mode = 'full';
+            continue;
+        }
+        if (value === '--why') {
+            includeWhy = true;
+            continue;
+        }
+        if (value.startsWith('--')) {
+            throw new Error(`Unknown context option: ${value}`);
+        }
+        if (repoRoot) {
+            throw new Error('Context accepts at most one repo path.');
+        }
+        repoRoot = value;
+    }
+    return { repoRoot, mode, includeWhy };
+}
 function writeJson(value) {
     process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
@@ -55,8 +82,11 @@ function writeHelp() {
         'Initialize a project in the current folder or at an explicit path:',
         '  agent-bootstrap init [project-path]',
         '',
-        'Load repo and vault context at the start of an AI agent session:',
+        'Optional AI context for agents:',
         '  agent-bootstrap context',
+        '  agent-bootstrap context --compact',
+        '  agent-bootstrap context --why',
+        '  agent-bootstrap context --full',
         '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
@@ -88,7 +118,8 @@ async function main(argv) {
         return;
     }
     if (command === 'context') {
-        process.stdout.write(`${(0, context_1.getContext)({ repoRoot: tail[0] })}\n`);
+        const contextArgs = parseContextArgs(tail);
+        process.stdout.write(`${(0, context_1.getContext)(contextArgs)}\n`);
         return;
     }
     throw new Error(`Unknown command "${command}". ${PUBLIC_COMMANDS}`);

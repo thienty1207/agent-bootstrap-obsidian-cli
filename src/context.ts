@@ -41,7 +41,45 @@ export function resolveRepoRoot(repoRoot?: string): string {
   return repoRoot ? path.resolve(repoRoot) : findRepoRoot(process.cwd());
 }
 
-export function getContext({ repoRoot }: { repoRoot?: string }): string {
+export type ContextMode = 'compact' | 'full';
+
+interface ContextSection {
+  label: string;
+  filePath: string;
+  fullOnly?: boolean;
+}
+
+function formatContextManifest({
+  mode,
+  loaded,
+  skipped,
+}: {
+  mode: ContextMode;
+  loaded: ContextSection[];
+  skipped: string[];
+}): string {
+  return [
+    '===== Context Manifest =====',
+    `Context mode: ${mode}`,
+    '',
+    'Loaded:',
+    ...loaded.map((section) => `- ${section.label}: ${section.filePath}`),
+    '',
+    'Skipped:',
+    ...skipped.map((item) => `- ${item}`),
+    '',
+  ].join('\n');
+}
+
+export function getContext({
+  repoRoot,
+  mode = 'compact',
+  includeWhy = false,
+}: {
+  repoRoot?: string;
+  mode?: ContextMode;
+  includeWhy?: boolean;
+}): string {
   const resolvedRepoRoot = resolveRepoRoot(repoRoot);
   const config = readRepoConfig(resolvedRepoRoot);
   ensureDailyNote(config.vault_root);
@@ -51,37 +89,58 @@ export function getContext({ repoRoot }: { repoRoot?: string }): string {
     createDailyLogMarker(['session', config.project_slug, new Date().toISOString().slice(0, 13)]),
   );
 
-  const sections: Array<[string, string]> = [
-    ['Repo AGENTS', path.join(resolvedRepoRoot, 'AGENTS.md')],
-    ['Vault Bridge', path.join(resolvedRepoRoot, 'docs', 'vault-memory.md')],
-    ['Project Map', path.join(resolvedRepoRoot, 'docs', 'project-map.md')],
-    ['Repo README', path.join(resolvedRepoRoot, 'README.md')],
-    ['Agent Workspace Guide', path.join(resolvedRepoRoot, '.agent', 'README.md')],
-    ['Vault Init', path.join(config.vault_root, 'Init.md')],
-    ['Vault AGENTS', path.join(config.vault_root, 'AGENTS.md')],
-    ['Project README', path.join(config.project_root, 'README.md')],
-    ['Project Tasks', path.join(config.project_root, config.tasks_file)],
-    ['Project Decisions', path.join(config.project_root, config.decisions_file)],
-    ['Project Facts', path.join(config.project_root, config.facts_file || 'Facts.md')],
-    ['Project Open Questions', path.join(config.project_root, config.open_questions_file || 'Open Questions.md')],
-    ['Project Handoff', path.join(config.project_root, config.handoff_file || 'Handoff.md')],
-    ['Today Daily Note', getDailyNotePath(config.vault_root)],
+  const sections: ContextSection[] = [
+    { label: 'Repo AGENTS', filePath: path.join(resolvedRepoRoot, 'AGENTS.md') },
+    { label: 'Agent Routing Index', filePath: path.join(resolvedRepoRoot, '.agent', 'INDEX.md') },
+    { label: 'Skills Routing Index', filePath: path.join(resolvedRepoRoot, '.agent', 'skills', 'INDEX.md') },
+    { label: 'Vault Bridge', filePath: path.join(resolvedRepoRoot, 'docs', 'vault-memory.md') },
+    { label: 'Project Map', filePath: path.join(resolvedRepoRoot, 'docs', 'project-map.md') },
+    { label: 'Repo README', filePath: path.join(resolvedRepoRoot, 'README.md') },
+    { label: 'Agent Workspace Guide', filePath: path.join(resolvedRepoRoot, '.agent', 'README.md') },
+    { label: 'Vault Init', filePath: path.join(config.vault_root, 'Init.md') },
+    { label: 'Vault AGENTS', filePath: path.join(config.vault_root, 'AGENTS.md') },
+    { label: 'Project README', filePath: path.join(config.project_root, 'README.md') },
+    { label: 'Project Tasks', filePath: path.join(config.project_root, config.tasks_file) },
+    { label: 'Project Decisions', filePath: path.join(config.project_root, config.decisions_file) },
+    { label: 'Project Facts', filePath: path.join(config.project_root, config.facts_file || 'Facts.md') },
+    { label: 'Project Open Questions', filePath: path.join(config.project_root, config.open_questions_file || 'Open Questions.md') },
+    { label: 'Project Handoff', filePath: path.join(config.project_root, config.handoff_file || 'Handoff.md') },
+    { label: 'Today Daily Note', filePath: getDailyNotePath(config.vault_root), fullOnly: true },
   ];
   const memoryIndex = formatProjectMemoryIndex(
     readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type),
   );
+  const loaded: ContextSection[] = [];
+  const skipped: string[] = [
+    '.agent/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
+  ];
+  if (mode === 'compact') {
+    skipped.push('Daily/** daily logs (run `agent-bootstrap context --full` when needed)');
+  }
 
-  return [
-    ...sections
-      .map(([label, filePath]) => {
-        const body = readIfExists(filePath);
-        if (!body) {
-          return null;
-        }
+  const output = sections
+    .map((section) => {
+      if (section.fullOnly && mode !== 'full') {
+        return null;
+      }
 
-        return `===== ${label} =====\n${body.trimEnd()}\n`;
-      })
-      .filter((value): value is string => Boolean(value)),
-    `===== Project Memory Index =====\n${memoryIndex.trimEnd()}\n`,
-  ].join('\n');
+      const body = readIfExists(section.filePath);
+      if (!body) {
+        skipped.push(`${section.label}: ${section.filePath} (missing)`);
+        return null;
+      }
+
+      loaded.push(section);
+      return `===== ${section.label} =====\n${body.trimEnd()}\n`;
+    })
+    .filter((value): value is string => Boolean(value));
+
+  output.push(`===== Project Memory Index =====\n${memoryIndex.trimEnd()}\n`);
+  loaded.push({ label: 'Project Memory Index', filePath: path.join(config.project_root, 'Artifacts', 'memory-index.json') });
+
+  if (includeWhy) {
+    output.push(formatContextManifest({ mode, loaded, skipped }));
+  }
+
+  return output.join('\n');
 }

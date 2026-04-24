@@ -23,6 +23,8 @@ exports.MANAGED_REPO_PATHS = [
     '.agent/README.md',
     '.agent/agents/planner.md',
     '.agent/commands/plan/brainstorm.md',
+    '.agent/rules/context/unknowns-gate.md',
+    '.agent/rules/context/stop-overthinking.md',
     '.agent/skills/INDEX.md',
     'docs/vault-memory.md',
     'docs/project-map.md',

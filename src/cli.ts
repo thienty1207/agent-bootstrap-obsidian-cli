@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { loadConfig, saveConfig } from './config';
 import { initProject } from './bootstrap';
-import { getContext } from './context';
+import { getContext, type ContextMode } from './context';
 import { ensureVaultScaffold } from './vault';
 
 const INSTALL_COMMAND = 'npm i -g --force @tytybill123/agent-bootstrap';
@@ -37,6 +37,45 @@ function parseFlags(args: string[]): ParsedArgs {
   return { rest, options };
 }
 
+function parseContextArgs(args: string[]): {
+  repoRoot?: string;
+  mode: ContextMode;
+  includeWhy: boolean;
+} {
+  let repoRoot: string | undefined;
+  let mode: ContextMode = 'compact';
+  let includeWhy = false;
+
+  for (const value of args) {
+    if (value === '--compact') {
+      mode = 'compact';
+      continue;
+    }
+
+    if (value === '--full') {
+      mode = 'full';
+      continue;
+    }
+
+    if (value === '--why') {
+      includeWhy = true;
+      continue;
+    }
+
+    if (value.startsWith('--')) {
+      throw new Error(`Unknown context option: ${value}`);
+    }
+
+    if (repoRoot) {
+      throw new Error('Context accepts at most one repo path.');
+    }
+
+    repoRoot = value;
+  }
+
+  return { repoRoot, mode, includeWhy };
+}
+
 function writeJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
@@ -64,8 +103,11 @@ function writeHelp(): void {
         'Initialize a project in the current folder or at an explicit path:',
         '  agent-bootstrap init [project-path]',
         '',
-        'Load repo and vault context at the start of an AI agent session:',
+        'Optional AI context for agents:',
         '  agent-bootstrap context',
+        '  agent-bootstrap context --compact',
+        '  agent-bootstrap context --why',
+        '  agent-bootstrap context --full',
         '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
@@ -104,7 +146,8 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   if (command === 'context') {
-    process.stdout.write(`${getContext({ repoRoot: tail[0] })}\n`);
+    const contextArgs = parseContextArgs(tail);
+    process.stdout.write(`${getContext(contextArgs)}\n`);
     return;
   }
 
