@@ -563,6 +563,35 @@ function findRepoRoot(startPath) {
   throw new Error('Could not find a bootstrapped repo from the current directory.');
 }
 
+function isContextRoot(candidate) {
+  return Boolean(
+    fs.existsSync(path.join(candidate, 'vault.config.json'))
+      || (
+        fs.existsSync(path.join(candidate, 'AGENTS.md'))
+        && fs.existsSync(path.join(candidate, '.agent', 'INDEX.md'))
+      ),
+  );
+}
+
+function findContextRoot(startPath) {
+  let current = path.resolve(startPath);
+
+  while (true) {
+    if (isContextRoot(current)) {
+      return current;
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      break;
+    }
+
+    current = parent;
+  }
+
+  return findRepoRoot(startPath);
+}
+
 function getTodayString() {
   const now = new Date();
   const year = now.getFullYear();
@@ -918,12 +947,17 @@ function resolveRoutingDecision(mode, title, content, scope, projectSlug, repoNa
 }
 
 function readRepoConfig(repoRoot) {
-  const configPath = path.join(repoRoot, 'vault.config.json');
-  const raw = readFile(configPath);
-  if (!raw) {
+  const config = readOptionalRepoConfig(repoRoot);
+  if (!config) {
     throw new Error('Missing vault.config.json. Run agent-bootstrap in the repo root first.');
   }
-  return JSON.parse(raw);
+  return config;
+}
+
+function readOptionalRepoConfig(repoRoot) {
+  const configPath = path.join(repoRoot, 'vault.config.json');
+  const raw = readFile(configPath);
+  return raw ? JSON.parse(raw) : null;
 }
 
 function formatContextManifest(mode, loaded, skipped) {
@@ -941,13 +975,6 @@ function formatContextManifest(mode, loaded, skipped) {
 }
 
 function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
-  ensureDailyNote(config.vault_root);
-  appendDailyLog(
-    config.vault_root,
-    \`Session started for \\\`\${config.project_slug}\\\`\`,
-    createDailyLogMarker(['session', config.project_slug, new Date().toISOString().slice(0, 13)]),
-  );
-
   const sections = [
     { label: 'Repo AGENTS', filePath: path.join(repoRoot, 'AGENTS.md') },
     { label: 'Agent Routing Index', filePath: path.join(repoRoot, '.agent', 'INDEX.md') },
@@ -956,25 +983,35 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
     { label: 'Project Map', filePath: path.join(repoRoot, 'docs', 'project-map.md') },
     { label: 'Repo README', filePath: path.join(repoRoot, 'README.md') },
     { label: 'Agent Workspace Guide', filePath: path.join(repoRoot, '.agent', 'README.md') },
-    { label: 'Vault Init', filePath: path.join(config.vault_root, 'Init.md') },
-    { label: 'Vault AGENTS', filePath: path.join(config.vault_root, 'AGENTS.md') },
-    { label: 'Project README', filePath: path.join(config.project_root, 'README.md') },
-    { label: 'Project Tasks', filePath: path.join(config.project_root, config.tasks_file) },
-    { label: 'Project Decisions', filePath: path.join(config.project_root, config.decisions_file) },
-    { label: 'Project Facts', filePath: path.join(config.project_root, config.facts_file || 'Facts.md') },
-    { label: 'Project Open Questions', filePath: path.join(config.project_root, config.open_questions_file || 'Open Questions.md') },
-    { label: 'Project Handoff', filePath: path.join(config.project_root, config.handoff_file || 'Handoff.md') },
-    { label: 'Today Daily Note', filePath: path.join(config.vault_root, 'Daily', \`\${getTodayString()}.md\`), fullOnly: true },
   ];
-  const memoryIndex = formatProjectMemoryIndex(
-    readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type),
-  );
   const loaded = [];
   const skipped = [
     '.agent/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
   ];
   if (mode === 'compact') {
     skipped.push('Daily/** daily logs (run agent-bootstrap context --full when needed)');
+  }
+  if (config) {
+    ensureDailyNote(config.vault_root);
+    appendDailyLog(
+      config.vault_root,
+      \`Session started for \\\`\${config.project_slug}\\\`\`,
+      createDailyLogMarker(['session', config.project_slug, new Date().toISOString().slice(0, 13)]),
+    );
+    sections.push(
+      { label: 'Vault Init', filePath: path.join(config.vault_root, 'Init.md') },
+      { label: 'Vault AGENTS', filePath: path.join(config.vault_root, 'AGENTS.md') },
+      { label: 'Project README', filePath: path.join(config.project_root, 'README.md') },
+      { label: 'Project Tasks', filePath: path.join(config.project_root, config.tasks_file) },
+      { label: 'Project Decisions', filePath: path.join(config.project_root, config.decisions_file) },
+      { label: 'Project Facts', filePath: path.join(config.project_root, config.facts_file || 'Facts.md') },
+      { label: 'Project Open Questions', filePath: path.join(config.project_root, config.open_questions_file || 'Open Questions.md') },
+      { label: 'Project Handoff', filePath: path.join(config.project_root, config.handoff_file || 'Handoff.md') },
+      { label: 'Today Daily Note', filePath: path.join(config.vault_root, 'Daily', \`\${getTodayString()}.md\`), fullOnly: true },
+    );
+  } else {
+    skipped.push('vault.config.json missing; loaded repo-local source context only');
+    skipped.push('Vault/project memory files unavailable until agent-bootstrap setup and agent-bootstrap init run');
   }
 
   const output = sections
@@ -994,8 +1031,20 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
     })
     .filter(Boolean);
 
-  output.push(\`===== Project Memory Index =====\\n\${memoryIndex.trimEnd()}\\n\`);
-  loaded.push({ label: 'Project Memory Index', filePath: path.join(config.project_root, 'Artifacts', 'memory-index.json') });
+  if (config) {
+    const memoryIndex = formatProjectMemoryIndex(
+      readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type),
+    );
+    output.push(\`===== Project Memory Index =====\\n\${memoryIndex.trimEnd()}\\n\`);
+    loaded.push({ label: 'Project Memory Index', filePath: path.join(config.project_root, 'Artifacts', 'memory-index.json') });
+  } else {
+    output.push([
+      '===== Source Repo Context =====',
+      'No vault.config.json found. Loaded repo-local instructions only.',
+      'Run agent-bootstrap setup and agent-bootstrap init to enable vault-backed memory.',
+      '',
+    ].join('\\n'));
+  }
 
   if (includeWhy) {
     output.push(formatContextManifest(mode, loaded, skipped));
@@ -1309,14 +1358,16 @@ function writeMemory(repoRoot, config, mode, content, title, scope, source, conf
 function main(argv) {
   const { rest, options } = parseFlags(argv);
   const [command, maybeContent] = rest;
-  const repoRoot = options['repo-root'] ? path.resolve(options['repo-root']) : findRepoRoot(process.cwd());
-  const config = readRepoConfig(repoRoot);
+  const repoRoot = options['repo-root'] ? findContextRoot(path.resolve(options['repo-root'])) : findContextRoot(process.cwd());
 
   if (!command || command === 'context') {
     const mode = options.full ? 'full' : 'compact';
+    const config = readOptionalRepoConfig(repoRoot);
     process.stdout.write(\`\${getContext(repoRoot, config, mode, Boolean(options.why))}\\n\`);
     return;
   }
+
+  const config = readRepoConfig(repoRoot);
 
   if (command === 'post-commit') {
     process.stdout.write(\`\${writeMemory(repoRoot, config, 'post-commit', '', '', 'project')}\\n\`);

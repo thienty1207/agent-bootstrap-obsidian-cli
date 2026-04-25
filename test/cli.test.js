@@ -476,6 +476,37 @@ test('global context command reads repo and vault files from the current project
   assert.match(result.stdout, /Project Memory Index/);
 });
 
+test('global context command falls back to repo-local context before init', () => {
+  const root = makeTempDir('agent-bootstrap-source-context-');
+  const repoRoot = path.join(root, 'source-repo');
+  const nested = path.join(repoRoot, 'src', 'deep');
+  const configHome = path.join(root, 'config-home');
+
+  writeFile(path.join(repoRoot, 'AGENTS.md'), '# Repo Agent Guide\n\nRun compact context first.\n');
+  writeFile(path.join(repoRoot, 'README.md'), '# Source Repo\n');
+  writeFile(path.join(repoRoot, 'docs', 'project-map.md'), '# Project Map\n');
+  writeFile(path.join(repoRoot, 'docs', 'vault-memory.md'), '# Vault Bridge\n');
+  writeFile(path.join(repoRoot, '.agent', 'INDEX.md'), '# Agent Routing Index\n');
+  writeFile(path.join(repoRoot, '.agent', 'README.md'), '# Agent Workspace Guide\n');
+  writeFile(path.join(repoRoot, '.agent', 'skills', 'INDEX.md'), '# Skills Routing Index\n');
+  fs.mkdirSync(nested, { recursive: true });
+
+  const compact = runCli(['context'], { configHome, cwd: nested });
+  assert.equal(compact.status, 0, compact.stderr);
+  assert.match(compact.stdout, /Repo AGENTS/);
+  assert.match(compact.stdout, /Agent Routing Index/);
+  assert.match(compact.stdout, /Skills Routing Index/);
+  assert.match(compact.stdout, /Repo README/);
+  assert.match(compact.stdout, /Source Repo Context/);
+  assert.doesNotMatch(compact.stdout, /Vault AGENTS/);
+  assert.doesNotMatch(compact.stdout, /Project Memory Index/);
+
+  const why = runCli(['context', '--why'], { configHome, cwd: nested });
+  assert.equal(why.status, 0, why.stderr);
+  assert.match(why.stdout, /Context mode: compact/);
+  assert.match(why.stdout, /vault\.config\.json missing/);
+});
+
 test('context modes keep compact context narrow and explain context choices', () => {
   const root = makeTempDir('agent-bootstrap-context-modes-');
   const repoRoot = path.join(root, 'repo');
