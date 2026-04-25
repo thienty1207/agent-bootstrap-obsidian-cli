@@ -1182,6 +1182,77 @@ test('frontend domain skills auto-trigger narrowly without expanding compact con
   assert.deepEqual(nestedAgentGuides, []);
 });
 
+test('specialist skill metadata only references shipped skills and every domain skill has an avoid gate', () => {
+  const skillsRoot = path.join(repoRoot, '.agent', 'skills');
+  const shippedSkills = new Set([
+    'agent-api',
+    'andrej-karpathy-skills',
+    'superpowers',
+    'architecture-designer',
+    'api-designer',
+    'devops-engineer',
+    'monitoring-expert',
+    'secure-code-guardian',
+    'database-optimizer',
+    'sql-pro',
+    'legacy-modernizer',
+    'frontend-design',
+    'vercel-react-best-practices',
+  ]);
+  const domainSkills = [
+    'agent-api',
+    'architecture-designer',
+    'api-designer',
+    'devops-engineer',
+    'monitoring-expert',
+    'secure-code-guardian',
+    'database-optimizer',
+    'sql-pro',
+    'legacy-modernizer',
+    'frontend-design',
+    'vercel-react-best-practices',
+  ];
+
+  for (const skill of domainSkills) {
+    const skillBody = readFile(path.join(skillsRoot, skill, 'SKILL.md'));
+    assert.match(skillBody, /^description:\s*Use when/m, `Expected trigger-first description in ${skill}`);
+    assert.match(skillBody, /## Do Not Use/, `Expected Do Not Use gate in ${skill}`);
+    assert.doesNotMatch(
+      skillBody,
+      /fullstack-guardian|microservices-architect|code-reviewer|postgres-pro|graphql-architect|terraform-engineer|kubernetes-specialist|sre-engineer|security-reviewer|test-master|debugging-wizard/,
+      `Expected no stale related-skill references in ${skill}`,
+    );
+  }
+
+  for (const skill of domainSkills) {
+    const skillBody = readFile(path.join(skillsRoot, skill, 'SKILL.md'));
+    const relatedLine = skillBody.split(/\r?\n/).find((line) => line.trim().startsWith('related-skills:'));
+    if (!relatedLine) {
+      continue;
+    }
+
+    const relatedSkills = relatedLine
+      .replace(/^\s*related-skills:\s*/, '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    for (const relatedSkill of relatedSkills) {
+      assert.equal(shippedSkills.has(relatedSkill), true, `${skill} references missing skill ${relatedSkill}`);
+    }
+  }
+});
+
+test('agent routing index exposes every shipped specialist agent without requiring folder scans', () => {
+  const agentIndex = readFile(path.join(repoRoot, '.agent', 'INDEX.md'));
+  const agentsRoot = path.join(repoRoot, '.agent', 'agents');
+  const agentFiles = fs.readdirSync(agentsRoot).filter((entry) => entry.endsWith('.md')).sort();
+
+  for (const agentFile of agentFiles) {
+    assert.match(agentIndex, new RegExp(`\\.agent/agents/${agentFile.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+  }
+});
+
 test('skill index covers shipped skills and skill frontmatter is triggerable', () => {
   const skillsRoot = path.join(repoRoot, '.agent', 'skills');
   const skillsIndex = readFile(path.join(skillsRoot, 'INDEX.md'));

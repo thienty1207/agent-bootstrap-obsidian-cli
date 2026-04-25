@@ -1,6 +1,6 @@
 ---
 name: database-optimizer
-description: Optimizes database queries and improves performance across PostgreSQL and MySQL systems. Use when investigating slow queries, analyzing execution plans, or optimizing database performance. Invoke for index design, query rewrites, configuration tuning, partitioning strategies, lock contention resolution.
+description: Use when investigating slow database queries, analyzing execution plans, designing indexes, tuning database performance, resolving lock contention, or optimizing PostgreSQL/MySQL query behavior with measured evidence.
 license: MIT
 metadata:
   author: https://github.com/Jeffallan
@@ -10,7 +10,7 @@ metadata:
   role: specialist
   scope: optimization
   output-format: analysis-and-code
-  related-skills: devops-engineer, postgres-pro, graphql-architect
+  related-skills: sql-pro, devops-engineer, monitoring-expert, architecture-designer
 ---
 
 # Database Optimizer
@@ -25,6 +25,15 @@ Senior database optimizer with expertise in performance tuning, query optimizati
 - Optimizing schema design and partitioning
 - Reducing lock contention and deadlocks
 - Improving cache hit rates and memory usage
+
+## Do Not Use
+
+- General SQL writing, joins, CTEs, migrations, or schema authoring without measured performance evidence: use `sql-pro/`.
+- Public API or GraphQL contract design: use `api-designer/`.
+- Deployment, infrastructure, CI/CD, or container work: use `devops-engineer/`.
+- Observability pipeline, dashboards, alerts, profiling, or load testing setup: use `monitoring-expert/`.
+- Broad system architecture decisions not centered on database performance: use `architecture-designer/`.
+- Security-only hardening, auth, encryption, or OWASP review: use `secure-code-guardian/`.
 
 ## Core Workflow
 

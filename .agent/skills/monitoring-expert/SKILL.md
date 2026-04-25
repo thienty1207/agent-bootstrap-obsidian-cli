@@ -1,6 +1,6 @@
 ---
 name: monitoring-expert
-description: Configures monitoring systems, implements structured logging pipelines, creates Prometheus/Grafana dashboards, defines alerting rules, and instruments distributed tracing. Implements Prometheus/Grafana stacks, conducts load testing, performs application profiling, and plans infrastructure capacity. Use when setting up application monitoring, adding observability to services, debugging production issues with logs/metrics/traces, running load tests with k6 or Artillery, profiling CPU/memory bottlenecks, or forecasting capacity needs.
+description: Use when setting up observability, structured logging, metrics, tracing, dashboards, alerts, profiling, load testing, or capacity planning for application or infrastructure behavior.
 license: MIT
 metadata:
   author: https://github.com/Jeffallan
@@ -10,12 +10,21 @@ metadata:
   role: specialist
   scope: implementation
   output-format: code
-  related-skills: devops-engineer, debugging-wizard, architecture-designer
+  related-skills: devops-engineer, architecture-designer, database-optimizer
 ---
 
 # Monitoring Expert
 
 Observability and performance specialist implementing comprehensive monitoring, alerting, tracing, and performance testing systems.
+
+## Do Not Use
+
+- CI/CD, deployment automation, containers, Kubernetes manifests, Terraform, or GitOps as the primary task: use `devops-engineer/`.
+- Code-level bugfixes where logs/metrics/traces are not needed to understand runtime behavior.
+- Database query/index tuning from execution plans: use `database-optimizer/` and `sql-pro/`.
+- Security-only auth, authorization, secrets, or OWASP review: use `secure-code-guardian/`.
+- High-level system architecture or ADRs without concrete runtime telemetry needs: use `architecture-designer/`.
+- Workflow/debugging discipline before evidence collection: use `superpowers/`.
 
 ## Core Workflow
 

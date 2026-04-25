@@ -1,6 +1,6 @@
 ---
 name: sql-pro
-description: Optimizes SQL queries, designs database schemas, and troubleshoots performance issues. Use when a user asks why their query is slow, needs help writing complex joins or aggregations, mentions database performance issues, or wants to design or migrate a schema. Invoke for complex queries, window functions, CTEs, indexing strategies, query plan analysis, covering index creation, recursive queries, EXPLAIN/ANALYZE interpretation, before/after query benchmarking, or migrating queries between database dialects (PostgreSQL, MySQL, SQL Server, Oracle).
+description: Use when writing SQL queries, joins, aggregations, CTEs, window functions, schema/query migrations, dialect conversions, or focused SQL fixes before escalating to measured database performance tuning.
 license: MIT
 metadata:
   author: https://github.com/Jeffallan
@@ -10,10 +10,18 @@ metadata:
   role: specialist
   scope: implementation
   output-format: code
-  related-skills: devops-engineer
+  related-skills: database-optimizer, api-designer
 ---
 
 # SQL Pro
+
+## Do Not Use
+
+- Slow-query investigation requiring measured execution plans, index strategy, lock analysis, or database engine tuning: use `database-optimizer/`.
+- Public REST/GraphQL/OpenAPI contract design: use `api-designer/`.
+- Deployment, infrastructure, CI/CD, or database operations automation: use `devops-engineer/`.
+- Security-only SQL injection or auth hardening: use `secure-code-guardian/`.
+- Non-SQL persistence logic or ORM-only application behavior unless raw SQL/schema semantics are central.
 
 ## Core Workflow
 

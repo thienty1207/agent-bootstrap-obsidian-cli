@@ -1,6 +1,6 @@
 ---
 name: legacy-modernizer
-description: Designs incremental migration strategies, identifies service boundaries, produces dependency maps and migration roadmaps, and generates API facade designs for aging codebases. Use when modernizing legacy systems, implementing strangler fig pattern or branch by abstraction, decomposing monoliths, upgrading frameworks or languages, or reducing technical debt without disrupting business operations.
+description: Use when modernizing legacy systems, planning strangler fig or branch-by-abstraction migrations, decomposing monoliths incrementally, upgrading frameworks/languages, or reducing technical debt without disrupting business operations.
 license: MIT
 metadata:
   author: https://github.com/Jeffallan
@@ -10,10 +10,19 @@ metadata:
   role: specialist
   scope: architecture
   output-format: code+analysis
-  related-skills: test-master, devops-engineer
+  related-skills: architecture-designer, devops-engineer, database-optimizer, secure-code-guardian, monitoring-expert
 ---
 
 # Legacy Modernizer
+
+## Do Not Use
+
+- Small isolated refactors, local cleanup, or bugfix-only changes: use nearest code/tests plus `andrej-karpathy-skills/karpathy-guidelines`.
+- Greenfield system architecture without a legacy migration constraint: use `architecture-designer/`.
+- Pure deployment, CI/CD, container, or infrastructure work: use `devops-engineer/`.
+- Database-only query/index tuning: use `database-optimizer/` and `sql-pro/`.
+- Security-only hardening or auth review: use `secure-code-guardian/`.
+- General test workflow or verification discipline: use `superpowers/`.
 
 ## Core Workflow
 

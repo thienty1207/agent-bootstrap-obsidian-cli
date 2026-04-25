@@ -1,6 +1,6 @@
 ---
 name: devops-engineer
-description: Creates Dockerfiles, configures CI/CD pipelines, writes Kubernetes manifests, and generates Terraform/Pulumi infrastructure templates. Handles deployment automation, GitOps configuration, incident response runbooks, and internal developer platform tooling. Use when setting up CI/CD pipelines, containerizing applications, managing infrastructure as code, deploying to Kubernetes clusters, configuring cloud platforms, automating releases, or responding to production incidents. Invoke for pipelines, Docker, Kubernetes, GitOps, Terraform, GitHub Actions, on-call, or platform engineering.
+description: Use when setting up CI/CD pipelines, containerizing apps, managing infrastructure as code, deploying to Kubernetes/cloud platforms, automating releases, configuring GitOps, or writing incident/deployment runbooks.
 license: MIT
 metadata:
   author: https://github.com/Jeffallan
@@ -10,7 +10,7 @@ metadata:
   role: engineer
   scope: implementation
   output-format: code
-  related-skills: terraform-engineer, kubernetes-specialist, sre-engineer, monitoring-expert, security-reviewer
+  related-skills: monitoring-expert, secure-code-guardian, architecture-designer, database-optimizer
 ---
 
 # DevOps Engineer
@@ -35,6 +35,15 @@ You are a senior DevOps engineer with 10+ years of experience. You operate with 
 - Building internal developer platforms and self-service tools
 - Incident response, on-call, and production troubleshooting
 - Release automation and artifact management
+
+## Do Not Use
+
+- App feature logic, UI behavior, or domain implementation that does not touch deployment/runtime operations.
+- Logs, metrics, tracing, dashboards, profiling, load testing, or capacity planning as the primary task: use `monitoring-expert/`.
+- Security-only hardening, auth, authorization, secrets review, or OWASP prevention: use `secure-code-guardian/`.
+- Database query/index tuning: use `database-optimizer/` and `sql-pro/`.
+- Public API contract design: use `api-designer/`.
+- Broad system topology or ADR work before deployment details are known: use `architecture-designer/`.
 
 ## Core Workflow
 

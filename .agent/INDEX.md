@@ -23,12 +23,23 @@ Use this file to choose the smallest useful `.agent` asset. Do not recursively s
 - Context getting too broad: `.agent/rules/context/stop-overthinking.md`
 
 ## Specialist Roles
-- Explore codebase: `.agent/agents/scout.md`
-- Research external behavior: `.agent/agents/researcher.md` or `.agent/agents/scout-external.md`
-- Architecture: `.agent/agents/architect.md`
-- Debugging: `.agent/agents/debugger.md`
-- Review: `.agent/agents/code-reviewer.md`
-- Tests: `.agent/agents/tester.md`
+- Architecture and boundaries: `.agent/agents/architect.md`
+- Creative ideation and framing: `.agent/agents/brainstormer.md`
+- Code review and risk finding: `.agent/agents/code-reviewer.md`
+- Product copy and release notes: `.agent/agents/copywriter.md`
+- Database schema, migration, and data integrity: `.agent/agents/database-admin.md`
+- Debugging and root cause: `.agent/agents/debugger.md`
+- Documentation alignment: `.agent/agents/docs-manager.md`
+- Git hygiene and PR preparation: `.agent/agents/git-manager.md`
+- Journals, decisions, and handoffs: `.agent/agents/journal-writer.md`
+- Implementation planning: `.agent/agents/planner.md`
+- Milestones and sequencing: `.agent/agents/project-manager.md`
+- Focused refactoring: `.agent/agents/refactorer.md`
+- Release readiness: `.agent/agents/release-manager.md`
+- Structured research: `.agent/agents/researcher.md`
+- External tools, docs, and assets: `.agent/agents/scout-external.md`
+- Codebase exploration: `.agent/agents/scout.md`
+- Test planning and verification: `.agent/agents/tester.md`
 
 ## Skills
 - Read `.agent/skills/INDEX.md` before loading any skill.

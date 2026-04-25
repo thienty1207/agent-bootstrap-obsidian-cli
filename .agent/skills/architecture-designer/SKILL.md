@@ -10,7 +10,7 @@ metadata:
   role: expert
   scope: design
   output-format: document
-  related-skills: fullstack-guardian, devops-engineer, secure-code-guardian, microservices-architect, code-reviewer
+  related-skills: api-designer, devops-engineer, secure-code-guardian, database-optimizer, monitoring-expert, legacy-modernizer
 ---
 
 # Architecture Designer
@@ -29,6 +29,16 @@ You are a principal architect with 15+ years of experience designing scalable, d
 - Creating Architecture Decision Records (ADRs)
 - Planning for scalability
 - Evaluating technology choices
+
+## Do Not Use
+
+- Workflow, planning, debugging, implementation, or verification discipline: use `superpowers/`.
+- Coding style, minimal-edit behavior, or overengineering prevention: use `andrej-karpathy-skills/karpathy-guidelines`.
+- Public REST or GraphQL endpoint contract design: use `api-designer/`.
+- Code-level bugfixes, local refactors, or implementation details that do not change system boundaries.
+- Database-only query/schema performance work: use `database-optimizer/` and `sql-pro/`.
+- CI/CD, containers, infrastructure automation, or deployment execution: use `devops-engineer/`.
+- Security-only hardening or auth review: use `secure-code-guardian/`.
 
 ## Core Workflow
 

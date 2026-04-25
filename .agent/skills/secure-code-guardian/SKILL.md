@@ -10,10 +10,19 @@ metadata:
   role: specialist
   scope: implementation
   output-format: code
-  related-skills: fullstack-guardian, security-reviewer, architecture-designer
+  related-skills: architecture-designer, api-designer, devops-engineer, monitoring-expert
 ---
 
 # Secure Code Guardian
+
+## Do Not Use
+
+- General code review without security-sensitive behavior.
+- Public API contract design without auth/security-specific decisions: use `api-designer/`.
+- Deployment, CI/CD, container, or infrastructure automation unless the task is specifically secret handling or runtime hardening: use `devops-engineer/`.
+- Observability, profiling, load testing, or dashboards: use `monitoring-expert/`.
+- Database query/index tuning: use `database-optimizer/` and `sql-pro/`.
+- Workflow, debugging, TDD, or verification discipline: use `superpowers/`.
 
 ## Core Workflow
 
