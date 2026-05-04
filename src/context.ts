@@ -47,7 +47,7 @@ function isContextRoot(candidate: string): boolean {
     readIfExists(path.join(candidate, 'vault.config.json'))
       || (
         readIfExists(path.join(candidate, 'AGENTS.md'))
-        && readIfExists(path.join(candidate, '.agent', 'INDEX.md'))
+        && readIfExists(path.join(candidate, '.codex', 'INDEX.md'))
       ),
   );
 }
@@ -118,16 +118,16 @@ export function getContext({
   const config = readOptionalRepoConfig(resolvedRepoRoot);
   const sections: ContextSection[] = [
     { label: 'Repo AGENTS', filePath: path.join(resolvedRepoRoot, 'AGENTS.md') },
-    { label: 'Agent Routing Index', filePath: path.join(resolvedRepoRoot, '.agent', 'INDEX.md') },
-    { label: 'Skills Routing Index', filePath: path.join(resolvedRepoRoot, '.agent', 'skills', 'INDEX.md') },
+    { label: 'Agent Routing Index', filePath: path.join(resolvedRepoRoot, '.codex', 'INDEX.md') },
+    { label: 'Skills Routing Index', filePath: path.join(resolvedRepoRoot, '.codex', 'skills', 'INDEX.md') },
     { label: 'Vault Bridge', filePath: path.join(resolvedRepoRoot, 'docs', 'vault-memory.md') },
     { label: 'Project Map', filePath: path.join(resolvedRepoRoot, 'docs', 'project-map.md') },
     { label: 'Repo README', filePath: path.join(resolvedRepoRoot, 'README.md') },
-    { label: 'Agent Workspace Guide', filePath: path.join(resolvedRepoRoot, '.agent', 'README.md') },
+    { label: 'Agent Workspace Guide', filePath: path.join(resolvedRepoRoot, '.codex', 'README.md') },
   ];
   const loaded: ContextSection[] = [];
   const skipped: string[] = [
-    '.agent/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
+    '.codex/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
   ];
   if (mode === 'compact') {
     skipped.push('Daily/** daily logs (run `agent-bootstrap context --full` when needed)');

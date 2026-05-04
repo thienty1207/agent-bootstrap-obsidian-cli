@@ -36,8 +36,9 @@ function runDoctor({ repoRoot } = {}) {
     const checks = {
         vaultConfig: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'vault.config.json')),
         agentFile: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'AGENTS.md')),
-        agentWorkspace: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.agent', 'agents', 'planner.md'))
-            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')),
+        agentWorkspace: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'config.toml'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'agents', 'manager.toml'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'commands', 'plan', 'brainstorm.md')),
         docs: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs')),
         plans: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'plans')),
         gitAvailable: hasGit(),
@@ -52,7 +53,7 @@ function runDoctor({ repoRoot } = {}) {
     };
     const suggestedCommands = [];
     if (missingRepoPaths.length > 0 || config.kit_version !== currentKitVersion) {
-        suggestedCommands.push('agent-bootstrap init');
+        suggestedCommands.push('agent-bootstrap update');
     }
     if (missingVaultPaths.length > 0 || !registered) {
         if (!suggestedCommands.includes('agent-bootstrap init')) {

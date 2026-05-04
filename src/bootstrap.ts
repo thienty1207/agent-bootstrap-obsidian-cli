@@ -40,7 +40,7 @@ import {
 type BootstrapAction = 'init' | 'new' | 'sync' | 'update' | 'migrate';
 
 const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
-const SEEDED_REPO_PATHS = ['.agent', 'docs', 'plans'];
+const SEEDED_REPO_PATHS = ['.codex', 'docs', 'plans'];
 
 interface BootstrapReport {
   action: BootstrapAction;
@@ -60,8 +60,32 @@ function copyTemplateIfPresent(vaultRoot: string, projectRoot: string): void {
   }
 }
 
+function removeLegacyAgentAssets(repoRoot: string): void {
+  const legacyPaths = [
+    '.agent',
+    '.agents',
+    path.join('.github', 'AGENTS.md'),
+    path.join('.github', ['AGENT', 'md'].join('.')),
+    path.join('.github', 'copilot-instructions.md'),
+    path.join('.github', 'agents'),
+    path.join('.github', 'commands'),
+    path.join('.github', 'rules'),
+    path.join('.github', 'skills'),
+    path.join('.github', 'prompts'),
+  ];
+
+  for (const relativePath of legacyPaths) {
+    fs.rmSync(path.join(repoRoot, relativePath), { recursive: true, force: true });
+  }
+}
+
+function resetManagedCodexWorkspace(repoRoot: string): void {
+  fs.rmSync(path.join(repoRoot, '.codex'), { recursive: true, force: true });
+}
+
 function copyRepoScaffold(repoRoot: string): void {
   const packageRoot = getPackageRoot();
+  resetManagedCodexWorkspace(repoRoot);
   syncSeededScaffold({
     sourceRoot: packageRoot,
     targetRoot: repoRoot,
@@ -123,6 +147,7 @@ function applyBootstrap({
 
   ensureDir(repoRoot);
   ensureVaultScaffold(vaultRoot);
+  removeLegacyAgentAssets(repoRoot);
 
   if (syncVault) {
     copyTemplateIfPresent(vaultRoot, projectRoot);
@@ -160,14 +185,7 @@ function applyBootstrap({
   writeFile(path.join(repoRoot, 'docs', 'project-map.md'), projectMapTemplate(repoName, projectSlug, projectType));
 
   fs.rmSync(legacyRootAgentPath, { force: true });
-  fs.rmSync(path.join(repoRoot, '.github', 'AGENTS.md'), { force: true });
-  fs.rmSync(path.join(repoRoot, '.github', legacyAgentFile), { force: true });
-  fs.rmSync(path.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
-  fs.rmSync(path.join(repoRoot, '.github', 'agents'), { recursive: true, force: true });
-  fs.rmSync(path.join(repoRoot, '.github', 'commands'), { recursive: true, force: true });
-  fs.rmSync(path.join(repoRoot, '.github', 'rules'), { recursive: true, force: true });
-  fs.rmSync(path.join(repoRoot, '.github', 'skills'), { recursive: true, force: true });
-  fs.rmSync(path.join(repoRoot, '.github', 'prompts'), { recursive: true, force: true });
+  removeLegacyAgentAssets(repoRoot);
 
   const gitInitialized = ensureGitRepository(repoRoot);
   const hooksConfigured = gitInitialized ? configureHooks(repoRoot) : false;

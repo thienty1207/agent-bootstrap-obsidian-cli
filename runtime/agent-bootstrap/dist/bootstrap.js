@@ -22,15 +22,36 @@ const kit_1 = require("./kit");
 const scaffold_1 = require("./scaffold");
 const vault_1 = require("./vault");
 const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
-const SEEDED_REPO_PATHS = ['.agent', 'docs', 'plans'];
+const SEEDED_REPO_PATHS = ['.codex', 'docs', 'plans'];
 function copyTemplateIfPresent(vaultRoot, projectRoot) {
     const templateRoot = node_path_1.default.join(vaultRoot, 'Projects', '_template');
     if (node_fs_1.default.existsSync(templateRoot) && !node_fs_1.default.existsSync(projectRoot)) {
         node_fs_1.default.cpSync(templateRoot, projectRoot, { recursive: true });
     }
 }
+function removeLegacyAgentAssets(repoRoot) {
+    const legacyPaths = [
+        '.agent',
+        '.agents',
+        node_path_1.default.join('.github', 'AGENTS.md'),
+        node_path_1.default.join('.github', ['AGENT', 'md'].join('.')),
+        node_path_1.default.join('.github', 'copilot-instructions.md'),
+        node_path_1.default.join('.github', 'agents'),
+        node_path_1.default.join('.github', 'commands'),
+        node_path_1.default.join('.github', 'rules'),
+        node_path_1.default.join('.github', 'skills'),
+        node_path_1.default.join('.github', 'prompts'),
+    ];
+    for (const relativePath of legacyPaths) {
+        node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, relativePath), { recursive: true, force: true });
+    }
+}
+function resetManagedCodexWorkspace(repoRoot) {
+    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.codex'), { recursive: true, force: true });
+}
 function copyRepoScaffold(repoRoot) {
     const packageRoot = (0, kit_1.getPackageRoot)();
+    resetManagedCodexWorkspace(repoRoot);
     (0, scaffold_1.syncSeededScaffold)({
         sourceRoot: packageRoot,
         targetRoot: repoRoot,
@@ -66,6 +87,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     const projectRootAlreadyExisted = node_fs_1.default.existsSync(projectRoot);
     (0, fs_utils_1.ensureDir)(repoRoot);
     (0, vault_1.ensureVaultScaffold)(vaultRoot);
+    removeLegacyAgentAssets(repoRoot);
     if (syncVault) {
         copyTemplateIfPresent(vaultRoot, projectRoot);
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Research'));
@@ -98,14 +120,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     (0, fs_utils_1.writeFile)(vaultMemoryPath, (0, templates_1.vaultMemoryDoc)(vaultRoot, projectRoot, projectType));
     (0, fs_utils_1.writeFile)(node_path_1.default.join(repoRoot, 'docs', 'project-map.md'), (0, templates_1.projectMapTemplate)(repoName, projectSlug, projectType));
     node_fs_1.default.rmSync(legacyRootAgentPath, { force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'AGENTS.md'), { force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', legacyAgentFile), { force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'copilot-instructions.md'), { force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'agents'), { recursive: true, force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'commands'), { recursive: true, force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'rules'), { recursive: true, force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'skills'), { recursive: true, force: true });
-    node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.github', 'prompts'), { recursive: true, force: true });
+    removeLegacyAgentAssets(repoRoot);
     const gitInitialized = ensureGitRepository(repoRoot);
     const hooksConfigured = gitInitialized ? configureHooks(repoRoot) : false;
     (0, fs_utils_1.writeFile)(node_path_1.default.join(repoRoot, 'vault.config.json'), JSON.stringify({

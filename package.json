@@ -1,9 +1,9 @@
 {
   "name": "@tytybill123/agent-bootstrap",
-  "version": "0.1.13",
+  "version": "0.2.0",
   "description": "Portable Obsidian vault bootstrap CLI for coding projects",
   "files": [
-    ".agent",
+    ".codex",
     "docs",
     "plans",
     "runtime",

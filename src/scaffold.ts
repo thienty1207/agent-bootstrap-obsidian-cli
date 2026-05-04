@@ -70,7 +70,7 @@ export function syncSeededScaffold({
   const manifest = readManifest(manifestPath);
   const nextManifest: ScaffoldManifest = {
     version: 1,
-    entries: { ...manifest.entries },
+    entries: {},
   };
 
   for (const seedPath of seedPaths) {

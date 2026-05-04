@@ -23,7 +23,7 @@ function readOptionalRepoConfig(repoRoot) {
 function isContextRoot(candidate) {
     return Boolean((0, fs_utils_1.readIfExists)(node_path_1.default.join(candidate, 'vault.config.json'))
         || ((0, fs_utils_1.readIfExists)(node_path_1.default.join(candidate, 'AGENTS.md'))
-            && (0, fs_utils_1.readIfExists)(node_path_1.default.join(candidate, '.agent', 'INDEX.md'))));
+            && (0, fs_utils_1.readIfExists)(node_path_1.default.join(candidate, '.codex', 'INDEX.md'))));
 }
 function findContextRoot(startPath) {
     let current = node_path_1.default.resolve(startPath);
@@ -60,16 +60,16 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
     const config = readOptionalRepoConfig(resolvedRepoRoot);
     const sections = [
         { label: 'Repo AGENTS', filePath: node_path_1.default.join(resolvedRepoRoot, 'AGENTS.md') },
-        { label: 'Agent Routing Index', filePath: node_path_1.default.join(resolvedRepoRoot, '.agent', 'INDEX.md') },
-        { label: 'Skills Routing Index', filePath: node_path_1.default.join(resolvedRepoRoot, '.agent', 'skills', 'INDEX.md') },
+        { label: 'Agent Routing Index', filePath: node_path_1.default.join(resolvedRepoRoot, '.codex', 'INDEX.md') },
+        { label: 'Skills Routing Index', filePath: node_path_1.default.join(resolvedRepoRoot, '.codex', 'skills', 'INDEX.md') },
         { label: 'Vault Bridge', filePath: node_path_1.default.join(resolvedRepoRoot, 'docs', 'vault-memory.md') },
         { label: 'Project Map', filePath: node_path_1.default.join(resolvedRepoRoot, 'docs', 'project-map.md') },
         { label: 'Repo README', filePath: node_path_1.default.join(resolvedRepoRoot, 'README.md') },
-        { label: 'Agent Workspace Guide', filePath: node_path_1.default.join(resolvedRepoRoot, '.agent', 'README.md') },
+        { label: 'Agent Workspace Guide', filePath: node_path_1.default.join(resolvedRepoRoot, '.codex', 'README.md') },
     ];
     const loaded = [];
     const skipped = [
-        '.agent/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
+        '.codex/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
     ];
     if (mode === 'compact') {
         skipped.push('Daily/** daily logs (run `agent-bootstrap context --full` when needed)');

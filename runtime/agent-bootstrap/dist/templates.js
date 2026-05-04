@@ -193,25 +193,25 @@ function repoReadmeTemplate(repoName, projectSlug, projectType) {
 
 ${repoName} is a VS Code friendly agent workspace layout.
 
-It keeps the agent workspace under \`.agent\`, while GitHub automation stays under \`.github/workflows\` and project-facing documentation lives at the repository root.
+It keeps the agent workspace under \`.codex\`, while GitHub automation stays under \`.github/workflows\` and project-facing documentation lives at the repository root.
 
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
 
-This package is intentionally documented around 4 user-facing actions: install/update, setup, init, and uninstall.
+This package is intentionally documented around install/update, setup, init, project update, and uninstall.
 \`agent-bootstrap context\` is an optional manual command for users; AI agents should run it automatically from \`AGENTS.md\`.
 
 ## Structure
 
 - \`AGENTS.md\`: main operating contract for AI agents
 - \`docs/project-map.md\`: fast orientation guide for the current project type
-- \`.agent/\`
+- \`.codex/\`
   - \`INDEX.md\`: compact routing table for agent assets
   - \`README.md\`: how the local agent workspace fits together
-  - \`agents/\`: specialized subagents
-  - \`commands/\`: reusable workflow prompts
-  - \`rules/\`: workflow and quality guardrails
-  - \`skills/\`: workflow, coding-principles, frontend, React/Next.js performance, agent/backend, and specialist domain guidance
+  - \`config.toml\`: Codex subagent defaults
+  - \`agents/\`: project-scoped Codex custom subagents
+  - \`commands/\`: agent-bootstrap managed command templates, not native Codex slash commands
+  - \`skills/\`: workflow, coding-principles, frontend design, and agent/backend API guidance
 - \`.github/\`
   - \`workflows/\`: GitHub Actions and YAML-only automation files
 - \`docs/\`: project documentation and reference notes
@@ -221,23 +221,23 @@ This package is intentionally documented around 4 user-facing actions: install/u
 ## Ownership Boundaries
 
 - \`README.md\` is user-owned and preserved if it already exists.
-- \`AGENTS.md\`, \`.agent/README.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
-- \`.agent/\`, \`docs/\`, and \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
-- Customized scaffold files are preserved; rerun \`agent-bootstrap init\` to repair missing managed assets and refresh untouched scaffold assets without replacing an existing repo \`README.md\`.
+- \`AGENTS.md\`, \`.codex/README.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
+- \`.codex/\` is kit-managed and refreshed from the installed kit by \`agent-bootstrap init\` or \`agent-bootstrap update\`.
+- \`docs/\` and \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
+- Customized source files and an existing repo \`README.md\` are preserved.
 
 ## Suggested use
 
 1. Read \`AGENTS.md\`.
 2. AI agents run \`agent-bootstrap context --compact\` automatically to load repo and vault context.
-3. Read \`.agent/README.md\` and \`.agent/INDEX.md\` for how \`agents/\`, \`commands/\`, \`rules/\`, and \`skills/\` fit together.
-4. Pick a specialist from \`.agent/agents/\` when the task fits a role.
-5. Use \`.agent/commands/\` to kick off repeatable workflows.
-6. Treat \`.agent/rules/\` as the guardrails.
-7. Read \`.agent/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs deeper domain or workflow guidance.
-8. Use \`.agent/skills/frontend-design/\` for UI design/styling and \`.agent/skills/vercel-react-best-practices/\` for React/Next.js performance only when their triggers match.
-9. Use \`.agent/skills/agent-api/\` specifically for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
-10. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
-11. Do not recursively scan \`.agent/skills\`; the index is the routing surface.
+3. Read \`.codex/README.md\` and \`.codex/INDEX.md\` for how Codex config, subagents, command templates, and skills fit together.
+4. Use \`.codex/agents/*.toml\` only when a task benefits from explicit subagent delegation.
+5. Treat \`.codex/commands/\` as reusable prompt templates managed by this kit.
+6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs deeper workflow or domain guidance.
+7. Use \`.codex/skills/frontend-design/\` for UI design and visual implementation work.
+8. Use \`.codex/skills/agent-api/\` for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
+9. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
+10. Do not recursively scan \`.codex/skills\`; the index is the routing surface.
 `;
 }
 function typeFocus(projectType) {
@@ -279,7 +279,7 @@ function rootAgentTemplate(vaultRoot, projectRoot, projectType) {
     return `# Workspace Agent Guide
 
 This section is managed by agent-bootstrap.
-Put repo-specific instructions outside the managed block so rerunning \`agent-bootstrap init\` can safely refresh the bridge files.
+Put repo-specific instructions outside the managed block so \`agent-bootstrap init\` or \`agent-bootstrap update\` can safely refresh the bridge files.
 
 Read this file first if you are working in this repository.
 
@@ -308,7 +308,7 @@ The compact context includes this read order:
 1. \`docs/vault-memory.md\`
 2. \`docs/project-map.md\`
 3. \`README.md\`
-4. \`.agent/README.md\`
+4. \`.codex/README.md\`
 5. \`${vaultRoot}/AGENTS.md\`
 6. \`${vaultRoot}/Init.md\`
 7. \`${projectRoot}/README.md\`
@@ -316,15 +316,15 @@ The compact context includes this read order:
 9. \`${projectRoot}/Facts.md\`
 10. \`${projectRoot}/Open Questions.md\`
 11. \`${projectRoot}/Handoff.md\`
-12. relevant docs under \`docs/\`, targeted agent assets under \`.agent/\`, and workflows under \`.github/workflows/\`
+12. relevant docs under \`docs/\`, targeted agent assets under \`.codex/\`, and workflows under \`.github/workflows/\`
 
 ## Context discipline
 
 - Treat \`src/\` as source of truth; \`dist/\` and \`runtime/agent-bootstrap/dist/\` are generated build outputs.
-- Read \`.agent/INDEX.md\` before choosing agent assets.
-- Read \`.agent/skills/INDEX.md\` before loading any skill.
+- Read \`.codex/INDEX.md\` before choosing agent assets.
+- Read \`.codex/skills/INDEX.md\` before loading any skill.
 - Workflow skills have priority over domain skills: load Superpowers workflow guidance and Karpathy coding principles before specialist domain skills when both apply.
-- Do not recursively scan \`.agent/skills\`; load one narrow skill only when needed.
+- Do not recursively scan \`.codex/skills\`; load one narrow skill only when needed.
 - If a fact is not in repo files, context output, or a cited source, mark it unknown instead of guessing.
 
 ## Type-specific focus
@@ -451,7 +451,7 @@ ${typeHotspots(projectType).join('\n')}
 1. \`AGENTS.md\`
 2. \`docs/vault-memory.md\`
 3. \`README.md\`
-4. \`.agent/README.md\`
+4. \`.codex/README.md\`
 5. project entrypoints and docs closest to the current task
 6. vault \`README.md\`, \`Tasks.md\`, and relevant \`Research/\`
 
@@ -489,7 +489,7 @@ Before doing meaningful work in this repo, read:
 1. \`AGENTS.md\`
 2. \`docs/project-map.md\`
 3. \`README.md\`
-4. \`.agent/README.md\`
+4. \`.codex/README.md\`
 5. \`${vaultRoot}/AGENTS.md\`
 6. \`${vaultRoot}/Init.md\`
 7. \`${projectRoot}/README.md\`
@@ -519,7 +519,7 @@ The runtime will:
 
 - ensure today's daily note exists
 - append daily worklog entries automatically
-- load repo \`README.md\` and \`.agent/README.md\` so the agent understands the local kit
+- load repo \`README.md\` and \`.codex/README.md\` so the agent understands the local kit
 - auto-route \`research\` and \`note\` entries to project or global scope by default
 - maintain a compact project memory index so \`context\` loads faster and with better recall
 `;
@@ -568,7 +568,7 @@ function isContextRoot(candidate) {
     fs.existsSync(path.join(candidate, 'vault.config.json'))
       || (
         fs.existsSync(path.join(candidate, 'AGENTS.md'))
-        && fs.existsSync(path.join(candidate, '.agent', 'INDEX.md'))
+        && fs.existsSync(path.join(candidate, '.codex', 'INDEX.md'))
       ),
   );
 }
@@ -977,16 +977,16 @@ function formatContextManifest(mode, loaded, skipped) {
 function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
   const sections = [
     { label: 'Repo AGENTS', filePath: path.join(repoRoot, 'AGENTS.md') },
-    { label: 'Agent Routing Index', filePath: path.join(repoRoot, '.agent', 'INDEX.md') },
-    { label: 'Skills Routing Index', filePath: path.join(repoRoot, '.agent', 'skills', 'INDEX.md') },
+    { label: 'Agent Routing Index', filePath: path.join(repoRoot, '.codex', 'INDEX.md') },
+    { label: 'Skills Routing Index', filePath: path.join(repoRoot, '.codex', 'skills', 'INDEX.md') },
     { label: 'Vault Bridge', filePath: path.join(repoRoot, 'docs', 'vault-memory.md') },
     { label: 'Project Map', filePath: path.join(repoRoot, 'docs', 'project-map.md') },
     { label: 'Repo README', filePath: path.join(repoRoot, 'README.md') },
-    { label: 'Agent Workspace Guide', filePath: path.join(repoRoot, '.agent', 'README.md') },
+    { label: 'Agent Workspace Guide', filePath: path.join(repoRoot, '.codex', 'README.md') },
   ];
   const loaded = [];
   const skipped = [
-    '.agent/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
+    '.codex/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
   ];
   if (mode === 'compact') {
     skipped.push('Daily/** daily logs (run agent-bootstrap context --full when needed)');

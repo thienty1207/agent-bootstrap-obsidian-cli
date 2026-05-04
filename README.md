@@ -1,19 +1,20 @@
 # @tytybill123/agent-bootstrap
 
-Portable CLI for bootstrapping coding projects into an Obsidian-based AI memory kit.
+Portable CLI for bootstrapping coding projects into an Obsidian-backed AI memory kit with a Codex-native workspace.
 
-The public user flow is intentionally kept to 4 actions:
+## Public Flow
+
+The user-facing flow is intentionally small:
 
 1. Install or update the CLI
 2. Set the Obsidian vault path
 3. Initialize a project
-4. Uninstall when no longer needed
+4. Update an existing project's kit files
+5. Uninstall when no longer needed
 
-AI context and memory commands still exist, but users normally do not need to run them manually. Generated `AGENTS.md` files instruct AI agents to run compact context automatically.
+AI context commands still exist, but generated `AGENTS.md` files tell AI agents to run compact context automatically.
 
-## 1. Install Or Update
-
-Use the same command for first install, reinstall, and update:
+## 1. Install Or Update CLI
 
 ```bash
 npm i -g --force @tytybill123/agent-bootstrap
@@ -35,33 +36,16 @@ agent-bootstrap setup
 
 ## 3. Init Project
 
-Run inside a project:
-
-```bash
-agent-bootstrap init
-```
-
-Or pass the project path:
-
-```bash
-agent-bootstrap init "D:\project\nodejs\srcEcommerce"
-```
-
-Choose a project type when you want better AI routing:
-
 ```bash
 agent-bootstrap init "D:\project\nodejs\srcEcommerce" --type fullstack
 agent-bootstrap init "D:\project\nodejs\frontend-app" --type frontend
 agent-bootstrap init "D:\project\nodejs\backend-service" --type backend
-agent-bootstrap init "D:\project\nodejs\cli-tool" --type tool
-agent-bootstrap init "D:\project\nodejs\desktop-app" --type desktop
-agent-bootstrap init "D:\project\nodejs\mobile-app" --type mobile
 ```
 
 Available project types:
 
-- `frontend`: UI routes, state, auth screens, browser behavior, deployment surface
-- `backend`: handlers, contracts, auth, persistence, migrations, service rollout
+- `frontend`: UI routes, state, browser behavior, deployment surface
+- `backend`: handlers, contracts, auth, persistence, service rollout
 - `fullstack`: frontend, backend, database, shared contracts, deploy topology
 - `tool`: CLI, scripts, filesystem effects, config, external command behavior
 - `desktop`: shell, windows, IPC, filesystem access, packaging
@@ -69,24 +53,33 @@ Available project types:
 
 If `--type` is omitted, the default is `tool`.
 
-`init` creates or refreshes:
+`init` creates:
 
 - root `AGENTS.md`
-- `.agent/` routing, rules, commands, agents, and skills
-- `docs/vault-memory.md`
-- `docs/project-map.md`
+- `.codex/` with Codex config, custom subagents, command templates, and 4 core skills
+- `docs/vault-memory.md` and `docs/project-map.md`
 - `plans/`
 - `vault.config.json`
 - `scripts/agent-memory.js`
 - `.githooks/post-commit`
 - vault project capsule under `Projects/<slug>`
-- stable memory files: `Tasks.md`, `Decisions.md`, `Facts.md`, `Open Questions.md`, `Handoff.md`
+- `Tasks.md`, `Decisions.md`, `Facts.md`, `Open Questions.md`, and `Handoff.md`
 
 Existing repo `README.md` files are preserved.
 
-Rerun `agent-bootstrap init` to repair missing managed assets or refresh untouched kit files.
+## 4. Update Project Kit
 
-## 4. Uninstall
+After installing a newer CLI version, refresh a project that is already being built:
+
+```bash
+agent-bootstrap update "D:\project\nodejs\srcEcommerce"
+```
+
+`update` refreshes kit-managed `.codex` assets, `AGENTS.md` managed block, docs bridge, runtime script, manifest, and kit version metadata. It preserves project source code, the root README, `vault.config.json` identity fields, and vault memory.
+
+Legacy `.agent`, `.agents`, and old `.github/agents|commands|rules|skills|prompts` assets are removed so AI agents do not read stale instructions.
+
+## 5. Uninstall CLI
 
 ```bash
 npm uninstall -g @tytybill123/agent-bootstrap
@@ -94,13 +87,7 @@ npm uninstall -g @tytybill123/agent-bootstrap
 
 ## Optional: AI Context
 
-Users can run this manually, but AI agents should run it automatically from `AGENTS.md`:
-
-```bash
-agent-bootstrap context
-```
-
-Context modes:
+Users can run these manually. AI agents should run it automatically from `AGENTS.md`:
 
 ```bash
 agent-bootstrap context --compact
@@ -108,69 +95,38 @@ agent-bootstrap context --why
 agent-bootstrap context --full
 ```
 
-- `context` defaults to `--compact`
 - `--compact` loads the smallest useful repo and vault context
 - `--why` explains what was loaded and skipped
 - `--full` adds daily/session history when needed
 
-## AI Memory Runtime
+## Codex Workspace
 
-After `init`, each project gets `scripts/agent-memory.js`. This is mainly for AI agents and automation:
+Generated projects use `.codex/`:
 
-```bash
-node scripts/agent-memory.js task "..."
-node scripts/agent-memory.js decision "..." --title "..."
-node scripts/agent-memory.js fact "..." --title "..." --source "..." --confidence high
-node scripts/agent-memory.js question "..." --title "..."
-node scripts/agent-memory.js handoff "..."
-node scripts/agent-memory.js research "..." --title "..."
-node scripts/agent-memory.js note "..." --title "..."
-node scripts/agent-memory.js compact
-node scripts/agent-memory.js context
-```
+- `config.toml`: default `[agents] max_threads = 6` and `max_depth = 1`
+- `agents/*.toml`: Codex custom agents
+- `commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands
+- `skills/`: lazy-loaded skill set
 
-Facts require provenance fields so future AI sessions do not treat guesses as truth:
+Shipped skills:
 
-- `Fact`
-- `Source`
-- `Confidence`
-- `Last verified`
+- `superpowers`: workflow priority top 1
+- `karpathy-coding-principles`: coding mindset top 2
+- `frontend-design`: frontend/UI top 3
+- `agent-api`: agent/backend API top 4
 
-Unresolved assumptions should go to `Open Questions.md`, not `Facts.md`.
+There is no `rules/` folder. Always-on guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
 
-## What Setup Creates
+## Vault Bridge
 
-The first `setup` creates or repairs a portable vault skeleton:
+The vault bridge is stable across `init` and `update`:
 
-- `AGENTS.md`
-- `Init.md`
-- `Daily`
-- `Templates`
-- `Projects`
-- `Research`
-- `Notes`
-- `Inbox`
-- `Archive`
-- `Tools`
-- `Projects/_template`
-- `.obsidian` daily note settings
-
-`Init.md` is the graph-friendly vault entrypoint. Project-specific memory lives under `Projects/<slug>`.
-
-## AI Consistency Model
-
-The kit keeps user work and AI work consistent through:
-
-- one root `AGENTS.md`
-- compact context loaded first
-- `.agent/INDEX.md` for routing
-- `.agent/skills/INDEX.md` before loading any skill
-- workflow skill priority for Superpowers and Karpathy-style coding discipline
-- lazy-loaded frontend and React/Next.js performance skills with narrow auto-trigger gates
-- source-backed `Facts.md`
-- unresolved unknowns in `Open Questions.md`
-- short handoffs in `Handoff.md`
-- no recursive scanning of `.agent/skills`
+- `vault.config.json` links repo, vault, project slug, project type, and kit version
+- `agent-bootstrap context --compact` loads repo context, vault context, and project memory index
+- `scripts/agent-memory.js` writes tasks, decisions, facts, questions, handoffs, research, notes, and compact summaries
+- `Facts.md` is for source-backed facts
+- `Open Questions.md` is for unresolved assumptions
+- `Handoff.md` keeps the next-session state short
 
 ## Contributor Verification
 

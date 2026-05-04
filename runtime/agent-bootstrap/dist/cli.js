@@ -11,7 +11,7 @@ const context_1 = require("./context");
 const vault_1 = require("./vault");
 const INSTALL_COMMAND = 'npm i -g --force @tytybill123/agent-bootstrap';
 const UNINSTALL_COMMAND = 'npm uninstall -g @tytybill123/agent-bootstrap';
-const PUBLIC_COMMANDS = 'Public commands: setup, init, context. Use --help for quickstart.';
+const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context. Use --help for quickstart.';
 function parseFlags(args) {
     const options = {};
     const rest = [];
@@ -83,6 +83,9 @@ function writeHelp() {
         '  agent-bootstrap init [project-path]',
         '  agent-bootstrap init [project-path] --type frontend|backend|tool|desktop|mobile|fullstack',
         '',
+        'Update kit-managed files in an existing project:',
+        '  agent-bootstrap update [project-path]',
+        '',
         'Optional AI context for agents:',
         '  agent-bootstrap context',
         '  agent-bootstrap context --compact',
@@ -115,6 +118,13 @@ async function main(argv) {
             slug: options.slug,
             vaultRoot: options['vault-root'],
             projectType: options.type,
+        }));
+        return;
+    }
+    if (command === 'update') {
+        const { rest } = parseFlags(tail);
+        writeJson((0, bootstrap_1.updateProject)({
+            repoRoot: rest[0] || process.cwd(),
         }));
         return;
     }

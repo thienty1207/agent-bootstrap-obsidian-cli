@@ -45,7 +45,7 @@ function syncSeededScaffold({ sourceRoot, targetRoot, manifestPath, seedPaths, }
     const manifest = readManifest(manifestPath);
     const nextManifest = {
         version: 1,
-        entries: { ...manifest.entries },
+        entries: {},
     };
     for (const seedPath of seedPaths) {
         const sourceBase = node_path_1.default.join(sourceRoot, seedPath);

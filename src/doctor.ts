@@ -53,8 +53,9 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
   const checks = {
     vaultConfig: fs.existsSync(path.join(resolvedRepoRoot, 'vault.config.json')),
     agentFile: fs.existsSync(path.join(resolvedRepoRoot, 'AGENTS.md')),
-    agentWorkspace: fs.existsSync(path.join(resolvedRepoRoot, '.agent', 'agents', 'planner.md'))
-      && fs.existsSync(path.join(resolvedRepoRoot, '.agent', 'commands', 'plan', 'brainstorm.md')),
+    agentWorkspace: fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'config.toml'))
+      && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'agents', 'manager.toml'))
+      && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'commands', 'plan', 'brainstorm.md')),
     docs: fs.existsSync(path.join(resolvedRepoRoot, 'docs')),
     plans: fs.existsSync(path.join(resolvedRepoRoot, 'plans')),
     gitAvailable: hasGit(),
@@ -71,7 +72,7 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
   const suggestedCommands: string[] = [];
 
   if (missingRepoPaths.length > 0 || config.kit_version !== currentKitVersion) {
-    suggestedCommands.push('agent-bootstrap init');
+    suggestedCommands.push('agent-bootstrap update');
   }
 
   if (missingVaultPaths.length > 0 || !registered) {

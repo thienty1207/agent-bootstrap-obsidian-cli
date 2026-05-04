@@ -6,7 +6,7 @@ let cachedPackageRoot: string | null = null;
 
 const PACKAGE_ROOT_MARKERS = [
   'package.json',
-  '.agent',
+  '.codex',
   'docs',
   'plans',
 ] as const;
@@ -14,13 +14,17 @@ const PACKAGE_ROOT_MARKERS = [
 export const MANAGED_REPO_PATHS = [
   'AGENTS.md',
   '.agent-bootstrap-manifest.json',
-  '.agent/INDEX.md',
-  '.agent/README.md',
-  '.agent/agents/planner.md',
-  '.agent/commands/plan/brainstorm.md',
-  '.agent/rules/context/unknowns-gate.md',
-  '.agent/rules/context/stop-overthinking.md',
-  '.agent/skills/INDEX.md',
+  '.codex/INDEX.md',
+  '.codex/README.md',
+  '.codex/config.toml',
+  '.codex/agents/manager.toml',
+  '.codex/agents/architect.toml',
+  '.codex/commands/plan/brainstorm.md',
+  '.codex/skills/INDEX.md',
+  '.codex/skills/superpowers/README.md',
+  '.codex/skills/karpathy-coding-principles/SKILL.md',
+  '.codex/skills/frontend-design/SKILL.md',
+  '.codex/skills/agent-api/SKILL.md',
   'docs/vault-memory.md',
   'docs/project-map.md',
   'plans/templates/feature-implementation-plan.md',
