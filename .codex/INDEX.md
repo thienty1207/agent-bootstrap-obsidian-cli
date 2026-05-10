@@ -16,7 +16,7 @@ folder recursively.
 - `.codex/config.toml`: Codex subagent settings.
 - `.codex/agents/*.toml`: project-scoped Codex custom subagents.
 - `.codex/commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands.
-- `.codex/skills/`: four lazy-loaded core skills.
+- `.codex/skills/`: two lazy-loaded core skills.
 
 There is no `rules/` folder. Mandatory guardrails live in `AGENTS.md`, this index,
 and `.codex/skills/INDEX.md`.
@@ -25,8 +25,6 @@ and `.codex/skills/INDEX.md`.
 
 1. `superpowers`: workflow discipline, planning, TDD, debugging, review, verification.
 2. `karpathy-coding-principles`: simplicity, surgical edits, explicit assumptions.
-3. `frontend-design`: browser-facing UI design and visual implementation.
-4. `agent-api`: model/provider adapters, streaming, tool calling, structured output.
 
 Load the narrowest matching skill. If a fact is not in repo files, context output,
 or a cited source, mark it unknown instead of guessing.

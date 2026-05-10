@@ -52,7 +52,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep vault scaffold links centered around `Init.md` so Obsidian Graph View and agent memory navigation stay useful as the vault grows.
 - Treat `src/` as the source of truth; `dist/` and `runtime/agent-bootstrap/dist/` are generated build outputs.
 - Do not recursively scan `.codex/skills`; read `.codex/skills/INDEX.md` and load one narrow skill only when needed.
-- Workflow skills have priority over domain skills: use Superpowers workflow guidance and Karpathy coding principles before specialist domain skills when both apply.
+- Use Superpowers workflow guidance before Karpathy coding principles; specialist knowledge should come from repo context, current docs, or a targeted subagent.
 - Do not reintroduce `.codex/rules`; mandatory guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
 - Treat older dated files under `plans/` as historical context; do not read them by default unless the task is about lifecycle history.
 - If a fact is not present in repo, context output, or a cited source, mark it unknown instead of guessing.

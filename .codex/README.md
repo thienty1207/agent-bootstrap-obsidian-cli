@@ -18,11 +18,11 @@ without scanning every skill or subagent file.
 - `.codex/config.toml` contains conservative Codex subagent defaults.
 - `.codex/agents/*.toml` are Codex custom agents for explicit delegation.
 - `.codex/commands/` contains prompt templates managed by this kit, not native Codex slash commands.
-- `.codex/skills/` contains lazy-loaded expertise. Do not recursively read it.
+- `.codex/skills/` contains lazy-loaded workflow and coding discipline. Do not recursively read it.
 - `docs/` and the linked vault hold durable project memory.
 
 There is no `rules/` folder. Short mandatory guardrails are kept in the always-on
-files above; deeper process and domain guidance stays lazy-loaded in skills.
+files above; deeper workflow guidance stays lazy-loaded in skills.
 
 ## Drift Control
 

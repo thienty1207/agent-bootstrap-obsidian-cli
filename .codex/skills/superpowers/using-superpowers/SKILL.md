@@ -99,10 +99,10 @@ These thoughts mean STOP—you're rationalizing:
 When multiple skills could apply, use this order:
 
 1. **Process skills first** (brainstorming, debugging) - these determine HOW to approach the task
-2. **Implementation skills second** (frontend-design, mcp-builder) - these guide execution
+2. **Implementation skills second** - these guide execution only when installed and routed by the local skill index
 
-"Let's build X" → brainstorming first, then implementation skills.
-"Fix this bug" → debugging first, then domain-specific skills.
+"Let's build X" → brainstorming first, then implementation guidance if locally installed.
+"Fix this bug" → debugging first, then repo-specific evidence.
 
 ## Skill Types
 

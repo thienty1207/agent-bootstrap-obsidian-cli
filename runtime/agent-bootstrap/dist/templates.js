@@ -211,7 +211,9 @@ This package is intentionally documented around install/update, setup, init, pro
   - \`config.toml\`: Codex subagent defaults
   - \`agents/\`: project-scoped Codex custom subagents
   - \`commands/\`: agent-bootstrap managed command templates, not native Codex slash commands
-  - \`skills/\`: workflow, coding-principles, frontend design, and agent/backend API guidance
+  - \`skills/\`: workflow and coding-principles guidance
+    - \`.codex/skills/superpowers/\`: workflow discipline
+    - \`.codex/skills/karpathy-coding-principles/\`: coding discipline
 - \`.github/\`
   - \`workflows/\`: GitHub Actions and YAML-only automation files
 - \`docs/\`: project documentation and reference notes
@@ -233,11 +235,10 @@ This package is intentionally documented around install/update, setup, init, pro
 3. Read \`.codex/README.md\` and \`.codex/INDEX.md\` for how Codex config, subagents, command templates, and skills fit together.
 4. Use \`.codex/agents/*.toml\` only when a task benefits from explicit subagent delegation.
 5. Treat \`.codex/commands/\` as reusable prompt templates managed by this kit.
-6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs deeper workflow or domain guidance.
-7. Use \`.codex/skills/frontend-design/\` for UI design and visual implementation work.
-8. Use \`.codex/skills/agent-api/\` for provider adapters, streaming bridges, tool-calling layers, and multi-provider agent backend work.
-9. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
-10. Do not recursively scan \`.codex/skills\`; the index is the routing surface.
+6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs deeper workflow or coding guidance.
+7. Use repo context, targeted subagents, and current official docs for frontend, backend, provider, cloud, database, CI, or framework-specific work.
+8. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
+9. Do not recursively scan \`.codex/skills\`; the index is the routing surface.
 `;
 }
 function typeFocus(projectType) {
@@ -323,7 +324,7 @@ The compact context includes this read order:
 - Treat \`src/\` as source of truth; \`dist/\` and \`runtime/agent-bootstrap/dist/\` are generated build outputs.
 - Read \`.codex/INDEX.md\` before choosing agent assets.
 - Read \`.codex/skills/INDEX.md\` before loading any skill.
-- Workflow skills have priority over domain skills: load Superpowers workflow guidance and Karpathy coding principles before specialist domain skills when both apply.
+- Use Superpowers workflow guidance before Karpathy coding principles; specialist knowledge should come from repo context, current docs, or a targeted subagent.
 - Do not recursively scan \`.codex/skills\`; load one narrow skill only when needed.
 - If a fact is not in repo files, context output, or a cited source, mark it unknown instead of guessing.
 

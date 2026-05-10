@@ -56,7 +56,7 @@ If `--type` is omitted, the default is `tool`.
 `init` creates:
 
 - root `AGENTS.md`
-- `.codex/` with Codex config, custom subagents, command templates, and 4 core skills
+- `.codex/` with Codex config, custom subagents, command templates, and 2 core skills
 - `docs/vault-memory.md` and `docs/project-map.md`
 - `plans/`
 - `vault.config.json`
@@ -106,14 +106,18 @@ Generated projects use `.codex/`:
 - `config.toml`: default `[agents] max_threads = 6` and `max_depth = 1`
 - `agents/*.toml`: Codex custom agents
 - `commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands
-- `skills/`: lazy-loaded skill set
+- `skills/`: lazy-loaded workflow and coding discipline
+  - `.codex/skills/superpowers/`: workflow discipline
+  - `.codex/skills/karpathy-coding-principles/`: coding discipline
 
-Shipped skills:
+Shipped core skills:
 
 - `superpowers`: workflow priority top 1
 - `karpathy-coding-principles`: coding mindset top 2
-- `frontend-design`: frontend/UI top 3
-- `agent-api`: agent/backend API top 4
+
+Frontend, backend, cloud, database, CI, provider, and framework-specific work is
+handled through repo context, the relevant subagent when delegation helps, and
+current official docs when API details matter.
 
 There is no `rules/` folder. Always-on guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
 

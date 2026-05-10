@@ -24,8 +24,8 @@ verification workflow.
 
 - Superpowers decides the workflow.
 - This skill keeps the implementation small, direct, and evidence-backed.
-- Domain skills provide subject matter only after the workflow and coding
-  discipline are clear.
+- Subject matter should come from repo context, current docs, or a targeted
+  subagent after the workflow and coding discipline are clear.
 
 ## Red Flags
 

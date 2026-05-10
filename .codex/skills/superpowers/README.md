@@ -1,6 +1,6 @@
 # Superpowers Workflow Routing Index
 
-Use this file to choose one Superpowers workflow skill. Superpowers controls process discipline; domain skills only add subject-matter guidance after the workflow route is clear.
+Use this file to choose one Superpowers workflow skill. Superpowers controls process discipline; specialist knowledge should come from repo context, current docs, or targeted subagents.
 
 ## Routing
 
@@ -21,9 +21,9 @@ Use this file to choose one Superpowers workflow skill. Superpowers controls pro
 
 ## Priority
 
-- Use Superpowers before domain skills when the task involves planning, debugging, coding, review, verification, or branch finishing.
+- Use Superpowers first when the task involves planning, debugging, coding, review, verification, or branch finishing.
 - Use Karpathy guidelines as the coding overlay for simplicity, surgical edits, assumptions, and verification criteria.
-- Load a domain skill only after choosing the workflow route.
+- Load another skill only when it is installed locally and the repo skill index routes to it.
 - Do not load every Superpowers skill. Pick the one row that matches the immediate workflow.
 
 ## Included Skills

@@ -28,8 +28,6 @@ exports.MANAGED_REPO_PATHS = [
     '.codex/skills/INDEX.md',
     '.codex/skills/superpowers/README.md',
     '.codex/skills/karpathy-coding-principles/SKILL.md',
-    '.codex/skills/frontend-design/SKILL.md',
-    '.codex/skills/agent-api/SKILL.md',
     'docs/vault-memory.md',
     'docs/project-map.md',
     'plans/templates/feature-implementation-plan.md',

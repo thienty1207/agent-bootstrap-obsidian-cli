@@ -13,12 +13,9 @@ const binPath = path.join(__dirname, '..', 'bin', 'agent-bootstrap.js');
 const repoRoot = path.join(__dirname, '..');
 const legacyAgentFile = ['AGENT', 'md'].join('.');
 const shippedSkills = [
-  'agent-api',
-  'frontend-design',
   'karpathy-coding-principles',
   'superpowers',
 ];
-const portableSkills = ['agent-api'];
 const coreAgents = [
   'architect',
   'backend_implementer',
@@ -108,37 +105,6 @@ function assertCoreSkillsPresent(repoRoot) {
   }
 }
 
-function assertPortableSkillsPresent(repoRoot) {
-  for (const skill of portableSkills) {
-    const skillRoot = path.join(repoRoot, '.codex', 'skills', skill);
-    assert.equal(fs.existsSync(path.join(skillRoot, 'SKILL.md')), true, `Expected portable skill at ${skillRoot}`);
-  }
-
-  const agentApiRoot = path.join(repoRoot, '.codex', 'skills', 'agent-api');
-  for (const file of [
-    path.join(agentApiRoot, 'references', 'agent-api-architecture.md'),
-    path.join(agentApiRoot, 'references', 'provider-capabilities.md'),
-    path.join(agentApiRoot, 'references', 'streaming-contract.md'),
-    path.join(agentApiRoot, 'references', 'tool-calling.md'),
-    path.join(agentApiRoot, 'references', 'structured-output.md'),
-    path.join(agentApiRoot, 'references', 'reliability-and-cost.md'),
-    path.join(agentApiRoot, 'references', 'provider-migration.md'),
-    path.join(agentApiRoot, 'python', 'agent-api.md'),
-    path.join(agentApiRoot, 'typescript', 'agent-api.md'),
-    path.join(agentApiRoot, 'go', 'agent-api.md'),
-    path.join(agentApiRoot, 'rust', 'agent-api.md'),
-  ]) {
-    assert.equal(fs.existsSync(file), true, `Expected agent-api asset at ${file}`);
-  }
-}
-
-function assertFrontendSkillsPresent(repoRoot) {
-  const frontendDesignRoot = path.join(repoRoot, '.codex', 'skills', 'frontend-design');
-
-  assert.equal(fs.existsSync(path.join(frontendDesignRoot, 'LICENSE.txt')), true);
-  assert.equal(fs.existsSync(path.join(frontendDesignRoot, 'SKILL.md')), true);
-}
-
 function assertAgentWorkspacePresent(repoRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'README.md')), true);
@@ -150,8 +116,6 @@ function assertAgentWorkspacePresent(repoRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'rules')), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'INDEX.md')), true);
   assertCoreSkillsPresent(repoRoot);
-  assertPortableSkillsPresent(repoRoot);
-  assertFrontendSkillsPresent(repoRoot);
 }
 
 function assertLegacyGithubAgentAssetsRemoved(repoRoot) {
@@ -400,7 +364,9 @@ test('setup stores portable config and init bootstraps current repo', () => {
 
   const repoReadme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(repoReadme, /face-gen-tools/i);
-  assert.match(repoReadme, /`\.codex\/skills\/agent-api\/`/i);
+  assert.match(repoReadme, /`\.codex\/skills\/superpowers\/`/i);
+  assert.doesNotMatch(repoReadme, /`\.codex\/skills\/agent-api\/`/i);
+  assert.doesNotMatch(repoReadme, /`\.codex\/skills\/frontend-design\/`/i);
   assert.doesNotMatch(repoReadme, /prompts\//i);
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENTS.md'));
@@ -409,7 +375,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(rootAgent, /agent-bootstrap context --why/);
   assert.match(rootAgent, /agent-bootstrap context --full/);
   assert.match(rootAgent, /\.codex\/skills\/INDEX\.md/);
-  assert.match(rootAgent, /Workflow skills have priority over domain skills/);
+  assert.match(rootAgent, /Superpowers workflow guidance before Karpathy coding principles/);
   assert.match(rootAgent, /Do not recursively scan `.codex\/skills`/);
   assert.match(rootAgent, /vault/i);
 
@@ -543,8 +509,6 @@ test('init creates the Codex workspace and removes legacy agent workspaces', () 
     .filter((entry) => fs.statSync(path.join(repoRoot, '.codex', 'skills', entry)).isDirectory())
     .sort();
   assert.deepEqual(skills, [
-    'agent-api',
-    'frontend-design',
     'karpathy-coding-principles',
     'superpowers',
   ]);
@@ -569,6 +533,8 @@ test('update command refreshes Codex assets while preserving project and vault m
   writeFile(path.join(repoRoot, 'src', 'app.js'), 'console.log("keep user source");\n');
   writeFile(path.join(repoRoot, '.agent', 'INDEX.md'), '# Legacy agent index\n');
   writeFile(path.join(repoRoot, '.codex', 'INDEX.md'), '# Broken Codex index\n');
+  writeFile(path.join(repoRoot, '.codex', 'skills', 'agent-api', 'SKILL.md'), '# Legacy optional agent-api skill\n');
+  writeFile(path.join(repoRoot, '.codex', 'skills', 'frontend-design', 'SKILL.md'), '# Legacy optional frontend-design skill\n');
   writeFile(path.join(repoRoot, '.github', 'skills', 'old.md'), '# Legacy GitHub skill\n');
 
   const projectConfigBefore = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
@@ -581,6 +547,8 @@ test('update command refreshes Codex assets while preserving project and vault m
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent')), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'architect.toml')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'agent-api')), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'frontend-design')), false);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
 
   const projectConfigAfter = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
@@ -1223,7 +1191,7 @@ test('Codex indexes enforce workflow priority and compact-context guardrails', (
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'rules')), false);
 });
 
-test('skill routing keeps exactly four core skills with clear priority', () => {
+test('skill routing keeps exactly two core skills with clear priority', () => {
   const skillsIndex = readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'));
   const karpathy = readFile(path.join(repoRoot, '.codex', 'skills', 'karpathy-coding-principles', 'SKILL.md'));
   const superpowersReadme = readFile(path.join(repoRoot, '.codex', 'skills', 'superpowers', 'README.md'));
@@ -1234,8 +1202,8 @@ test('skill routing keeps exactly four core skills with clear priority', () => {
   assert.deepEqual(skillDirs, shippedSkills);
   assert.match(skillsIndex, /1\. `superpowers`/);
   assert.match(skillsIndex, /2\. `karpathy-coding-principles`/);
-  assert.match(skillsIndex, /3\. `frontend-design`/);
-  assert.match(skillsIndex, /4\. `agent-api`/);
+  assert.doesNotMatch(skillsIndex, /frontend-design/);
+  assert.doesNotMatch(skillsIndex, /agent-api/);
   assert.match(karpathy, /does not replace Superpowers/);
   assert.match(karpathy, /Edit surgically/);
 
@@ -1248,26 +1216,16 @@ test('skill routing keeps exactly four core skills with clear priority', () => {
   assert.match(superpowersReadme, /verification-before-completion/);
 });
 
-test('frontend and agent-api skills auto-trigger narrowly without expanding compact context', () => {
+test('optional domain skills are pruned from core routing without expanding compact context', () => {
   const skillsRoot = path.join(repoRoot, '.codex', 'skills');
   const skillsIndex = readFile(path.join(skillsRoot, 'INDEX.md'));
-  const frontendDesign = readFile(path.join(skillsRoot, 'frontend-design', 'SKILL.md'));
-  const agentApi = readFile(path.join(skillsRoot, 'agent-api', 'SKILL.md'));
 
-  assert.match(skillsIndex, /frontend-design/);
-  assert.match(skillsIndex, /agent-api/);
-  assert.match(skillsIndex, /UI\/UX design, frontend layout/);
-  assert.match(skillsIndex, /Agent backend, provider adapters, streaming/);
-
-  assert.match(frontendDesign, /## Do Not Use/);
-  assert.match(frontendDesign, /bugfix-only/);
-  assert.match(frontendDesign, /existing design system/);
-  assert.match(frontendDesign, /admin, SaaS, dashboard, or operational tool/);
-  assert.match(frontendDesign, /Superpowers and Karpathy remain higher priority/);
-
-  assert.match(agentApi, /^description:\s*Use when/m);
-  assert.match(agentApi, /streaming/i);
-  assert.match(agentApi, /tool/i);
+  assert.match(skillsIndex, /superpowers/);
+  assert.match(skillsIndex, /karpathy-coding-principles/);
+  assert.doesNotMatch(skillsIndex, /frontend-design/);
+  assert.doesNotMatch(skillsIndex, /agent-api/);
+  assert.equal(fs.existsSync(path.join(skillsRoot, 'frontend-design')), false);
+  assert.equal(fs.existsSync(path.join(skillsRoot, 'agent-api')), false);
 
   const nestedAgentGuides = [];
   const stack = [skillsRoot];
@@ -1288,9 +1246,9 @@ test('frontend and agent-api skills auto-trigger narrowly without expanding comp
 
 test('shipped skill metadata is triggerable and does not reference removed skills', () => {
   const skillsRoot = path.join(repoRoot, '.codex', 'skills');
-  const removedSkillPattern = /andrej-karpathy-skills|api-designer|architecture-designer|database-optimizer|devops-engineer|legacy-modernizer|monitoring-expert|secure-code-guardian|sql-pro|vercel-react-best-practices/;
+  const removedSkillPattern = /agent-api|frontend-design|andrej-karpathy-skills|api-designer|architecture-designer|database-optimizer|devops-engineer|legacy-modernizer|monitoring-expert|secure-code-guardian|sql-pro|vercel-react-best-practices/;
 
-  for (const skill of ['agent-api', 'frontend-design', 'karpathy-coding-principles']) {
+  for (const skill of ['karpathy-coding-principles']) {
     const skillBody = readFile(path.join(skillsRoot, skill, 'SKILL.md'));
     assert.match(skillBody, /^description:\s*Use when/m, `Expected trigger-first description in ${skill}`);
     assert.doesNotMatch(skillBody, removedSkillPattern, `Expected no removed skill references in ${skill}`);
