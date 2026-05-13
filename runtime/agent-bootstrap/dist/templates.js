@@ -211,9 +211,9 @@ This package is intentionally documented around install/update, setup, init, pro
   - \`config.toml\`: Codex subagent defaults
   - \`agents/\`: project-scoped Codex custom subagents
   - \`commands/\`: agent-bootstrap managed command templates, not native Codex slash commands
-  - \`skills/\`: workflow and coding-principles guidance
+  - \`skills/\`: bundled workflow skill plus optional project-specific custom skills
     - \`.codex/skills/superpowers/\`: workflow discipline
-    - \`.codex/skills/karpathy-coding-principles/\`: coding discipline
+    - \`.codex/skills/<custom-skill>/\`: optional custom skills registered in \`.codex/skills/INDEX.md\`
 - \`.github/\`
   - \`workflows/\`: GitHub Actions and YAML-only automation files
 - \`docs/\`: project documentation and reference notes
@@ -225,6 +225,7 @@ This package is intentionally documented around install/update, setup, init, pro
 - \`README.md\` is user-owned and preserved if it already exists.
 - \`AGENTS.md\`, \`.codex/README.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
 - \`.codex/\` is kit-managed and refreshed from the installed kit by \`agent-bootstrap init\` or \`agent-bootstrap update\`.
+- Custom skill folders under \`.codex/skills/<custom-skill>/\` are preserved by \`agent-bootstrap update\` when they are registered in \`.codex/skills/INDEX.md\`.
 - \`docs/\` and \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
 - Customized source files and an existing repo \`README.md\` are preserved.
 
@@ -235,8 +236,8 @@ This package is intentionally documented around install/update, setup, init, pro
 3. Read \`.codex/README.md\` and \`.codex/INDEX.md\` for how Codex config, subagents, command templates, and skills fit together.
 4. Use \`.codex/agents/*.toml\` only when a task benefits from explicit subagent delegation.
 5. Treat \`.codex/commands/\` as reusable prompt templates managed by this kit.
-6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs deeper workflow or coding guidance.
-7. Use repo context, targeted subagents, and current official docs for frontend, backend, provider, cloud, database, CI, or framework-specific work.
+6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs workflow guidance or a registered custom skill.
+7. Use repo context, targeted subagents, registered custom skills, and current official docs for frontend, backend, provider, cloud, database, CI, or framework-specific work.
 8. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
 9. Do not recursively scan \`.codex/skills\`; the index is the routing surface.
 `;
@@ -324,9 +325,20 @@ The compact context includes this read order:
 - Treat \`src/\` as source of truth; \`dist/\` and \`runtime/agent-bootstrap/dist/\` are generated build outputs.
 - Read \`.codex/INDEX.md\` before choosing agent assets.
 - Read \`.codex/skills/INDEX.md\` before loading any skill.
-- Use Superpowers workflow guidance before Karpathy coding principles; specialist knowledge should come from repo context, current docs, or a targeted subagent.
+- Use Superpowers as the only bundled workflow skill. Optional project skills must be registered in \`.codex/skills/INDEX.md\` before loading.
 - Do not recursively scan \`.codex/skills\`; load one narrow skill only when needed.
 - If a fact is not in repo files, context output, or a cited source, mark it unknown instead of guessing.
+
+## Coding discipline guardrails
+
+These are always-on guardrails, not a separate skill. Superpowers owns planning, TDD, debugging, review, and verification.
+
+- State assumptions that affect implementation before editing.
+- Prefer the smallest useful change that solves the request.
+- Edit only files tied to the requested behavior.
+- Avoid speculative abstractions, toggles, helper layers, or cleanup.
+- Verify against the real goal with the smallest useful test, build, or smoke check.
+- If a repo fact is not present in files, context output, tests, or a cited source, mark it unknown instead of guessing.
 
 ## Type-specific focus
 

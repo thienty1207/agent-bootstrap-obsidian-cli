@@ -22,7 +22,6 @@ export const MANAGED_REPO_PATHS = [
   '.codex/commands/plan/brainstorm.md',
   '.codex/skills/INDEX.md',
   '.codex/skills/superpowers/README.md',
-  '.codex/skills/karpathy-coding-principles/SKILL.md',
   'docs/vault-memory.md',
   'docs/project-map.md',
   'plans/templates/feature-implementation-plan.md',

@@ -22,8 +22,8 @@ Use this file to choose one Superpowers workflow skill. Superpowers controls pro
 ## Priority
 
 - Use Superpowers first when the task involves planning, debugging, coding, review, verification, or branch finishing.
-- Use Karpathy guidelines as the coding overlay for simplicity, surgical edits, assumptions, and verification criteria.
-- Load another skill only when it is installed locally and the repo skill index routes to it.
+- Follow the coding discipline guardrails in `AGENTS.md` for simplicity, surgical edits, assumptions, and verification criteria.
+- Load another skill only when it is installed locally and `.codex/skills/INDEX.md` routes to it.
 - Do not load every Superpowers skill. Pick the one row that matches the immediate workflow.
 
 ## Included Skills

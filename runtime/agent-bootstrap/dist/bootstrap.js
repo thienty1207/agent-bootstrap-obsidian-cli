@@ -9,6 +9,7 @@ exports.syncProject = syncProject;
 exports.updateProject = updateProject;
 exports.migrateProject = migrateProject;
 const node_fs_1 = __importDefault(require("node:fs"));
+const node_os_1 = __importDefault(require("node:os"));
 const node_path_1 = __importDefault(require("node:path"));
 const node_child_process_1 = __importDefault(require("node:child_process"));
 const config_1 = require("./config");
@@ -23,6 +24,12 @@ const scaffold_1 = require("./scaffold");
 const vault_1 = require("./vault");
 const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
 const SEEDED_REPO_PATHS = ['.codex', 'docs', 'plans'];
+const BUNDLED_SKILL_DIRS = new Set(['superpowers']);
+const OBSOLETE_MANAGED_SKILL_DIRS = new Set([
+    [['kar', 'pathy'].join(''), 'coding', 'principles'].join('-'),
+]);
+const CUSTOM_SKILLS_START = '<!-- agent-bootstrap:custom-skills:start -->';
+const CUSTOM_SKILLS_END = '<!-- agent-bootstrap:custom-skills:end -->';
 function copyTemplateIfPresent(vaultRoot, projectRoot) {
     const templateRoot = node_path_1.default.join(vaultRoot, 'Projects', '_template');
     if (node_fs_1.default.existsSync(templateRoot) && !node_fs_1.default.existsSync(projectRoot)) {
@@ -46,18 +53,90 @@ function removeLegacyAgentAssets(repoRoot) {
         node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, relativePath), { recursive: true, force: true });
     }
 }
+function extractCustomSkillsBlock(content) {
+    if (!content) {
+        return undefined;
+    }
+    const start = content.indexOf(CUSTOM_SKILLS_START);
+    const end = content.indexOf(CUSTOM_SKILLS_END);
+    if (start === -1 || end === -1 || end < start) {
+        return undefined;
+    }
+    return content.slice(start, end + CUSTOM_SKILLS_END.length);
+}
+function defaultCustomSkillsBlock() {
+    return [
+        CUSTOM_SKILLS_START,
+        '## Custom Skills',
+        '',
+        'No custom project skills are registered yet.',
+        '',
+        'When adding one, create `.codex/skills/<skill-name>/SKILL.md` and replace this line with a precise routing table entry.',
+        CUSTOM_SKILLS_END,
+    ].join('\n');
+}
+function snapshotCustomSkills(repoRoot) {
+    const skillsRoot = node_path_1.default.join(repoRoot, '.codex', 'skills');
+    const tempRoot = node_fs_1.default.mkdtempSync(node_path_1.default.join(node_os_1.default.tmpdir(), 'agent-bootstrap-custom-skills-'));
+    const skillNames = [];
+    const customIndexBlock = extractCustomSkillsBlock((0, fs_utils_1.readIfExists)(node_path_1.default.join(skillsRoot, 'INDEX.md')));
+    if (!node_fs_1.default.existsSync(skillsRoot)) {
+        return { tempRoot, skillNames, customIndexBlock };
+    }
+    for (const entry of node_fs_1.default.readdirSync(skillsRoot, { withFileTypes: true })) {
+        if (!entry.isDirectory()) {
+            continue;
+        }
+        if (BUNDLED_SKILL_DIRS.has(entry.name) || OBSOLETE_MANAGED_SKILL_DIRS.has(entry.name)) {
+            continue;
+        }
+        node_fs_1.default.cpSync(node_path_1.default.join(skillsRoot, entry.name), node_path_1.default.join(tempRoot, entry.name), { recursive: true });
+        skillNames.push(entry.name);
+    }
+    return { tempRoot, skillNames, customIndexBlock };
+}
+function mergeCustomSkillsBlock(indexPath, customIndexBlock) {
+    const body = (0, fs_utils_1.readIfExists)(indexPath);
+    if (!body) {
+        return;
+    }
+    const block = customIndexBlock || defaultCustomSkillsBlock();
+    const currentBlock = extractCustomSkillsBlock(body);
+    const next = currentBlock
+        ? body.replace(currentBlock, block)
+        : `${body.trimEnd()}\n\n${block}\n`;
+    (0, fs_utils_1.writeFile)(indexPath, next);
+}
+function restoreCustomSkills(repoRoot, snapshot) {
+    const skillsRoot = node_path_1.default.join(repoRoot, '.codex', 'skills');
+    (0, fs_utils_1.ensureDir)(skillsRoot);
+    for (const skillName of snapshot.skillNames) {
+        node_fs_1.default.cpSync(node_path_1.default.join(snapshot.tempRoot, skillName), node_path_1.default.join(skillsRoot, skillName), { recursive: true });
+    }
+    mergeCustomSkillsBlock(node_path_1.default.join(skillsRoot, 'INDEX.md'), snapshot.customIndexBlock);
+}
+function cleanupCustomSkillsSnapshot(snapshot) {
+    node_fs_1.default.rmSync(snapshot.tempRoot, { recursive: true, force: true });
+}
 function resetManagedCodexWorkspace(repoRoot) {
     node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, '.codex'), { recursive: true, force: true });
 }
 function copyRepoScaffold(repoRoot) {
     const packageRoot = (0, kit_1.getPackageRoot)();
-    resetManagedCodexWorkspace(repoRoot);
-    (0, scaffold_1.syncSeededScaffold)({
-        sourceRoot: packageRoot,
-        targetRoot: repoRoot,
-        manifestPath: node_path_1.default.join(repoRoot, SCAFFOLD_MANIFEST_PATH),
-        seedPaths: SEEDED_REPO_PATHS,
-    });
+    const customSkills = snapshotCustomSkills(repoRoot);
+    try {
+        resetManagedCodexWorkspace(repoRoot);
+        (0, scaffold_1.syncSeededScaffold)({
+            sourceRoot: packageRoot,
+            targetRoot: repoRoot,
+            manifestPath: node_path_1.default.join(repoRoot, SCAFFOLD_MANIFEST_PATH),
+            seedPaths: SEEDED_REPO_PATHS,
+        });
+        restoreCustomSkills(repoRoot, customSkills);
+    }
+    finally {
+        cleanupCustomSkillsSnapshot(customSkills);
+    }
 }
 function ensureGitRepository(repoRoot) {
     if (node_fs_1.default.existsSync(node_path_1.default.join(repoRoot, '.git'))) {

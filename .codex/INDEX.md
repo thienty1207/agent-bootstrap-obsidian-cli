@@ -16,18 +16,18 @@ folder recursively.
 - `.codex/config.toml`: Codex subagent settings.
 - `.codex/agents/*.toml`: project-scoped Codex custom subagents.
 - `.codex/commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands.
-- `.codex/skills/`: two lazy-loaded core skills.
+- `.codex/skills/`: one bundled Superpowers workflow skill plus optional custom skills registered in the skills index.
 
 There is no `rules/` folder. Mandatory guardrails live in `AGENTS.md`, this index,
 and `.codex/skills/INDEX.md`.
 
-## Skill Priority
+## Skill Routing
 
-1. `superpowers`: workflow discipline, planning, TDD, debugging, review, verification.
-2. `karpathy-coding-principles`: simplicity, surgical edits, explicit assumptions.
+- `superpowers` is the only bundled skill and owns workflow discipline: planning, TDD, debugging, review, verification, and finishing work.
+- Optional project-specific skills must be registered in `.codex/skills/INDEX.md` before loading.
 
-Load the narrowest matching skill. If a fact is not in repo files, context output,
-or a cited source, mark it unknown instead of guessing.
+Load the narrowest matching skill from the index. If a fact is not in repo files,
+context output, or a cited source, mark it unknown instead of guessing.
 
 ## Subagent Routing
 

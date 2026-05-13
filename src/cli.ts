@@ -4,8 +4,8 @@ import { initProject, updateProject } from './bootstrap';
 import { getContext, type ContextMode } from './context';
 import { ensureVaultScaffold } from './vault';
 
-const INSTALL_COMMAND = 'npm i -g --force @tytybill123/agent-bootstrap';
-const UNINSTALL_COMMAND = 'npm uninstall -g @tytybill123/agent-bootstrap';
+const INSTALL_COMMAND = 'npm i -g --force @kakasitink/agent-bootstrap';
+const UNINSTALL_COMMAND = 'npm uninstall -g @kakasitink/agent-bootstrap';
 const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context. Use --help for quickstart.';
 
 interface ParsedArgs {

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import cp from 'node:child_process';
 import { resolveVaultRoot } from './config';
@@ -7,6 +8,7 @@ import {
   ensureDir,
   writeFile,
   writeFileIfMissing,
+  readIfExists,
   slugify,
   upsertManagedBlock,
   findRepoRoot,
@@ -41,6 +43,18 @@ type BootstrapAction = 'init' | 'new' | 'sync' | 'update' | 'migrate';
 
 const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
 const SEEDED_REPO_PATHS = ['.codex', 'docs', 'plans'];
+const BUNDLED_SKILL_DIRS = new Set(['superpowers']);
+const OBSOLETE_MANAGED_SKILL_DIRS = new Set([
+  [['kar', 'pathy'].join(''), 'coding', 'principles'].join('-'),
+]);
+const CUSTOM_SKILLS_START = '<!-- agent-bootstrap:custom-skills:start -->';
+const CUSTOM_SKILLS_END = '<!-- agent-bootstrap:custom-skills:end -->';
+
+interface CustomSkillsSnapshot {
+  tempRoot: string;
+  skillNames: string[];
+  customIndexBlock?: string;
+}
 
 interface BootstrapReport {
   action: BootstrapAction;
@@ -79,19 +93,108 @@ function removeLegacyAgentAssets(repoRoot: string): void {
   }
 }
 
+function extractCustomSkillsBlock(content?: string | null): string | undefined {
+  if (!content) {
+    return undefined;
+  }
+
+  const start = content.indexOf(CUSTOM_SKILLS_START);
+  const end = content.indexOf(CUSTOM_SKILLS_END);
+  if (start === -1 || end === -1 || end < start) {
+    return undefined;
+  }
+
+  return content.slice(start, end + CUSTOM_SKILLS_END.length);
+}
+
+function defaultCustomSkillsBlock(): string {
+  return [
+    CUSTOM_SKILLS_START,
+    '## Custom Skills',
+    '',
+    'No custom project skills are registered yet.',
+    '',
+    'When adding one, create `.codex/skills/<skill-name>/SKILL.md` and replace this line with a precise routing table entry.',
+    CUSTOM_SKILLS_END,
+  ].join('\n');
+}
+
+function snapshotCustomSkills(repoRoot: string): CustomSkillsSnapshot {
+  const skillsRoot = path.join(repoRoot, '.codex', 'skills');
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-bootstrap-custom-skills-'));
+  const skillNames: string[] = [];
+  const customIndexBlock = extractCustomSkillsBlock(readIfExists(path.join(skillsRoot, 'INDEX.md')));
+
+  if (!fs.existsSync(skillsRoot)) {
+    return { tempRoot, skillNames, customIndexBlock };
+  }
+
+  for (const entry of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+
+    if (BUNDLED_SKILL_DIRS.has(entry.name) || OBSOLETE_MANAGED_SKILL_DIRS.has(entry.name)) {
+      continue;
+    }
+
+    fs.cpSync(path.join(skillsRoot, entry.name), path.join(tempRoot, entry.name), { recursive: true });
+    skillNames.push(entry.name);
+  }
+
+  return { tempRoot, skillNames, customIndexBlock };
+}
+
+function mergeCustomSkillsBlock(indexPath: string, customIndexBlock?: string): void {
+  const body = readIfExists(indexPath);
+  if (!body) {
+    return;
+  }
+
+  const block = customIndexBlock || defaultCustomSkillsBlock();
+  const currentBlock = extractCustomSkillsBlock(body);
+  const next = currentBlock
+    ? body.replace(currentBlock, block)
+    : `${body.trimEnd()}\n\n${block}\n`;
+
+  writeFile(indexPath, next);
+}
+
+function restoreCustomSkills(repoRoot: string, snapshot: CustomSkillsSnapshot): void {
+  const skillsRoot = path.join(repoRoot, '.codex', 'skills');
+  ensureDir(skillsRoot);
+
+  for (const skillName of snapshot.skillNames) {
+    fs.cpSync(path.join(snapshot.tempRoot, skillName), path.join(skillsRoot, skillName), { recursive: true });
+  }
+
+  mergeCustomSkillsBlock(path.join(skillsRoot, 'INDEX.md'), snapshot.customIndexBlock);
+}
+
+function cleanupCustomSkillsSnapshot(snapshot: CustomSkillsSnapshot): void {
+  fs.rmSync(snapshot.tempRoot, { recursive: true, force: true });
+}
+
 function resetManagedCodexWorkspace(repoRoot: string): void {
   fs.rmSync(path.join(repoRoot, '.codex'), { recursive: true, force: true });
 }
 
 function copyRepoScaffold(repoRoot: string): void {
   const packageRoot = getPackageRoot();
-  resetManagedCodexWorkspace(repoRoot);
-  syncSeededScaffold({
-    sourceRoot: packageRoot,
-    targetRoot: repoRoot,
-    manifestPath: path.join(repoRoot, SCAFFOLD_MANIFEST_PATH),
-    seedPaths: SEEDED_REPO_PATHS,
-  });
+  const customSkills = snapshotCustomSkills(repoRoot);
+
+  try {
+    resetManagedCodexWorkspace(repoRoot);
+    syncSeededScaffold({
+      sourceRoot: packageRoot,
+      targetRoot: repoRoot,
+      manifestPath: path.join(repoRoot, SCAFFOLD_MANIFEST_PATH),
+      seedPaths: SEEDED_REPO_PATHS,
+    });
+    restoreCustomSkills(repoRoot, customSkills);
+  } finally {
+    cleanupCustomSkillsSnapshot(customSkills);
+  }
 }
 
 function ensureGitRepository(repoRoot: string): boolean {

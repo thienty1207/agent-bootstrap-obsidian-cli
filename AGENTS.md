@@ -52,13 +52,24 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep vault scaffold links centered around `Init.md` so Obsidian Graph View and agent memory navigation stay useful as the vault grows.
 - Treat `src/` as the source of truth; `dist/` and `runtime/agent-bootstrap/dist/` are generated build outputs.
 - Do not recursively scan `.codex/skills`; read `.codex/skills/INDEX.md` and load one narrow skill only when needed.
-- Use Superpowers workflow guidance before Karpathy coding principles; specialist knowledge should come from repo context, current docs, or a targeted subagent.
+- Use Superpowers as the only bundled workflow skill. Optional project skills must be registered in `.codex/skills/INDEX.md` before an agent loads them.
 - Do not reintroduce `.codex/rules`; mandatory guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
 - Treat older dated files under `plans/` as historical context; do not read them by default unless the task is about lifecycle history.
 - If a fact is not present in repo, context output, or a cited source, mark it unknown instead of guessing.
 - Treat `README.md` and `src/cli.ts` as the source of truth for the public CLI surface if an older plan file mentions superseded commands.
 - Keep the managed `AGENTS.md` block refreshable without overwriting user-written instructions outside the markers.
 - Verify bootstrap behavior through `test/cli.test.js` and real smoke tests before claiming completion.
+
+## Coding discipline guardrails
+
+These are always-on guardrails, not a separate skill. Superpowers owns planning, TDD, debugging, review, and verification.
+
+- State assumptions that affect implementation before editing.
+- Prefer the smallest useful change that solves the request.
+- Edit only files tied to the requested behavior.
+- Avoid speculative abstractions, toggles, helper layers, or cleanup.
+- Verify against the real goal with the smallest useful test, build, or smoke check.
+- If a repo fact is not present in files, context output, tests, or a cited source, mark it unknown instead of guessing.
 
 ## Fast path
 

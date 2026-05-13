@@ -3,30 +3,29 @@
 Read this index before loading a skill. Load one narrow skill entry only when the
 task shape matches. Do not recursively scan `.codex/skills`.
 
-## Priority
+## Bundled Skill
 
-1. `superpowers`: always first for workflow-heavy work such as planning, TDD,
-   debugging, implementation plans, code review, verification, or finishing work.
-2. `karpathy-coding-principles`: second for coding/refactor/review mindset:
-   simple design, explicit assumptions, surgical edits, and fresh verification.
-
-Superpowers owns workflow. Karpathy does not replace Superpowers; it is a small
-coding-principles overlay once the workflow path is chosen.
-
-## Routing Table
+`superpowers` is the only bundled skill. It owns workflow discipline for planning,
+TDD, debugging, implementation plans, code review, verification, and finishing
+work.
 
 | Task shape | Load |
 | --- | --- |
-| Planning, debugging, TDD, review, verification, branch finishing | `.codex/skills/superpowers/README.md` |
-| Non-trivial coding, refactor, bugfix, review, or implementation judgment | `.codex/skills/karpathy-coding-principles/SKILL.md` |
+| Planning, debugging, TDD, review, verification, branch finishing, or implementation workflow | `.codex/skills/superpowers/README.md` |
+
+<!-- agent-bootstrap:custom-skills:start -->
+## Custom Skills
+
+No custom project skills are registered yet.
+
+When adding one, create `.codex/skills/<skill-name>/SKILL.md` and replace this line with a precise routing table entry.
+<!-- agent-bootstrap:custom-skills:end -->
 
 ## Load Budget
 
-- Default: Superpowers route plus Karpathy overlay for implementation work.
-- For frontend, backend, cloud, database, CI, or provider-specific work, use the
-  nearest repo files, the relevant subagent when delegation helps, and current
-  official docs when API details matter.
-- If unsure, inspect the nearest repo files or write the uncertainty down instead of loading multiple skills.
+- Load Superpowers first for workflow-heavy work.
+- Load a custom skill only when it is installed locally and the routing row above matches the task.
+- For frontend, backend, cloud, database, CI, provider, or framework work without a matching custom skill, use nearest repo files, targeted subagents when delegation helps, and current official docs when API details matter.
 - Supporting docs and upstream readmes are attribution/reference only; do not load them during startup.
 
 ## Hallucination Guard

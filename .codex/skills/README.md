@@ -1,9 +1,9 @@
 # Skills
 
-This kit ships two core skills only:
+This kit ships one bundled skill:
 
-- `superpowers/`: workflow discipline.
-- `karpathy-coding-principles/`: coding mindset overlay.
+- `superpowers/`: workflow discipline for planning, TDD, debugging, review, verification, and finishing work.
 
-Read `INDEX.md` first. Load one matching skill body when needed; do not scan the
-whole folder at startup.
+Projects may add custom domain skills under `.codex/skills/<skill-name>/`.
+Register each custom skill in `INDEX.md`; agents should read the index first and
+load only the matching skill body.

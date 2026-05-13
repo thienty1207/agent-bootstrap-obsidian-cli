@@ -1,4 +1,4 @@
-# @tytybill123/agent-bootstrap
+# @kakasitink/agent-bootstrap
 
 Portable CLI for bootstrapping coding projects into an Obsidian-backed AI memory kit with a Codex-native workspace.
 
@@ -17,7 +17,7 @@ AI context commands still exist, but generated `AGENTS.md` files tell AI agents 
 ## 1. Install Or Update CLI
 
 ```bash
-npm i -g --force @tytybill123/agent-bootstrap
+npm i -g --force @kakasitink/agent-bootstrap
 ```
 
 ## 2. Set Vault
@@ -56,7 +56,7 @@ If `--type` is omitted, the default is `tool`.
 `init` creates:
 
 - root `AGENTS.md`
-- `.codex/` with Codex config, custom subagents, command templates, and 2 core skills
+- `.codex/` with Codex config, custom subagents, command templates, one bundled workflow skill, and optional custom skills
 - `docs/vault-memory.md` and `docs/project-map.md`
 - `plans/`
 - `vault.config.json`
@@ -75,14 +75,14 @@ After installing a newer CLI version, refresh a project that is already being bu
 agent-bootstrap update "D:\project\nodejs\srcEcommerce"
 ```
 
-`update` refreshes kit-managed `.codex` assets, `AGENTS.md` managed block, docs bridge, runtime script, manifest, and kit version metadata. It preserves project source code, the root README, `vault.config.json` identity fields, and vault memory.
+`update` refreshes kit-managed `.codex` assets, `AGENTS.md` managed block, docs bridge, runtime script, manifest, and kit version metadata. It preserves project source code, the root README, `vault.config.json` identity fields, vault memory, and registered custom skill folders under `.codex/skills/`.
 
 Legacy `.agent`, `.agents`, and old `.github/agents|commands|rules|skills|prompts` assets are removed so AI agents do not read stale instructions.
 
 ## 5. Uninstall CLI
 
 ```bash
-npm uninstall -g @tytybill123/agent-bootstrap
+npm uninstall -g @kakasitink/agent-bootstrap
 ```
 
 ## Optional: AI Context
@@ -106,20 +106,62 @@ Generated projects use `.codex/`:
 - `config.toml`: default `[agents] max_threads = 6` and `max_depth = 1`
 - `agents/*.toml`: Codex custom agents
 - `commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands
-- `skills/`: lazy-loaded workflow and coding discipline
+- `skills/`: one bundled workflow skill plus optional project-specific custom skills
   - `.codex/skills/superpowers/`: workflow discipline
-  - `.codex/skills/karpathy-coding-principles/`: coding discipline
+  - `.codex/skills/<custom-skill>/`: optional user-added project skills registered in `.codex/skills/INDEX.md`
 
-Shipped core skills:
+Shipped bundled skill:
 
-- `superpowers`: workflow priority top 1
-- `karpathy-coding-principles`: coding mindset top 2
+- `superpowers`: workflow discipline for planning, TDD, debugging, review, verification, and finishing work
 
 Frontend, backend, cloud, database, CI, provider, and framework-specific work is
 handled through repo context, the relevant subagent when delegation helps, and
-current official docs when API details matter.
+current official docs when API details matter. If a project needs reusable local
+guidance for a specific stack, add a custom skill and register it in the skills
+index instead of changing the bundled Superpowers workflow.
 
 There is no `rules/` folder. Always-on guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
+
+## Add Project-Specific Skills
+
+Generated projects can add domain skills for their own stack while keeping
+Superpowers as the only bundled workflow skill. Agents should inspect
+`.codex/skills/INDEX.md` first, then load only the matching custom skill body.
+They should not recursively scan every skill folder.
+
+To add a custom skill:
+
+1. Create `.codex/skills/<skill-name>/SKILL.md`.
+2. Add frontmatter with `name` and a precise `description: Use when ...`.
+3. Register the skill under the custom skills block in `.codex/skills/INDEX.md`.
+4. Keep the skill domain-specific. Do not duplicate planning, TDD, debugging,
+   review, or verification workflow that belongs to Superpowers.
+
+Example custom skill file:
+
+```md
+---
+name: nextjs
+description: Use when working on Next.js routes, React Server Components, or App Router behavior.
+---
+
+# Next.js Project Skill
+
+Load current project conventions first, then apply Next.js-specific guidance.
+```
+
+Example custom routing entries for `.codex/skills/INDEX.md`:
+
+```md
+| Task shape | Load |
+| --- | --- |
+| Next.js routes, React Server Components, or App Router behavior | `.codex/skills/nextjs/SKILL.md` |
+| Rust services, Cargo workflows, or ownership-sensitive refactors | `.codex/skills/rust/SKILL.md` |
+| Supabase database, auth, storage, realtime, or edge function work | `.codex/skills/supabase/SKILL.md` |
+```
+
+`agent-bootstrap update` preserves custom skill folders that are not bundled kit
+skills and are not obsolete managed skills.
 
 ## Vault Bridge
 
