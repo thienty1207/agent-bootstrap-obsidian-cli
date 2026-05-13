@@ -3,5 +3,6 @@ max_threads = 6
 max_depth = 1
 
 # Advanced option:
-# Set max_threads = 10 only when you intentionally want every shipped custom
-# agent available for broad parallel delegation in a large task.
+# Keep broad delegation deliberate. This kit ships 3 core quality gates
+# (code-reviewer, security-auditor, test-engineer); add custom agents only
+# when a project has a domain-specific need.

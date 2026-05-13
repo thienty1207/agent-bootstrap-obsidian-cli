@@ -203,7 +203,10 @@ This package is intentionally documented around install/update, setup, init, pro
   - \`INDEX.md\`: compact routing table for agent assets
   - \`README.md\`: how the local agent workspace fits together
   - \`config.toml\`: Codex subagent defaults
-  - \`agents/\`: project-scoped Codex custom subagents
+  - \`agents/\`: 3 core subagents plus optional project-specific custom agents
+    - \`.codex/agents/code-reviewer.toml\`: correctness, maintainability, regressions, and architecture fit
+    - \`.codex/agents/security-auditor.toml\`: security, auth, secrets, injection, dependency, and vault-sensitive data handling
+    - \`.codex/agents/test-engineer.toml\`: test strategy, regression coverage, smoke checks, and verification evidence
   - \`commands/\`: agent-bootstrap managed command templates, not native Codex slash commands
   - \`skills/\`: bundled workflow skill plus optional project-specific custom skills
     - \`.codex/skills/superpowers/\`: workflow discipline
@@ -220,6 +223,7 @@ This package is intentionally documented around install/update, setup, init, pro
 - \`AGENTS.md\`, \`.codex/README.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
 - \`.codex/\` is kit-managed and refreshed from the installed kit by \`agent-bootstrap init\` or \`agent-bootstrap update\`.
 - Custom skill folders under \`.codex/skills/<custom-skill>/\` are preserved by \`agent-bootstrap update\` when they are registered in \`.codex/skills/INDEX.md\`.
+- Custom agent files under \`.codex/agents/<custom-agent>.toml\` are preserved by \`agent-bootstrap update\` when they are registered in \`.codex/agents/INDEX.md\`.
 - \`docs/\` and \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
 - Customized source files and an existing repo \`README.md\` are preserved.
 
@@ -228,10 +232,10 @@ This package is intentionally documented around install/update, setup, init, pro
 1. Read \`AGENTS.md\`.
 2. AI agents run \`agent-bootstrap context --compact\` automatically to load repo and vault context.
 3. Read \`.codex/README.md\` and \`.codex/INDEX.md\` for how Codex config, subagents, command templates, and skills fit together.
-4. Use \`.codex/agents/*.toml\` only when a task benefits from explicit subagent delegation.
+4. Read \`.codex/agents/INDEX.md\`, then use one core or custom agent only when a task benefits from explicit subagent delegation.
 5. Treat \`.codex/commands/\` as reusable prompt templates managed by this kit.
 6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs workflow guidance or a registered custom skill.
-7. Use repo context, targeted subagents, registered custom skills, and current official docs for frontend, backend, provider, cloud, database, CI, or framework-specific work.
+7. Use repo context, targeted subagents, registered custom skills, registered custom agents, and current official docs for frontend, backend, provider, cloud, database, CI, or framework-specific work.
 8. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
 9. Do not recursively scan \`.codex/skills\`; the index is the routing surface.
 `;
@@ -320,8 +324,13 @@ The compact context includes this read order:
 
 - Treat \`src/\` as source of truth; \`dist/\` and \`runtime/agent-bootstrap/dist/\` are generated build outputs.
 - Read \`.codex/INDEX.md\` before choosing agent assets.
+- Read \`.codex/agents/INDEX.md\` before dispatching a subagent.
 - Read \`.codex/skills/INDEX.md\` before loading any skill.
 - Use Superpowers as the only bundled workflow skill. Optional project skills must be registered in \`.codex/skills/INDEX.md\` before loading.
+- Superpowers is the workflow brain. The 3 bundled core subagents are quality gates: \`code-reviewer\`, \`security-auditor\`, and \`test-engineer\`.
+- Optional project agents must be registered in \`.codex/agents/INDEX.md\` before use.
+- Do not let subagents invoke other subagents; composition belongs to the parent agent, command, or user.
+- Do not recursively scan \`.codex/agents\`; use the index and load one routed TOML only when needed.
 - Do not recursively scan \`.codex/skills\`; load one narrow skill only when needed.
 - If a fact is not in repo files, context output, or a cited source, mark it unknown instead of guessing.
 
@@ -992,6 +1001,7 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
   const sections = [
     { label: 'Repo AGENTS', filePath: path.join(repoRoot, 'AGENTS.md') },
     { label: 'Agent Routing Index', filePath: path.join(repoRoot, '.codex', 'INDEX.md') },
+    { label: 'Subagent Routing Index', filePath: path.join(repoRoot, '.codex', 'agents', 'INDEX.md') },
     { label: 'Skills Routing Index', filePath: path.join(repoRoot, '.codex', 'skills', 'INDEX.md') },
     { label: 'Vault Bridge', filePath: path.join(repoRoot, 'docs', 'vault-memory.md') },
     { label: 'Project Map', filePath: path.join(repoRoot, 'docs', 'project-map.md') },
@@ -1000,6 +1010,7 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
   ];
   const loaded = [];
   const skipped = [
+    '.codex/agents/** recursive agent bodies (load only the routed TOML when needed)',
     '.codex/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
   ];
   if (mode === 'compact') {

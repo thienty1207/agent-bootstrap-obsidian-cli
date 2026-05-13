@@ -61,6 +61,7 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
     const sections = [
         { label: 'Repo AGENTS', filePath: node_path_1.default.join(resolvedRepoRoot, 'AGENTS.md') },
         { label: 'Agent Routing Index', filePath: node_path_1.default.join(resolvedRepoRoot, '.codex', 'INDEX.md') },
+        { label: 'Subagent Routing Index', filePath: node_path_1.default.join(resolvedRepoRoot, '.codex', 'agents', 'INDEX.md') },
         { label: 'Skills Routing Index', filePath: node_path_1.default.join(resolvedRepoRoot, '.codex', 'skills', 'INDEX.md') },
         { label: 'Vault Bridge', filePath: node_path_1.default.join(resolvedRepoRoot, 'docs', 'vault-memory.md') },
         { label: 'Project Map', filePath: node_path_1.default.join(resolvedRepoRoot, 'docs', 'project-map.md') },
@@ -69,6 +70,7 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
     ];
     const loaded = [];
     const skipped = [
+        '.codex/agents/** recursive agent bodies (load only the routed TOML when needed)',
         '.codex/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
     ];
     if (mode === 'compact') {

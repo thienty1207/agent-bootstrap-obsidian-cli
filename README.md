@@ -56,7 +56,7 @@ If `--type` is omitted, the default is `tool`.
 `init` creates:
 
 - root `AGENTS.md`
-- `.codex/` with Codex config, custom subagents, command templates, one bundled workflow skill, and optional custom skills
+- `.codex/` with Codex config, 3 core quality subagents, command templates, one bundled workflow skill, and optional custom skills/agents
 - `docs/vault-memory.md` and `docs/project-map.md`
 - `plans/`
 - `vault.config.json`
@@ -75,7 +75,7 @@ After installing a newer CLI version, refresh a project that is already being bu
 agent-bootstrap update "D:\project\nodejs\srcEcommerce"
 ```
 
-`update` refreshes kit-managed `.codex` assets, `AGENTS.md` managed block, docs bridge, runtime script, manifest, and kit version metadata. It preserves project source code, the root README, `vault.config.json` identity fields, vault memory, and registered custom skill folders under `.codex/skills/`.
+`update` refreshes kit-managed `.codex` assets, `AGENTS.md` managed block, docs bridge, runtime script, manifest, and kit version metadata. It preserves project source code, the root README, `vault.config.json` identity fields, vault memory, registered custom skill folders under `.codex/skills/`, and registered custom agents under `.codex/agents/`.
 
 Legacy `.agent`, `.agents`, and old `.github/agents|commands|rules|skills|prompts` assets are removed so AI agents do not read stale instructions.
 
@@ -104,7 +104,10 @@ agent-bootstrap context --full
 Generated projects use `.codex/`:
 
 - `config.toml`: default `[agents] max_threads = 6` and `max_depth = 1`
-- `agents/*.toml`: Codex custom agents
+- `agents/`: 3 core subagents plus optional project-specific custom agents
+  - `.codex/agents/code-reviewer.toml`: correctness, maintainability, regressions, and architecture fit
+  - `.codex/agents/security-auditor.toml`: security, auth, secrets, injection, dependency, and vault-sensitive data handling
+  - `.codex/agents/test-engineer.toml`: test strategy, regression coverage, smoke checks, and verification evidence
 - `commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands
 - `skills/`: one bundled workflow skill plus optional project-specific custom skills
   - `.codex/skills/superpowers/`: workflow discipline
@@ -114,11 +117,18 @@ Shipped bundled skill:
 
 - `superpowers`: workflow discipline for planning, TDD, debugging, review, verification, and finishing work
 
+Core subagents:
+
+- `code-reviewer`: quality gate for correctness, maintainability, regressions, and architecture fit
+- `security-auditor`: security gate for exploitable issues and sensitive-data handling
+- `test-engineer`: verification gate for tests, smoke checks, and missing coverage
+
 Frontend, backend, cloud, database, CI, provider, and framework-specific work is
-handled through repo context, the relevant subagent when delegation helps, and
-current official docs when API details matter. If a project needs reusable local
-guidance for a specific stack, add a custom skill and register it in the skills
-index instead of changing the bundled Superpowers workflow.
+handled through repo context, registered custom skills, registered custom agents,
+and current official docs when API details matter. If a project needs reusable
+local guidance for a specific stack, add a custom skill or custom agent and
+register it in the matching index instead of changing the bundled Superpowers
+workflow or the 3 core subagents.
 
 There is no `rules/` folder. Always-on guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
 
@@ -162,6 +172,49 @@ Example custom routing entries for `.codex/skills/INDEX.md`:
 
 `agent-bootstrap update` preserves custom skill folders that are not bundled kit
 skills and are not obsolete managed skills.
+
+## Add Project-Specific Agents
+
+Generated projects can add domain agents for independent perspectives that are
+not covered by the 3 core subagents. Agents should inspect
+`.codex/agents/INDEX.md` first, then load or dispatch only the matching custom
+agent. They should not recursively scan every agent file.
+
+To add a custom agent:
+
+1. Create `.codex/agents/<agent-name>.toml`.
+2. Define `name`, `description`, `developer_instructions`, and optional `nickname_candidates`.
+3. Register the agent under the custom agents block in `.codex/agents/INDEX.md`.
+4. Keep the agent domain-specific. Do not duplicate Superpowers workflow or the
+   built-in `code-reviewer`, `security-auditor`, and `test-engineer` gates.
+
+Example custom agent file:
+
+```toml
+name = "nextjs-ui-reviewer"
+description = "Use when reviewing Next.js App Router UI, routing, accessibility, and browser behavior."
+developer_instructions = """
+You are a project-specific Next.js UI review agent.
+
+Use Superpowers as the workflow brain. Review only Next.js UI concerns, cite repo
+evidence, and report findings back to the parent agent. Do not invoke other
+subagents.
+"""
+nickname_candidates = ["Next UI", "Frontend Review"]
+```
+
+Example custom routing entries for `.codex/agents/INDEX.md`:
+
+```md
+| Task shape | Agent |
+| --- | --- |
+| Next.js App Router UI, accessibility, or browser behavior review | `.codex/agents/nextjs-ui-reviewer.toml` |
+| Rust service ownership, concurrency, or Cargo release review | `.codex/agents/rust-service-reviewer.toml` |
+| Supabase RLS, Auth, storage policy, or SQL migration review | `.codex/agents/supabase-reviewer.toml` |
+```
+
+`agent-bootstrap update` preserves custom agent files that are not bundled core
+agents and are not obsolete managed agents.
 
 ## Vault Bridge
 

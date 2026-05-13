@@ -37,7 +37,10 @@ function runDoctor({ repoRoot } = {}) {
         vaultConfig: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'vault.config.json')),
         agentFile: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'AGENTS.md')),
         agentWorkspace: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'config.toml'))
-            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'agents', 'manager.toml'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'agents', 'INDEX.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'agents', 'code-reviewer.toml'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'agents', 'security-auditor.toml'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'agents', 'test-engineer.toml'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'commands', 'plan', 'brainstorm.md')),
         docs: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs')),
         plans: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'plans')),

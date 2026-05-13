@@ -19,18 +19,21 @@ const obsoleteSkillDirs = [
   [['kar', 'pathy'].join(''), 'coding', 'principles'].join('-'),
 ];
 const coreAgents = [
-  'architect',
-  'backend_implementer',
-  'frontend_implementer',
-  'manager',
-  'reviewer',
-  'tester',
+  'code-reviewer',
+  'security-auditor',
+  'test-engineer',
 ];
-const advancedAgents = [
-  'ci_cd',
-  'cloud',
-  'database',
-  'docs_researcher',
+const obsoleteManagedAgents = [
+  ['man', 'ager'].join(''),
+  ['arch', 'itect'].join(''),
+  ['frontend', 'implementer'].join('_'),
+  ['backend', 'implementer'].join('_'),
+  ['data', 'base'].join(''),
+  ['cl', 'oud'].join(''),
+  ['ci', 'cd'].join('_'),
+  ['docs', 'researcher'].join('_'),
+  ['rev', 'iewer'].join(''),
+  ['tes', 'ter'].join(''),
 ];
 
 function makeTempDir(prefix) {
@@ -123,8 +126,12 @@ function assertAgentWorkspacePresent(repoRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'README.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'config.toml')), true);
-  for (const agent of [...coreAgents, ...advancedAgents]) {
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'INDEX.md')), true);
+  for (const agent of coreAgents) {
     assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', `${agent}.toml`)), true);
+  }
+  for (const agent of obsoleteManagedAgents) {
+    assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', `${agent}.toml`)), false);
   }
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'commands', 'plan', 'brainstorm.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'rules')), false);
@@ -298,9 +305,11 @@ test('global CLI rejects internal commands instead of treating them as project p
 });
 
 test('repo docs stay aligned with the limited public CLI surface', () => {
+  const packageJson = JSON.parse(readFile(path.join(repoRoot, 'package.json')));
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
+  assert.equal(packageJson.version, '0.2.4');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -314,7 +323,9 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.match(readme, /Optional: AI Context/);
   assert.match(readme, /AI agents should run it automatically from `AGENTS\.md`/);
   assert.match(readme, /Add Project-Specific Skills/);
+  assert.match(readme, /Add Project-Specific Agents/);
   assert.match(readme, /\.codex\/skills\/INDEX\.md/);
+  assert.match(readme, /\.codex\/agents\/INDEX\.md/);
   assert.match(readme, /--type frontend/);
   assert.match(readme, /--type backend/);
   assert.doesNotMatch(readme, /--type web/);
@@ -384,6 +395,8 @@ test('setup stores portable config and init bootstraps current repo', () => {
 
   const repoReadme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(repoReadme, /face-gen-tools/i);
+  assert.match(repoReadme, /3 core subagents/i);
+  assert.match(repoReadme, /`\.codex\/agents\/code-reviewer\.toml`/i);
   assert.match(repoReadme, /`\.codex\/skills\/superpowers\/`/i);
   assert.match(repoReadme, /optional project-specific custom skills/i);
   assert.doesNotMatch(repoReadme, /`\.codex\/skills\/agent-api\/`/i);
@@ -397,6 +410,11 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(rootAgent, /agent-bootstrap context --why/);
   assert.match(rootAgent, /agent-bootstrap context --full/);
   assert.match(rootAgent, /\.codex\/skills\/INDEX\.md/);
+  assert.match(rootAgent, /\.codex\/agents\/INDEX\.md/);
+  assert.match(rootAgent, /Superpowers is the workflow brain/);
+  assert.match(rootAgent, /code-reviewer/);
+  assert.match(rootAgent, /security-auditor/);
+  assert.match(rootAgent, /test-engineer/);
   assert.match(rootAgent, /Coding discipline guardrails/);
   assert.match(rootAgent, /State assumptions that affect implementation/);
   assert.match(rootAgent, /Superpowers owns planning, TDD, debugging, review, and verification/);
@@ -474,6 +492,7 @@ test('global context command falls back to repo-local context before init', () =
   writeFile(path.join(repoRoot, 'docs', 'project-map.md'), '# Project Map\n');
   writeFile(path.join(repoRoot, 'docs', 'vault-memory.md'), '# Vault Bridge\n');
   writeFile(path.join(repoRoot, '.codex', 'INDEX.md'), '# Agent Routing Index\n');
+  writeFile(path.join(repoRoot, '.codex', 'agents', 'INDEX.md'), '# Subagent Routing Index\n');
   writeFile(path.join(repoRoot, '.codex', 'README.md'), '# Agent Workspace Guide\n');
   writeFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'), '# Skills Routing Index\n');
   fs.mkdirSync(nested, { recursive: true });
@@ -482,6 +501,7 @@ test('global context command falls back to repo-local context before init', () =
   assert.equal(compact.status, 0, compact.stderr);
   assert.match(compact.stdout, /Repo AGENTS/);
   assert.match(compact.stdout, /Agent Routing Index/);
+  assert.match(compact.stdout, /Subagent Routing Index/);
   assert.match(compact.stdout, /Skills Routing Index/);
   assert.match(compact.stdout, /Repo README/);
   assert.match(compact.stdout, /Source Repo Context/);
@@ -491,6 +511,7 @@ test('global context command falls back to repo-local context before init', () =
   const why = runCli(['context', '--why'], { configHome, cwd: nested });
   assert.equal(why.status, 0, why.stderr);
   assert.match(why.stdout, /Context mode: compact/);
+  assert.match(why.stdout, /\.codex\/agents\/\*\* recursive agent bodies/);
   assert.match(why.stdout, /vault\.config\.json missing/);
 });
 
@@ -517,8 +538,13 @@ test('init creates the Codex workspace and removes legacy agent workspaces', () 
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'config.toml')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'rules')), false);
-  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'manager.toml')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'database.toml')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'INDEX.md')), true);
+  for (const agent of coreAgents) {
+    assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', `${agent}.toml`)), true);
+  }
+  for (const agent of obsoleteManagedAgents) {
+    assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', `${agent}.toml`)), false);
+  }
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'commands', 'plan', 'brainstorm.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent')), false);
@@ -555,6 +581,20 @@ test('update command refreshes Codex assets while preserving project and vault m
   writeFile(path.join(repoRoot, 'src', 'app.js'), 'console.log("keep user source");\n');
   writeFile(path.join(repoRoot, '.agent', 'INDEX.md'), '# Legacy agent index\n');
   writeFile(path.join(repoRoot, '.codex', 'INDEX.md'), '# Broken Codex index\n');
+  writeFile(path.join(repoRoot, '.codex', 'agents', 'mobile-reviewer.toml'), 'name = "mobile-reviewer"\ndescription = "Use when reviewing mobile navigation and release flows."\ndeveloper_instructions = """\nYou are a project custom mobile review agent.\n"""\n');
+  writeFile(path.join(repoRoot, '.codex', 'agents', obsoleteManagedAgents[0] + '.toml'), 'name = "obsolete"\n');
+  writeFile(path.join(repoRoot, '.codex', 'agents', 'INDEX.md'), [
+    '# Custom-only old agents index',
+    '',
+    '<!-- agent-bootstrap:custom-agents:start -->',
+    '## Custom Agents',
+    '',
+    '| Task shape | Agent |',
+    '| --- | --- |',
+    '| Mobile navigation, permissions, or release-flow review | `.codex/agents/mobile-reviewer.toml` |',
+    '<!-- agent-bootstrap:custom-agents:end -->',
+    '',
+  ].join('\n'));
   writeFile(path.join(repoRoot, '.codex', 'skills', 'nextjs', 'SKILL.md'), '---\nname: nextjs\ndescription: Use when working on Next.js routes, React Server Components, or App Router behavior.\n---\n\n# Next.js Skill\n');
   writeFile(path.join(repoRoot, '.codex', 'skills', obsoleteSkillDirs[0], 'SKILL.md'), '# Obsolete managed skill\n');
   writeFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'), [
@@ -580,7 +620,13 @@ test('update command refreshes Codex assets while preserving project and vault m
   assert.equal(readFile(path.join(repoRoot, 'src', 'app.js')), 'console.log("keep user source");\n');
   assert.equal(fs.existsSync(path.join(repoRoot, '.agent')), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'INDEX.md')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'architect.toml')), true);
+  assertAgentWorkspacePresent(repoRoot);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'mobile-reviewer.toml')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', obsoleteManagedAgents[0] + '.toml')), false);
+  const agentsIndexAfterUpdate = readFile(path.join(repoRoot, '.codex', 'agents', 'INDEX.md'));
+  assert.match(agentsIndexAfterUpdate, /Mobile navigation, permissions, or release-flow review/);
+  assert.match(agentsIndexAfterUpdate, /\.codex\/agents\/mobile-reviewer\.toml/);
+  assert.match(agentsIndexAfterUpdate, /code-reviewer/);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'nextjs', 'SKILL.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', obsoleteSkillDirs[0])), false);
   const skillsIndexAfterUpdate = readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'));
@@ -749,7 +795,9 @@ test('bootstrap preserves an existing root README while adding bridge files', ()
   const readme = readFile(path.join(repoRoot, 'README.md'));
   assert.match(readme, /Keep this content\./);
   assert.doesNotMatch(readme, /VS Code friendly agent workspace layout/i);
-  assert.ok(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'manager.toml')));
+  for (const agent of coreAgents) {
+    assert.ok(fs.existsSync(path.join(repoRoot, '.codex', 'agents', `${agent}.toml`)));
+  }
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
 });
@@ -926,13 +974,13 @@ test('update helper restores repo-local managed assets without clobbering a cust
   assert.equal(result.status, 0, result.stderr);
 
   writeFile(path.join(repoRoot, 'README.md'), '# Custom README\n\nKeep my repo intro.\n');
-  fs.rmSync(path.join(repoRoot, '.codex', 'agents', 'manager.toml'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.codex', 'agents', 'code-reviewer.toml'), { force: true });
   fs.rmSync(path.join(repoRoot, 'scripts', 'agent-memory.js'), { force: true });
   writeFile(path.join(repoRoot, '.github', 'prompts', 'legacy-prompt.md'), '# Legacy prompt\n');
 
   const updateReport = withConfigHome(configHome, () => updateProject({ repoRoot }));
   assert.equal(updateReport.action, 'update');
-  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'manager.toml')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'code-reviewer.toml')), true);
   assertAgentWorkspacePresent(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'scripts', 'agent-memory.js')), true);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
@@ -949,6 +997,20 @@ test('migrate helper upgrades a legacy repo into the single-root-AGENTS kit layo
   writeFile(path.join(repoRoot, 'README.md'), '# Legacy README\n\nDo not overwrite this.\n');
   writeFile(path.join(repoRoot, legacyAgentFile), '# Legacy root agent guide\n\nKeep this note.\n');
   writeFile(path.join(repoRoot, '.github', legacyAgentFile), '# Legacy github agent guide\n');
+  writeFile(path.join(repoRoot, '.codex', 'agents', 'mobile-reviewer.toml'), 'name = "mobile-reviewer"\ndescription = "Use when reviewing mobile navigation and release flows."\ndeveloper_instructions = """\nYou are a project custom mobile review agent.\n"""\n');
+  writeFile(path.join(repoRoot, '.codex', 'agents', obsoleteManagedAgents[1] + '.toml'), 'name = "obsolete"\n');
+  writeFile(path.join(repoRoot, '.codex', 'agents', 'INDEX.md'), [
+    '# Legacy Agents Index',
+    '',
+    '<!-- agent-bootstrap:custom-agents:start -->',
+    '## Custom Agents',
+    '',
+    '| Task shape | Agent |',
+    '| --- | --- |',
+    '| Mobile navigation, permissions, or release-flow review | `.codex/agents/mobile-reviewer.toml` |',
+    '<!-- agent-bootstrap:custom-agents:end -->',
+    '',
+  ].join('\n'));
   writeFile(path.join(repoRoot, '.codex', 'skills', 'rust', 'SKILL.md'), '---\nname: rust\ndescription: Use when working on Rust services, Cargo workflows, or ownership-sensitive refactors.\n---\n\n# Rust Skill\n');
   writeFile(path.join(repoRoot, '.codex', 'skills', obsoleteSkillDirs[0], 'SKILL.md'), '# Obsolete managed skill\n');
   writeFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'), [
@@ -976,6 +1038,12 @@ test('migrate helper upgrades a legacy repo into the single-root-AGENTS kit layo
   assert.equal(fs.existsSync(path.join(repoRoot, 'AGENTS.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, legacyAgentFile)), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'mobile-reviewer.toml')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', obsoleteManagedAgents[1] + '.toml')), false);
+  assert.match(readFile(path.join(repoRoot, '.codex', 'agents', 'INDEX.md')), /Mobile navigation, permissions/);
+  for (const agent of coreAgents) {
+    assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', `${agent}.toml`)), true);
+  }
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'rust', 'SKILL.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', obsoleteSkillDirs[0])), false);
   assert.match(readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md')), /Rust services, Cargo workflows/);
@@ -998,7 +1066,7 @@ test('doctor internal report suggests update for repairable drift', () => {
   result = runCli(['init', repoRoot, '--type', 'desktop'], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
 
-  fs.rmSync(path.join(repoRoot, '.codex', 'agents', 'manager.toml'), { force: true });
+  fs.rmSync(path.join(repoRoot, '.codex', 'agents', 'code-reviewer.toml'), { force: true });
   fs.rmSync(path.join(repoRoot, 'docs', 'project-map.md'), { force: true });
   fs.rmSync(path.join(repoRoot, 'scripts', 'agent-memory.js'), { force: true });
 
@@ -1007,7 +1075,7 @@ test('doctor internal report suggests update for repairable drift', () => {
   assert.equal(doctor.checks.runtimeScript, false);
   assert.equal(doctor.checks.projectMap, false);
   assert.match(doctor.repo.kitVersion, /^\d+\.\d+\.\d+/);
-  assert.ok(doctor.missing.repoPaths.includes('.codex/agents/manager.toml'));
+  assert.ok(doctor.missing.repoPaths.includes('.codex/agents/code-reviewer.toml'));
   assert.ok(doctor.missing.repoPaths.includes('docs/project-map.md'));
   assert.ok(doctor.missing.repoPaths.includes('scripts/agent-memory.js'));
   assert.ok(doctor.suggestedCommands.includes('agent-bootstrap update'));
@@ -1234,12 +1302,19 @@ test('memory compact summarizes session noise into a project artifact', () => {
 
 test('Codex indexes enforce workflow priority and compact-context guardrails', () => {
   const agentIndex = readFile(path.join(repoRoot, '.codex', 'INDEX.md'));
+  const subagentIndex = readFile(path.join(repoRoot, '.codex', 'agents', 'INDEX.md'));
   const skillsIndex = readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'));
 
   assert.match(agentIndex, /Run `agent-bootstrap context --compact`/);
   assert.match(agentIndex, /There is no `rules\/` folder/);
   assert.match(agentIndex, /agent-bootstrap managed prompt templates, not native Codex slash commands/);
-  assert.match(agentIndex, /Do not dispatch subagents by default/);
+  assert.match(agentIndex, /Superpowers \+ 3 core subagents/i);
+  assert.match(agentIndex, /code-reviewer/);
+  assert.match(agentIndex, /security-auditor/);
+  assert.match(agentIndex, /test-engineer/);
+  assert.match(subagentIndex, /3 core subagents/i);
+  assert.match(subagentIndex, /Custom Agents/);
+  assert.match(subagentIndex, /Do not dispatch subagents by default/);
   assert.match(skillsIndex, /superpowers/);
   assert.match(skillsIndex, /Custom Skills/);
   assert.doesNotMatch(skillsIndex, obsoleteSkillNamePattern());
@@ -1326,20 +1401,32 @@ test('shipped skill metadata is triggerable and does not reference removed skill
   assert.doesNotMatch(superpowersReadme, removedSkillPattern);
 });
 
-test('Codex routing index exposes shipped custom agents without conflicting with built-ins', () => {
+test('Codex routing index exposes exactly three core subagents with vault-aware contracts', () => {
   const agentIndex = readFile(path.join(repoRoot, '.codex', 'INDEX.md'));
+  const subagentIndex = readFile(path.join(repoRoot, '.codex', 'agents', 'INDEX.md'));
   const agentsRoot = path.join(repoRoot, '.codex', 'agents');
   const agentFiles = fs.readdirSync(agentsRoot).filter((entry) => entry.endsWith('.toml')).sort();
 
-  assert.deepEqual(agentFiles, [...advancedAgents, ...coreAgents].map((agent) => `${agent}.toml`).sort());
-  for (const agent of [...coreAgents, ...advancedAgents]) {
+  assert.deepEqual(agentFiles, coreAgents.map((agent) => `${agent}.toml`).sort());
+  for (const agent of coreAgents) {
     const body = readFile(path.join(agentsRoot, `${agent}.toml`));
     assert.match(body, new RegExp(`name = "${agent}"`));
     assert.match(body, /description = "/);
     assert.match(body, /developer_instructions = """\r?\n/);
+    assert.match(body, /Superpowers/);
+    assert.match(body, /vault bridge/i);
+    assert.match(body, /evidence/i);
+    assert.match(body, /Do not invoke other subagents/);
     assert.match(agentIndex, new RegExp(`\\b${agent}\\b`));
+    assert.match(subagentIndex, new RegExp(`\\b${agent}\\b`));
   }
+  assert.match(readFile(path.join(agentsRoot, 'code-reviewer.toml')), /Findings first/);
+  assert.match(readFile(path.join(agentsRoot, 'security-auditor.toml')), /Severity/);
+  assert.match(readFile(path.join(agentsRoot, 'test-engineer.toml')), /Missing coverage/);
   assert.equal(agentFiles.some((file) => ['default.toml', 'worker.toml', 'explorer.toml'].includes(file)), false);
+  for (const agent of obsoleteManagedAgents) {
+    assert.equal(fs.existsSync(path.join(agentsRoot, `${agent}.toml`)), false);
+  }
 });
 
 test('skill index covers shipped skills and skill frontmatter is triggerable', () => {
@@ -1634,7 +1721,9 @@ test('packed install supports setup from the vault cwd and init from the repo cw
   assert.equal(fs.existsSync(path.join(repoRoot, 'AGENTS.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, legacyAgentFile)), false);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'vault-memory.md')), true);
-  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'manager.toml')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'code-reviewer.toml')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'security-auditor.toml')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'agents', 'test-engineer.toml')), true);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
 });
 

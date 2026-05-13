@@ -44,15 +44,40 @@ type BootstrapAction = 'init' | 'new' | 'sync' | 'update' | 'migrate';
 const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
 const SEEDED_REPO_PATHS = ['.codex', 'docs', 'plans'];
 const BUNDLED_SKILL_DIRS = new Set(['superpowers']);
+const CORE_AGENT_FILES = new Set([
+  'code-reviewer.toml',
+  'security-auditor.toml',
+  'test-engineer.toml',
+]);
 const OBSOLETE_MANAGED_SKILL_DIRS = new Set([
   [['kar', 'pathy'].join(''), 'coding', 'principles'].join('-'),
 ]);
+const OBSOLETE_MANAGED_AGENT_FILES = new Set([
+  ['man', 'ager'].join(''),
+  ['arch', 'itect'].join(''),
+  ['frontend', 'implementer'].join('_'),
+  ['backend', 'implementer'].join('_'),
+  ['data', 'base'].join(''),
+  ['cl', 'oud'].join(''),
+  ['ci', 'cd'].join('_'),
+  ['docs', 'researcher'].join('_'),
+  ['rev', 'iewer'].join(''),
+  ['tes', 'ter'].join(''),
+].map((name) => `${name}.toml`));
 const CUSTOM_SKILLS_START = '<!-- agent-bootstrap:custom-skills:start -->';
 const CUSTOM_SKILLS_END = '<!-- agent-bootstrap:custom-skills:end -->';
+const CUSTOM_AGENTS_START = '<!-- agent-bootstrap:custom-agents:start -->';
+const CUSTOM_AGENTS_END = '<!-- agent-bootstrap:custom-agents:end -->';
 
 interface CustomSkillsSnapshot {
   tempRoot: string;
   skillNames: string[];
+  customIndexBlock?: string;
+}
+
+interface CustomAgentsSnapshot {
+  tempRoot: string;
+  agentFiles: string[];
   customIndexBlock?: string;
 }
 
@@ -93,18 +118,26 @@ function removeLegacyAgentAssets(repoRoot: string): void {
   }
 }
 
-function extractCustomSkillsBlock(content?: string | null): string | undefined {
+function extractMarkedBlock(content: string | null | undefined, startMarker: string, endMarker: string): string | undefined {
   if (!content) {
     return undefined;
   }
 
-  const start = content.indexOf(CUSTOM_SKILLS_START);
-  const end = content.indexOf(CUSTOM_SKILLS_END);
+  const start = content.indexOf(startMarker);
+  const end = content.indexOf(endMarker);
   if (start === -1 || end === -1 || end < start) {
     return undefined;
   }
 
-  return content.slice(start, end + CUSTOM_SKILLS_END.length);
+  return content.slice(start, end + endMarker.length);
+}
+
+function extractCustomSkillsBlock(content?: string | null): string | undefined {
+  return extractMarkedBlock(content, CUSTOM_SKILLS_START, CUSTOM_SKILLS_END);
+}
+
+function extractCustomAgentsBlock(content?: string | null): string | undefined {
+  return extractMarkedBlock(content, CUSTOM_AGENTS_START, CUSTOM_AGENTS_END);
 }
 
 function defaultCustomSkillsBlock(): string {
@@ -116,6 +149,18 @@ function defaultCustomSkillsBlock(): string {
     '',
     'When adding one, create `.codex/skills/<skill-name>/SKILL.md` and replace this line with a precise routing table entry.',
     CUSTOM_SKILLS_END,
+  ].join('\n');
+}
+
+function defaultCustomAgentsBlock(): string {
+  return [
+    CUSTOM_AGENTS_START,
+    '## Custom Agents',
+    '',
+    'No custom project agents are registered yet.',
+    '',
+    'When adding one, create `.codex/agents/<agent-name>.toml` and replace this line with a precise routing table entry.',
+    CUSTOM_AGENTS_END,
   ].join('\n');
 }
 
@@ -145,6 +190,32 @@ function snapshotCustomSkills(repoRoot: string): CustomSkillsSnapshot {
   return { tempRoot, skillNames, customIndexBlock };
 }
 
+function snapshotCustomAgents(repoRoot: string): CustomAgentsSnapshot {
+  const agentsRoot = path.join(repoRoot, '.codex', 'agents');
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-bootstrap-custom-agents-'));
+  const agentFiles: string[] = [];
+  const customIndexBlock = extractCustomAgentsBlock(readIfExists(path.join(agentsRoot, 'INDEX.md')));
+
+  if (!fs.existsSync(agentsRoot)) {
+    return { tempRoot, agentFiles, customIndexBlock };
+  }
+
+  for (const entry of fs.readdirSync(agentsRoot, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.toml')) {
+      continue;
+    }
+
+    if (CORE_AGENT_FILES.has(entry.name) || OBSOLETE_MANAGED_AGENT_FILES.has(entry.name)) {
+      continue;
+    }
+
+    fs.cpSync(path.join(agentsRoot, entry.name), path.join(tempRoot, entry.name));
+    agentFiles.push(entry.name);
+  }
+
+  return { tempRoot, agentFiles, customIndexBlock };
+}
+
 function mergeCustomSkillsBlock(indexPath: string, customIndexBlock?: string): void {
   const body = readIfExists(indexPath);
   if (!body) {
@@ -153,6 +224,21 @@ function mergeCustomSkillsBlock(indexPath: string, customIndexBlock?: string): v
 
   const block = customIndexBlock || defaultCustomSkillsBlock();
   const currentBlock = extractCustomSkillsBlock(body);
+  const next = currentBlock
+    ? body.replace(currentBlock, block)
+    : `${body.trimEnd()}\n\n${block}\n`;
+
+  writeFile(indexPath, next);
+}
+
+function mergeCustomAgentsBlock(indexPath: string, customIndexBlock?: string): void {
+  const body = readIfExists(indexPath);
+  if (!body) {
+    return;
+  }
+
+  const block = customIndexBlock || defaultCustomAgentsBlock();
+  const currentBlock = extractCustomAgentsBlock(body);
   const next = currentBlock
     ? body.replace(currentBlock, block)
     : `${body.trimEnd()}\n\n${block}\n`;
@@ -171,7 +257,22 @@ function restoreCustomSkills(repoRoot: string, snapshot: CustomSkillsSnapshot): 
   mergeCustomSkillsBlock(path.join(skillsRoot, 'INDEX.md'), snapshot.customIndexBlock);
 }
 
+function restoreCustomAgents(repoRoot: string, snapshot: CustomAgentsSnapshot): void {
+  const agentsRoot = path.join(repoRoot, '.codex', 'agents');
+  ensureDir(agentsRoot);
+
+  for (const agentFile of snapshot.agentFiles) {
+    fs.cpSync(path.join(snapshot.tempRoot, agentFile), path.join(agentsRoot, agentFile));
+  }
+
+  mergeCustomAgentsBlock(path.join(agentsRoot, 'INDEX.md'), snapshot.customIndexBlock);
+}
+
 function cleanupCustomSkillsSnapshot(snapshot: CustomSkillsSnapshot): void {
+  fs.rmSync(snapshot.tempRoot, { recursive: true, force: true });
+}
+
+function cleanupCustomAgentsSnapshot(snapshot: CustomAgentsSnapshot): void {
   fs.rmSync(snapshot.tempRoot, { recursive: true, force: true });
 }
 
@@ -182,6 +283,7 @@ function resetManagedCodexWorkspace(repoRoot: string): void {
 function copyRepoScaffold(repoRoot: string): void {
   const packageRoot = getPackageRoot();
   const customSkills = snapshotCustomSkills(repoRoot);
+  const customAgents = snapshotCustomAgents(repoRoot);
 
   try {
     resetManagedCodexWorkspace(repoRoot);
@@ -191,8 +293,10 @@ function copyRepoScaffold(repoRoot: string): void {
       manifestPath: path.join(repoRoot, SCAFFOLD_MANIFEST_PATH),
       seedPaths: SEEDED_REPO_PATHS,
     });
+    restoreCustomAgents(repoRoot, customAgents);
     restoreCustomSkills(repoRoot, customSkills);
   } finally {
+    cleanupCustomAgentsSnapshot(customAgents);
     cleanupCustomSkillsSnapshot(customSkills);
   }
 }

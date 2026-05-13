@@ -54,7 +54,10 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     vaultConfig: fs.existsSync(path.join(resolvedRepoRoot, 'vault.config.json')),
     agentFile: fs.existsSync(path.join(resolvedRepoRoot, 'AGENTS.md')),
     agentWorkspace: fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'config.toml'))
-      && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'agents', 'manager.toml'))
+      && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'agents', 'INDEX.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'agents', 'code-reviewer.toml'))
+      && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'agents', 'security-auditor.toml'))
+      && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'agents', 'test-engineer.toml'))
       && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'commands', 'plan', 'brainstorm.md')),
     docs: fs.existsSync(path.join(resolvedRepoRoot, 'docs')),
     plans: fs.existsSync(path.join(resolvedRepoRoot, 'plans')),

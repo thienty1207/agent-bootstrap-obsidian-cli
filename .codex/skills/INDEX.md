@@ -25,7 +25,7 @@ When adding one, create `.codex/skills/<skill-name>/SKILL.md` and replace this l
 
 - Load Superpowers first for workflow-heavy work.
 - Load a custom skill only when it is installed locally and the routing row above matches the task.
-- For frontend, backend, cloud, database, CI, provider, or framework work without a matching custom skill, use nearest repo files, targeted subagents when delegation helps, and current official docs when API details matter.
+- For frontend, backend, cloud, database, CI, provider, or framework work without a matching custom skill, use nearest repo files, the 3 core quality subagents when delegation helps, registered custom agents when installed, and current official docs when API details matter.
 - Supporting docs and upstream readmes are attribution/reference only; do not load them during startup.
 
 ## Hallucination Guard

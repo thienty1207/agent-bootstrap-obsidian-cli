@@ -25,11 +25,30 @@ const vault_1 = require("./vault");
 const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
 const SEEDED_REPO_PATHS = ['.codex', 'docs', 'plans'];
 const BUNDLED_SKILL_DIRS = new Set(['superpowers']);
+const CORE_AGENT_FILES = new Set([
+    'code-reviewer.toml',
+    'security-auditor.toml',
+    'test-engineer.toml',
+]);
 const OBSOLETE_MANAGED_SKILL_DIRS = new Set([
     [['kar', 'pathy'].join(''), 'coding', 'principles'].join('-'),
 ]);
+const OBSOLETE_MANAGED_AGENT_FILES = new Set([
+    ['man', 'ager'].join(''),
+    ['arch', 'itect'].join(''),
+    ['frontend', 'implementer'].join('_'),
+    ['backend', 'implementer'].join('_'),
+    ['data', 'base'].join(''),
+    ['cl', 'oud'].join(''),
+    ['ci', 'cd'].join('_'),
+    ['docs', 'researcher'].join('_'),
+    ['rev', 'iewer'].join(''),
+    ['tes', 'ter'].join(''),
+].map((name) => `${name}.toml`));
 const CUSTOM_SKILLS_START = '<!-- agent-bootstrap:custom-skills:start -->';
 const CUSTOM_SKILLS_END = '<!-- agent-bootstrap:custom-skills:end -->';
+const CUSTOM_AGENTS_START = '<!-- agent-bootstrap:custom-agents:start -->';
+const CUSTOM_AGENTS_END = '<!-- agent-bootstrap:custom-agents:end -->';
 function copyTemplateIfPresent(vaultRoot, projectRoot) {
     const templateRoot = node_path_1.default.join(vaultRoot, 'Projects', '_template');
     if (node_fs_1.default.existsSync(templateRoot) && !node_fs_1.default.existsSync(projectRoot)) {
@@ -53,16 +72,22 @@ function removeLegacyAgentAssets(repoRoot) {
         node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, relativePath), { recursive: true, force: true });
     }
 }
-function extractCustomSkillsBlock(content) {
+function extractMarkedBlock(content, startMarker, endMarker) {
     if (!content) {
         return undefined;
     }
-    const start = content.indexOf(CUSTOM_SKILLS_START);
-    const end = content.indexOf(CUSTOM_SKILLS_END);
+    const start = content.indexOf(startMarker);
+    const end = content.indexOf(endMarker);
     if (start === -1 || end === -1 || end < start) {
         return undefined;
     }
-    return content.slice(start, end + CUSTOM_SKILLS_END.length);
+    return content.slice(start, end + endMarker.length);
+}
+function extractCustomSkillsBlock(content) {
+    return extractMarkedBlock(content, CUSTOM_SKILLS_START, CUSTOM_SKILLS_END);
+}
+function extractCustomAgentsBlock(content) {
+    return extractMarkedBlock(content, CUSTOM_AGENTS_START, CUSTOM_AGENTS_END);
 }
 function defaultCustomSkillsBlock() {
     return [
@@ -73,6 +98,17 @@ function defaultCustomSkillsBlock() {
         '',
         'When adding one, create `.codex/skills/<skill-name>/SKILL.md` and replace this line with a precise routing table entry.',
         CUSTOM_SKILLS_END,
+    ].join('\n');
+}
+function defaultCustomAgentsBlock() {
+    return [
+        CUSTOM_AGENTS_START,
+        '## Custom Agents',
+        '',
+        'No custom project agents are registered yet.',
+        '',
+        'When adding one, create `.codex/agents/<agent-name>.toml` and replace this line with a precise routing table entry.',
+        CUSTOM_AGENTS_END,
     ].join('\n');
 }
 function snapshotCustomSkills(repoRoot) {
@@ -95,6 +131,26 @@ function snapshotCustomSkills(repoRoot) {
     }
     return { tempRoot, skillNames, customIndexBlock };
 }
+function snapshotCustomAgents(repoRoot) {
+    const agentsRoot = node_path_1.default.join(repoRoot, '.codex', 'agents');
+    const tempRoot = node_fs_1.default.mkdtempSync(node_path_1.default.join(node_os_1.default.tmpdir(), 'agent-bootstrap-custom-agents-'));
+    const agentFiles = [];
+    const customIndexBlock = extractCustomAgentsBlock((0, fs_utils_1.readIfExists)(node_path_1.default.join(agentsRoot, 'INDEX.md')));
+    if (!node_fs_1.default.existsSync(agentsRoot)) {
+        return { tempRoot, agentFiles, customIndexBlock };
+    }
+    for (const entry of node_fs_1.default.readdirSync(agentsRoot, { withFileTypes: true })) {
+        if (!entry.isFile() || !entry.name.endsWith('.toml')) {
+            continue;
+        }
+        if (CORE_AGENT_FILES.has(entry.name) || OBSOLETE_MANAGED_AGENT_FILES.has(entry.name)) {
+            continue;
+        }
+        node_fs_1.default.cpSync(node_path_1.default.join(agentsRoot, entry.name), node_path_1.default.join(tempRoot, entry.name));
+        agentFiles.push(entry.name);
+    }
+    return { tempRoot, agentFiles, customIndexBlock };
+}
 function mergeCustomSkillsBlock(indexPath, customIndexBlock) {
     const body = (0, fs_utils_1.readIfExists)(indexPath);
     if (!body) {
@@ -102,6 +158,18 @@ function mergeCustomSkillsBlock(indexPath, customIndexBlock) {
     }
     const block = customIndexBlock || defaultCustomSkillsBlock();
     const currentBlock = extractCustomSkillsBlock(body);
+    const next = currentBlock
+        ? body.replace(currentBlock, block)
+        : `${body.trimEnd()}\n\n${block}\n`;
+    (0, fs_utils_1.writeFile)(indexPath, next);
+}
+function mergeCustomAgentsBlock(indexPath, customIndexBlock) {
+    const body = (0, fs_utils_1.readIfExists)(indexPath);
+    if (!body) {
+        return;
+    }
+    const block = customIndexBlock || defaultCustomAgentsBlock();
+    const currentBlock = extractCustomAgentsBlock(body);
     const next = currentBlock
         ? body.replace(currentBlock, block)
         : `${body.trimEnd()}\n\n${block}\n`;
@@ -115,7 +183,18 @@ function restoreCustomSkills(repoRoot, snapshot) {
     }
     mergeCustomSkillsBlock(node_path_1.default.join(skillsRoot, 'INDEX.md'), snapshot.customIndexBlock);
 }
+function restoreCustomAgents(repoRoot, snapshot) {
+    const agentsRoot = node_path_1.default.join(repoRoot, '.codex', 'agents');
+    (0, fs_utils_1.ensureDir)(agentsRoot);
+    for (const agentFile of snapshot.agentFiles) {
+        node_fs_1.default.cpSync(node_path_1.default.join(snapshot.tempRoot, agentFile), node_path_1.default.join(agentsRoot, agentFile));
+    }
+    mergeCustomAgentsBlock(node_path_1.default.join(agentsRoot, 'INDEX.md'), snapshot.customIndexBlock);
+}
 function cleanupCustomSkillsSnapshot(snapshot) {
+    node_fs_1.default.rmSync(snapshot.tempRoot, { recursive: true, force: true });
+}
+function cleanupCustomAgentsSnapshot(snapshot) {
     node_fs_1.default.rmSync(snapshot.tempRoot, { recursive: true, force: true });
 }
 function resetManagedCodexWorkspace(repoRoot) {
@@ -124,6 +203,7 @@ function resetManagedCodexWorkspace(repoRoot) {
 function copyRepoScaffold(repoRoot) {
     const packageRoot = (0, kit_1.getPackageRoot)();
     const customSkills = snapshotCustomSkills(repoRoot);
+    const customAgents = snapshotCustomAgents(repoRoot);
     try {
         resetManagedCodexWorkspace(repoRoot);
         (0, scaffold_1.syncSeededScaffold)({
@@ -132,9 +212,11 @@ function copyRepoScaffold(repoRoot) {
             manifestPath: node_path_1.default.join(repoRoot, SCAFFOLD_MANIFEST_PATH),
             seedPaths: SEEDED_REPO_PATHS,
         });
+        restoreCustomAgents(repoRoot, customAgents);
         restoreCustomSkills(repoRoot, customSkills);
     }
     finally {
+        cleanupCustomAgentsSnapshot(customAgents);
         cleanupCustomSkillsSnapshot(customSkills);
     }
 }

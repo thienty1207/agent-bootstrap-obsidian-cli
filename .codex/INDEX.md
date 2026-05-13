@@ -9,12 +9,13 @@ folder recursively.
 - Run `agent-bootstrap context --compact` before meaningful repo work.
 - Use `agent-bootstrap context --why` before expanding context.
 - Use `agent-bootstrap context --full` only when daily/session history is needed.
+- Read `.codex/agents/INDEX.md` before dispatching a subagent.
 - Read `.codex/skills/INDEX.md` before loading a skill body.
 
 ## What Lives Here
 
 - `.codex/config.toml`: Codex subagent settings.
-- `.codex/agents/*.toml`: project-scoped Codex custom subagents.
+- `.codex/agents/`: 3 core subagents plus optional custom agents registered in the agent index.
 - `.codex/commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands.
 - `.codex/skills/`: one bundled Superpowers workflow skill plus optional custom skills registered in the skills index.
 
@@ -31,24 +32,14 @@ context output, or a cited source, mark it unknown instead of guessing.
 
 ## Subagent Routing
 
-Core/default dispatch agents:
+The core execution model is Superpowers + 3 core subagents:
 
-- `manager`: research, requirements, tech-stack options, feature scope, handoff for user approval.
-- `architect`: system architecture after direction is clear; boundaries, data flow, contracts, ownership.
-- `frontend_implementer`: frontend implementation under the chosen architecture.
-- `backend_implementer`: backend implementation under the chosen architecture.
-- `tester`: focused tests, reproductions, smoke checks, regression risk.
-- `reviewer`: correctness, security, behavior regressions, missing tests.
+- `code-reviewer`: correctness, maintainability, regressions, and architecture fit.
+- `security-auditor`: exploitable security issues, auth, secrets, injection, dependencies, and vault-sensitive data handling.
+- `test-engineer`: test strategy, regression coverage, smoke checks, and verification evidence.
 
-Advanced/on-demand agents:
-
-- `docs_researcher`: current docs/API verification.
-- `ci_cd`: CI/CD, release automation, pipeline failures.
-- `cloud`: cloud deployment and managed service topology.
-- `database`: schema, migrations, query and data-integrity work.
-
-Do not dispatch subagents by default. Dispatch only when the task is broad enough
-to benefit from parallel work or a specialized review.
+Read `.codex/agents/INDEX.md` before dispatching any subagent. Custom agents
+must be registered there before use.
 
 ## Command Templates
 

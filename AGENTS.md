@@ -53,6 +53,8 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Treat `src/` as the source of truth; `dist/` and `runtime/agent-bootstrap/dist/` are generated build outputs.
 - Do not recursively scan `.codex/skills`; read `.codex/skills/INDEX.md` and load one narrow skill only when needed.
 - Use Superpowers as the only bundled workflow skill. Optional project skills must be registered in `.codex/skills/INDEX.md` before an agent loads them.
+- Use the 3 bundled core subagents only as quality gates: `code-reviewer`, `security-auditor`, and `test-engineer`.
+- Read `.codex/agents/INDEX.md` before dispatching a subagent. Optional project agents must be registered there before use.
 - Do not reintroduce `.codex/rules`; mandatory guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
 - Treat older dated files under `plans/` as historical context; do not read them by default unless the task is about lifecycle history.
 - If a fact is not present in repo, context output, or a cited source, mark it unknown instead of guessing.
@@ -74,7 +76,7 @@ These are always-on guardrails, not a separate skill. Superpowers owns planning,
 ## Fast path
 
 1. Read `README.md`
-2. Read `.codex/README.md` and `.codex/INDEX.md`; list targeted `.codex/agents` or `.codex/commands` only when needed
+2. Read `.codex/README.md`, `.codex/INDEX.md`, `.codex/agents/INDEX.md`, and `.codex/skills/INDEX.md`; list targeted `.codex/agents` or `.codex/commands` only when needed
 3. Run `npm test`
 4. Confirm `README.md` and `src/cli.ts` still agree on the public command surface
 5. In generated projects, use `agent-bootstrap context --compact` as the automatic first-step context loader for AI sessions
