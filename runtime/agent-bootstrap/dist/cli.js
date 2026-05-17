@@ -9,9 +9,10 @@ const config_1 = require("./config");
 const bootstrap_1 = require("./bootstrap");
 const context_1 = require("./context");
 const vault_1 = require("./vault");
+const memory_ops_1 = require("./memory-ops");
 const INSTALL_COMMAND = 'npm i -g --force @kakasitink/agent-bootstrap';
 const UNINSTALL_COMMAND = 'npm uninstall -g @kakasitink/agent-bootstrap';
-const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context. Use --help for quickstart.';
+const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, memory. Use --help for quickstart.';
 function parseFlags(args) {
     const options = {};
     const rest = [];
@@ -92,6 +93,13 @@ function writeHelp() {
         '  agent-bootstrap context --why',
         '  agent-bootstrap context --full',
         '',
+        'Automatic memory recall and maintenance:',
+        '  agent-bootstrap recall "<query>" [project-path]',
+        '  agent-bootstrap memory status [project-path]',
+        '  agent-bootstrap memory sync-sessions [project-path]',
+        '  agent-bootstrap memory export [project-path]',
+        '  agent-bootstrap memory backup [project-path]',
+        '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
     ].join('\n'));
@@ -131,6 +139,28 @@ async function main(argv) {
     if (command === 'context') {
         const contextArgs = parseContextArgs(tail);
         process.stdout.write(`${(0, context_1.getContext)(contextArgs)}\n`);
+        return;
+    }
+    if (command === 'recall') {
+        const { rest, options } = parseFlags(tail);
+        const query = rest[0];
+        if (!query) {
+            throw new Error('Recall requires a query: agent-bootstrap recall "<query>" [project-path]');
+        }
+        process.stdout.write(`${(0, memory_ops_1.runRecall)({
+            query,
+            repoRoot: rest[1],
+            limit: options.limit ? Number.parseInt(options.limit, 10) : undefined,
+        })}\n`);
+        return;
+    }
+    if (command === 'memory') {
+        const { rest } = parseFlags(tail);
+        const subcommand = rest[0];
+        if (!subcommand) {
+            throw new Error('Memory requires a subcommand: status, sync-sessions, export, backup.');
+        }
+        writeJson((0, memory_ops_1.runMemoryCommand)(subcommand, { repoRoot: rest[1] }));
         return;
     }
     throw new Error(`Unknown command "${command}". ${PUBLIC_COMMANDS}`);

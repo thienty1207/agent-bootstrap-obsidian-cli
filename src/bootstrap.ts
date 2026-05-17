@@ -360,6 +360,7 @@ function applyBootstrap({
     copyTemplateIfPresent(vaultRoot, projectRoot);
     ensureDir(path.join(projectRoot, 'Research'));
     ensureDir(path.join(projectRoot, 'Notes'));
+    ensureDir(path.join(projectRoot, 'Sessions'));
     ensureDir(path.join(projectRoot, 'Artifacts'));
 
     const writeVaultFile = projectRootAlreadyExisted ? writeFileIfMissing : writeFile;
@@ -370,6 +371,9 @@ function applyBootstrap({
     writeVaultFile(path.join(projectRoot, 'Open Questions.md'), openQuestionsTemplate(projectSlug, today));
     writeVaultFile(path.join(projectRoot, 'Handoff.md'), handoffTemplate(projectSlug, today));
   }
+
+  ensureDir(path.join(projectRoot, 'Sessions'));
+  ensureDir(path.join(projectRoot, 'Artifacts'));
 
   copyRepoScaffold(repoRoot);
   if (preserveReadme) {

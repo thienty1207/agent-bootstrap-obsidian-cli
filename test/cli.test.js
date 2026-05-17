@@ -287,6 +287,8 @@ test('--help prints the quickstart flow', () => {
   assert.match(result.stdout, /agent-bootstrap init/);
   assert.match(result.stdout, /agent-bootstrap update/);
   assert.match(result.stdout, /agent-bootstrap context/);
+  assert.match(result.stdout, /agent-bootstrap recall/);
+  assert.match(result.stdout, /agent-bootstrap memory status/);
   assert.match(result.stdout, /npm uninstall -g @kakasitink\/agent-bootstrap/);
 });
 
@@ -297,10 +299,10 @@ test('global CLI rejects internal commands instead of treating them as project p
 
   fs.mkdirSync(workspaceRoot, { recursive: true });
 
-  for (const command of ['memory', 'doctor', 'migrate', 'sync', 'projects', 'config', 'new']) {
+  for (const command of ['doctor', 'migrate', 'sync', 'projects', 'config', 'new']) {
     const result = runCli([command], { configHome, cwd: workspaceRoot });
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Public commands: setup, init, update, context/i);
+    assert.match(result.stderr, /Public commands: setup, init, update, context, recall, memory/i);
   }
 });
 
@@ -309,7 +311,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '0.2.4');
+  assert.equal(packageJson.version, '0.3.0');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -318,10 +320,12 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.match(agentGuide, /Superpowers owns planning, TDD, debugging, review, and verification/);
   assert.doesNotMatch(agentGuide, obsoleteSkillNamePattern());
   assert.match(agentGuide, /public cli surface/i);
-  assert.match(readme, /The user-facing flow is intentionally small/);
+  assert.match(readme, /Automatic Memory Recall/);
   assert.match(readme, /Update an existing project's kit files/);
   assert.match(readme, /Optional: AI Context/);
   assert.match(readme, /AI agents should run it automatically from `AGENTS\.md`/);
+  assert.match(readme, /agent-bootstrap recall "<query>"/);
+  assert.match(readme, /agent-bootstrap memory backup/);
   assert.match(readme, /Add Project-Specific Skills/);
   assert.match(readme, /Add Project-Specific Agents/);
   assert.match(readme, /\.codex\/skills\/INDEX\.md/);
@@ -1211,6 +1215,127 @@ test('memory writes build a project memory index and context includes it', () =>
   assert.match(result.stdout, /Routing strategy/);
 });
 
+test('recall searches durable project memory and handles empty results', () => {
+  const root = makeTempDir('agent-bootstrap-recall-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['decision', 'Use Supabase RLS policies for tenant isolation.', '--title', 'Tenant security']);
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['fact', 'Billing exports live under src/billing/export.ts.', '--title', 'Billing export path', '--source', 'repo files']);
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['recall', 'tenant isolation', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Recall Results/);
+  assert.match(result.stdout, /One Thing/);
+  assert.match(result.stdout, /Tenant security/);
+  assert.match(result.stdout, /Supabase RLS policies/);
+  assert.match(result.stdout, /Decisions\.md/);
+
+  const empty = runCli(['recall', 'nonexistent-zebra-query', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(empty.status, 0, empty.stderr);
+  assert.match(empty.stdout, /No recall results/);
+});
+
+test('compact context auto-refreshes recall index and includes bounded auto recall', () => {
+  const root = makeTempDir('agent-bootstrap-auto-recall-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['decision', 'Keep recall context bounded to five entries.', '--title', 'Bounded recall']);
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['context', '--compact'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Auto Recall/);
+  assert.match(result.stdout, /Bounded recall/);
+  assert.doesNotMatch(result.stdout, /===== Today Daily Note =====/);
+
+  const recallIndexPath = path.join(vaultRoot, 'Projects', 'repo', 'Artifacts', 'recall-index.json');
+  assert.equal(fs.existsSync(recallIndexPath), true);
+  const recallIndex = JSON.parse(readFile(recallIndexPath));
+  assert.ok(recallIndex.documents.length > 0);
+
+  const why = runCli(['context', '--compact', '--why'], { configHome, cwd: repoRoot });
+  assert.equal(why.status, 0, why.stderr);
+  assert.match(why.stdout, /Recall index/);
+  assert.match(why.stdout, /full recall memory bodies/i);
+});
+
+test('memory commands report status sync sessions export and backup project memory', () => {
+  const root = makeTempDir('agent-bootstrap-memory-ops-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['task', 'Ship automatic recall status commands']);
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['memory', 'status', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  let status = parseJson(result.stdout);
+  assert.equal(status.ok, true);
+  assert.equal(status.projectSlug, 'repo');
+  assert.equal(status.checks.projectRoot, true);
+  assert.ok(status.counts.memoryRecords >= 1);
+
+  result = runCli(['memory', 'sync-sessions', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const sync = parseJson(result.stdout);
+  assert.equal(fs.existsSync(sync.sessionPath), true);
+  assert.match(readFile(sync.sessionPath), /Ship automatic recall status commands/);
+
+  result = runCli(['memory', 'export', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const exported = parseJson(result.stdout);
+  assert.equal(fs.existsSync(exported.exportPath), true);
+  const exportBody = JSON.parse(readFile(exported.exportPath));
+  assert.equal(exportBody.project.slug, 'repo');
+  assert.ok(exportBody.files.some((file) => file.relativePath === 'Tasks.md'));
+
+  result = runCli(['memory', 'backup', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const backup = parseJson(result.stdout);
+  assert.equal(fs.existsSync(backup.backupPath), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'manifest.json')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'Tasks.md')), true);
+
+  result = runCli(['memory', 'status', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  status = parseJson(result.stdout);
+  assert.ok(status.counts.sessions >= 1);
+  assert.ok(status.counts.exports >= 1);
+  assert.ok(status.counts.backups >= 1);
+});
+
 test('stable memory writes update project fact question and handoff files', () => {
   const root = makeTempDir('agent-bootstrap-stable-memory-');
   const vaultRoot = path.join(root, 'vault');
@@ -1293,11 +1418,44 @@ test('memory compact summarizes session noise into a project artifact', () => {
   assert.equal(result.status, 0, result.stderr);
 
   const summaryPath = path.join(vaultRoot, 'Projects', 'repo', 'Artifacts', 'session-summary.md');
+  const sessionsRoot = path.join(vaultRoot, 'Projects', 'repo', 'Sessions');
   assert.equal(fs.existsSync(summaryPath), true);
   const summary = readFile(summaryPath);
   assert.match(summary, /# Session Summary/);
   assert.match(summary, /Recent Tasks/);
   assert.match(summary, /Keep compact memory useful/);
+  assert.equal(fs.existsSync(sessionsRoot), true);
+  assert.ok(fs.readdirSync(sessionsRoot).some((file) => file.endsWith('.md')));
+});
+
+test('repo-local runtime mirrors recall and memory status commands from nested paths', () => {
+  const root = makeTempDir('agent-bootstrap-runtime-recall-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const nested = path.join(repoRoot, 'src', 'feature');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(nested, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['fact', 'Frontend recall uses bounded snippets.', '--title', 'Recall snippet budget'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['recall', 'bounded snippets'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Recall Results/);
+  assert.match(result.stdout, /Recall snippet budget/);
+
+  result = runRuntime(repoRoot, ['memory', 'status'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const status = parseJson(result.stdout);
+  assert.equal(status.projectSlug, 'repo');
+  assert.equal(status.ok, true);
 });
 
 test('Codex indexes enforce workflow priority and compact-context guardrails', () => {

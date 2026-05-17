@@ -11,7 +11,8 @@ without scanning every skill or subagent file.
 3. `.codex/INDEX.md`
 4. `.codex/agents/INDEX.md`
 5. `.codex/skills/INDEX.md`
-6. One targeted skill or subagent only when the task requires it
+6. `agent-bootstrap recall "<query>"` only when compact context is insufficient
+7. One targeted skill or subagent only when the task requires it
 
 ## Boundaries
 
@@ -21,6 +22,7 @@ without scanning every skill or subagent file.
 - `.codex/commands/` contains prompt templates managed by this kit, not native Codex slash commands.
 - `.codex/skills/` contains the bundled Superpowers workflow skill and optional registered custom skills. Do not recursively read it.
 - `docs/` and the linked vault hold durable project memory.
+- `agent-bootstrap context --compact` refreshes bounded Auto Recall from the linked vault; full memory bodies stay on disk until queried.
 
 There is no `rules/` folder. Short mandatory guardrails are kept in the always-on
 files above; deeper workflow guidance stays lazy-loaded in skills.

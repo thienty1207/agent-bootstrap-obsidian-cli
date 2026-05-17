@@ -253,6 +253,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
         copyTemplateIfPresent(vaultRoot, projectRoot);
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Research'));
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Notes'));
+        (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Sessions'));
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Artifacts'));
         const writeVaultFile = projectRootAlreadyExisted ? fs_utils_1.writeFileIfMissing : fs_utils_1.writeFile;
         writeVaultFile(node_path_1.default.join(projectRoot, 'README.md'), (0, templates_1.projectReadmeTemplate)(projectSlug, repoRoot, today, projectType));
@@ -262,6 +263,8 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
         writeVaultFile(node_path_1.default.join(projectRoot, 'Open Questions.md'), (0, templates_1.openQuestionsTemplate)(projectSlug, today));
         writeVaultFile(node_path_1.default.join(projectRoot, 'Handoff.md'), (0, templates_1.handoffTemplate)(projectSlug, today));
     }
+    (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Sessions'));
+    (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Artifacts'));
     copyRepoScaffold(repoRoot);
     if (preserveReadme) {
         (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoRoot, 'README.md'), (0, templates_1.repoReadmeTemplate)(repoName, projectSlug, projectType));

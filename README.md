@@ -4,15 +4,17 @@ Portable CLI for bootstrapping coding projects into an Obsidian-backed AI memory
 
 ## Public Flow
 
-The user-facing flow is intentionally small:
+The core bootstrap flow stays small, with automatic memory commands available for agents and maintenance:
 
 1. Install or update the CLI
 2. Set the Obsidian vault path
 3. Initialize a project
 4. Update an existing project's kit files
-5. Uninstall when no longer needed
+5. Let AI agents auto-load context and recall memory
+6. Export or back up memory when needed
+7. Uninstall when no longer needed
 
-AI context commands still exist, but generated `AGENTS.md` files tell AI agents to run compact context automatically.
+Generated `AGENTS.md` files tell AI agents to run compact context automatically. Users can inspect recall, status, export, and backup manually, but normal AI work should not depend on manual memory commands.
 
 ## 1. Install Or Update CLI
 
@@ -98,6 +100,90 @@ agent-bootstrap context --full
 - `--compact` loads the smallest useful repo and vault context
 - `--why` explains what was loaded and skipped
 - `--full` adds daily/session history when needed
+
+## Automatic Memory Recall
+
+The kit now includes a local, Obsidian-first recall layer inspired by QMD-style
+Markdown search and AgentMemory-style status/export/backup workflows. It does
+not require QMD, AgentMemory, a server, MCP plugin, vector database, API key, or
+background daemon.
+
+AI agents should run this automatically:
+
+```bash
+agent-bootstrap context --compact
+```
+
+That command refreshes `Artifacts/recall-index.json`, loads the project memory
+index, and injects a bounded `Auto Recall` section into context. It does not
+dump full daily logs or recursively scan the vault.
+
+Targeted recall:
+
+```bash
+agent-bootstrap recall "<query>" "D:\project\nodejs\srcEcommerce"
+```
+
+Examples:
+
+```bash
+agent-bootstrap recall "auth decision"
+agent-bootstrap recall "billing export path"
+agent-bootstrap recall "next handoff"
+```
+
+Memory maintenance:
+
+```bash
+agent-bootstrap memory status "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory sync-sessions "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory export "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory backup "D:\project\nodejs\srcEcommerce"
+```
+
+- `memory status` reports vault, project capsule, memory index, recall index,
+  sessions, exports, and backups.
+- `memory sync-sessions` writes a clean Markdown session summary under
+  `Projects/<slug>/Sessions/` and refreshes recall.
+- `memory export` writes a JSON export under
+  `Projects/<slug>/Artifacts/Exports/`.
+- `memory backup` writes a timestamped plain-file backup under
+  `Projects/<slug>/Artifacts/Backups/`.
+
+Generated project agents should also use the repo-local runtime silently:
+
+```bash
+node scripts/agent-memory.js recall "<query>"
+node scripts/agent-memory.js memory status
+node scripts/agent-memory.js memory sync-sessions
+node scripts/agent-memory.js compact
+```
+
+After meaningful work, agents should write durable memory with the existing
+runtime commands and run `compact` or `memory sync-sessions` when it helps the
+next session. This keeps memory automatic without asking the user to run commands.
+
+### Backup Before Reinstalling Windows
+
+Memory is stored on disk in your Obsidian vault and in each repo's generated
+bridge files. Before reinstalling Windows, back up:
+
+1. Your Obsidian vault folder.
+2. Your project repositories.
+3. The global CLI config folder if you want to keep machine registration:
+   `%USERPROFILE%\.agent-bootstrap` or the folder set by
+   `AGENT_BOOTSTRAP_CONFIG_HOME`.
+
+For each important project, run:
+
+```bash
+agent-bootstrap memory backup "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory export "D:\project\nodejs\srcEcommerce"
+```
+
+After reinstalling Windows, install the CLI again, run `agent-bootstrap setup`
+against the restored vault, then run `agent-bootstrap update` inside each restored
+project.
 
 ## Codex Workspace
 
@@ -221,8 +307,10 @@ agents and are not obsolete managed agents.
 The vault bridge is stable across `init` and `update`:
 
 - `vault.config.json` links repo, vault, project slug, project type, and kit version
-- `agent-bootstrap context --compact` loads repo context, vault context, and project memory index
-- `scripts/agent-memory.js` writes tasks, decisions, facts, questions, handoffs, research, notes, and compact summaries
+- `agent-bootstrap context --compact` loads repo context, vault context, project memory index, and bounded Auto Recall
+- `agent-bootstrap recall "<query>"` searches durable project memory Markdown
+- `agent-bootstrap memory <status|sync-sessions|export|backup>` handles health, session replay, export, and backup
+- `scripts/agent-memory.js` writes tasks, decisions, facts, questions, handoffs, research, notes, recall output, memory maintenance, and compact summaries
 - `Facts.md` is for source-backed facts
 - `Open Questions.md` is for unresolved assumptions
 - `Handoff.md` keeps the next-session state short

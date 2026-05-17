@@ -8,6 +8,7 @@ import {
   getDailyNotePath,
   readProjectMemoryIndex,
 } from './vault';
+import { formatAutoRecallContext, getRecallIndexPath } from './recall';
 
 export interface RepoConfig {
   vault_root: string;
@@ -130,6 +131,7 @@ export function getContext({
   const skipped: string[] = [
     '.codex/agents/** recursive agent bodies (load only the routed TOML when needed)',
     '.codex/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
+    'Full recall memory bodies (indexed on disk; compact context receives bounded snippets only)',
   ];
   if (mode === 'compact') {
     skipped.push('Daily/** daily logs (run `agent-bootstrap context --full` when needed)');
@@ -180,6 +182,9 @@ export function getContext({
     );
     output.push(`===== Project Memory Index =====\n${memoryIndex.trimEnd()}\n`);
     loaded.push({ label: 'Project Memory Index', filePath: path.join(config.project_root, 'Artifacts', 'memory-index.json') });
+    const autoRecall = formatAutoRecallContext(config, mode === 'full' ? 8 : 5);
+    output.push(`===== Auto Recall =====\n${autoRecall.trimEnd()}\n`);
+    loaded.push({ label: 'Recall Index', filePath: getRecallIndexPath(config.project_root) });
   } else {
     output.push([
       '===== Source Repo Context =====',

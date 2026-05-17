@@ -29,9 +29,9 @@ The CLI bootstraps new coding projects so they get:
 
 ## Public CLI surface
 
-The documented user-facing flow is install/update CLI, `setup`, `init`, project `update`, and uninstall.
+The documented user-facing flow is install/update CLI, `setup`, `init`, project `update`, automatic `context`, targeted `recall`, memory maintenance, and uninstall.
 
-`context` remains available as an optional AI-context command. AI agents should run `agent-bootstrap context --compact` automatically from this file instead of asking the user to run it.
+`context` remains the automatic AI-context command. AI agents should run `agent-bootstrap context --compact` automatically from this file instead of asking the user to run it. `recall` and `memory` commands are public helper commands for targeted vault search, status, export, backup, and session sync.
 
 This source repo also contains lifecycle helper modules such as `syncProject`, `migrateProject`, and `runDoctor`; `updateProject` backs the public `agent-bootstrap update [projectPath]` command.
 
@@ -45,10 +45,12 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep `agent-bootstrap setup [path]` sufficient to initialize a brand new vault path, defaulting to the current working directory when omitted.
 - Keep `agent-bootstrap update [projectPath]` sufficient to refresh kit-managed `.codex` and bridge files in projects already being built.
 - Keep `agent-bootstrap context --compact` as the automatic first command agents run at the start of a fresh project session.
+- Keep `agent-bootstrap recall "<query>" [projectPath]` available for targeted memory search when compact context is insufficient.
+- Keep `agent-bootstrap memory <status|sync-sessions|export|backup> [projectPath]` available for memory health, clean session summaries, JSON export, and plain-file backup.
 - Use `agent-bootstrap context --why` before expanding context, and `agent-bootstrap context --full` only when daily history is needed.
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
-- Keep `context` loading a compact project memory index so large repos do not require broad vault scans.
+- Keep `context` loading a compact project memory index and bounded Auto Recall so large repos do not require broad vault scans.
 - Keep vault scaffold links centered around `Init.md` so Obsidian Graph View and agent memory navigation stay useful as the vault grows.
 - Treat `src/` as the source of truth; `dist/` and `runtime/agent-bootstrap/dist/` are generated build outputs.
 - Do not recursively scan `.codex/skills`; read `.codex/skills/INDEX.md` and load one narrow skill only when needed.
@@ -80,3 +82,5 @@ These are always-on guardrails, not a separate skill. Superpowers owns planning,
 3. Run `npm test`
 4. Confirm `README.md` and `src/cli.ts` still agree on the public command surface
 5. In generated projects, use `agent-bootstrap context --compact` as the automatic first-step context loader for AI sessions
+6. Use `agent-bootstrap recall "<query>"` silently when prior project memory is needed
+7. Use `agent-bootstrap memory status` before backup/export troubleshooting

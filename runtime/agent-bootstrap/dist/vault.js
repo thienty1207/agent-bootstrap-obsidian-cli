@@ -106,6 +106,7 @@ Minimum structure:
 - \`README.md\` as source of truth
 - \`Tasks.md\` for next actions
 - \`Decisions.md\` for decision log
+- \`Sessions/\` for clean agent session summaries and replay
 - \`Research/\` for project-only research
 - \`Notes/\` for working notes
 - \`Artifacts/\` for generated outputs when needed
@@ -175,14 +176,15 @@ This is the graph-friendly entrypoint for the vault and the first note an AI age
 - Project template: [[Projects/_template/README|Project Template]]
 
 ## Agent Runtime
-- In a bootstrapped repo, run \`agent-bootstrap context\` first.
+- In a bootstrapped repo, run \`agent-bootstrap context --compact\` first.
+- Use \`agent-bootstrap recall "<query>"\` for targeted prior memory when compact context is insufficient.
 - Keep short-term execution in [[Daily/README|Daily]].
 - Keep durable project facts in [[Projects/README|Projects]].
 - Keep reusable knowledge in [[Research/README|Research]] or [[Notes/README|Notes]].
 
 ## Memory Model
 - The vault can grow without a fixed memory ceiling because notes stay on disk.
-- Agents should load compact context first, then open only the narrow notes needed for the task.
+- Agents should load compact context first, use bounded Auto Recall, then open only the narrow notes needed for the task.
 - Stable cross-project learnings should become reusable notes instead of staying buried in daily logs.
 `;
 }
@@ -337,6 +339,7 @@ tags:
 - Facts: [[Facts]]
 - Open Questions: [[Open Questions]]
 - Handoff: [[Handoff]]
+- Sessions: [[Sessions]]
 - Research: [[Research]]
 - Notes: [[Notes]]
 - Artifacts: [[Artifacts]]
@@ -522,6 +525,7 @@ function ensureVaultScaffold(vaultRoot) {
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, '.obsidian'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Research'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Notes'));
+    (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Sessions'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Artifacts'));
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'AGENTS.md'), vaultAgentTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Init.md'), vaultInitTemplate());
@@ -539,6 +543,7 @@ function ensureVaultScaffold(vaultRoot) {
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Handoff.md'), projectTemplateHandoff());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Research', 'README.md'), '# Research\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Notes', 'README.md'), '# Notes\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Sessions', 'README.md'), '# Sessions\n\nClean agent session summaries for recall and replay.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Artifacts', 'README.md'), '# Artifacts\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, '.obsidian', 'core-plugins.json'), corePluginsConfig());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, '.obsidian', 'daily-notes.json'), dailyNotesConfig());
@@ -596,6 +601,7 @@ function createEmptyIndex(projectSlug, projectType) {
             facts: [],
             questions: [],
             handoffs: [],
+            sessions: [],
             daily: [],
         },
     };
@@ -615,6 +621,7 @@ function normalizeMemoryIndex(index, projectSlug, projectType) {
             facts: index.recent?.facts || [],
             questions: index.recent?.questions || [],
             handoffs: index.recent?.handoffs || [],
+            sessions: index.recent?.sessions || [],
             daily: index.recent?.daily || [],
         },
     };
@@ -659,6 +666,7 @@ function formatProjectMemoryIndex(index) {
         ['Recent Facts', index.recent.facts],
         ['Recent Questions', index.recent.questions],
         ['Recent Handoffs', index.recent.handoffs],
+        ['Recent Sessions', index.recent.sessions],
         ['Recent Daily Events', index.recent.daily],
     ];
     const lines = [

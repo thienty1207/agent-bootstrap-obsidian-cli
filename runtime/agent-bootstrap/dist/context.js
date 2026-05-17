@@ -9,6 +9,7 @@ exports.getContext = getContext;
 const node_path_1 = __importDefault(require("node:path"));
 const fs_utils_1 = require("./fs-utils");
 const vault_1 = require("./vault");
+const recall_1 = require("./recall");
 function readRepoConfig(repoRoot) {
     const config = readOptionalRepoConfig(repoRoot);
     if (!config) {
@@ -72,6 +73,7 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
     const skipped = [
         '.codex/agents/** recursive agent bodies (load only the routed TOML when needed)',
         '.codex/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
+        'Full recall memory bodies (indexed on disk; compact context receives bounded snippets only)',
     ];
     if (mode === 'compact') {
         skipped.push('Daily/** daily logs (run `agent-bootstrap context --full` when needed)');
@@ -103,6 +105,9 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
         const memoryIndex = (0, vault_1.formatProjectMemoryIndex)((0, vault_1.readProjectMemoryIndex)(config.project_root, config.project_slug, config.project_type));
         output.push(`===== Project Memory Index =====\n${memoryIndex.trimEnd()}\n`);
         loaded.push({ label: 'Project Memory Index', filePath: node_path_1.default.join(config.project_root, 'Artifacts', 'memory-index.json') });
+        const autoRecall = (0, recall_1.formatAutoRecallContext)(config, mode === 'full' ? 8 : 5);
+        output.push(`===== Auto Recall =====\n${autoRecall.trimEnd()}\n`);
+        loaded.push({ label: 'Recall Index', filePath: (0, recall_1.getRecallIndexPath)(config.project_root) });
     }
     else {
         output.push([

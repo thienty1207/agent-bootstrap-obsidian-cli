@@ -7,6 +7,8 @@ folder recursively.
 ## Automatic Startup
 
 - Run `agent-bootstrap context --compact` before meaningful repo work.
+- Use `agent-bootstrap recall "<query>"` when compact context is not enough for prior decisions, facts, handoffs, or session summaries.
+- Use `agent-bootstrap memory status` when memory health, export, backup, or session sync needs inspection.
 - Use `agent-bootstrap context --why` before expanding context.
 - Use `agent-bootstrap context --full` only when daily/session history is needed.
 - Read `.codex/agents/INDEX.md` before dispatching a subagent.
@@ -18,6 +20,7 @@ folder recursively.
 - `.codex/agents/`: 3 core subagents plus optional custom agents registered in the agent index.
 - `.codex/commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands.
 - `.codex/skills/`: one bundled Superpowers workflow skill plus optional custom skills registered in the skills index.
+- Vault `Artifacts/recall-index.json` and `Sessions/`: generated memory recall assets maintained by `context`, `recall`, and `memory` commands.
 
 There is no `rules/` folder. Mandatory guardrails live in `AGENTS.md`, this index,
 and `.codex/skills/INDEX.md`.

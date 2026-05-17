@@ -44,6 +44,7 @@ tags:
 ## Working model
 - Source code lives in the external repo at \`source_path\`
 - Durable memory lives in this project capsule inside the vault
+- Clean session summaries live in \`Sessions/\` for automatic recall and replay
 - Research that generalizes across projects should be moved to global \`Research\` or \`Notes\`
 
 ## Links
@@ -54,6 +55,7 @@ tags:
 - [[Facts]]
 - [[Open Questions]]
 - [[Handoff]]
+- [[Sessions]]
 - [[Research]]
 - [[Notes]]
 - [[Artifacts]]
@@ -192,8 +194,8 @@ It keeps the agent workspace under \`.codex\`, while GitHub automation stays und
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
 
-This package is intentionally documented around install/update, setup, init, project update, and uninstall.
-\`agent-bootstrap context\` is an optional manual command for users; AI agents should run it automatically from \`AGENTS.md\`.
+This package is documented around install/update, setup, init, project update, automatic context, recall, memory status, backup, and uninstall.
+\`agent-bootstrap context --compact\` is automatic agent startup; \`recall\` and \`memory\` commands are available for targeted inspection and maintenance.
 
 ## Structure
 
@@ -230,14 +232,24 @@ This package is intentionally documented around install/update, setup, init, pro
 ## Suggested use
 
 1. Read \`AGENTS.md\`.
-2. AI agents run \`agent-bootstrap context --compact\` automatically to load repo and vault context.
+2. AI agents run \`agent-bootstrap context --compact\` automatically to load repo, vault context, and bounded Auto Recall.
 3. Read \`.codex/README.md\` and \`.codex/INDEX.md\` for how Codex config, subagents, command templates, and skills fit together.
 4. Read \`.codex/agents/INDEX.md\`, then use one core or custom agent only when a task benefits from explicit subagent delegation.
 5. Treat \`.codex/commands/\` as reusable prompt templates managed by this kit.
 6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs workflow guidance or a registered custom skill.
 7. Use repo context, targeted subagents, registered custom skills, registered custom agents, and current official docs for frontend, backend, provider, cloud, database, CI, or framework-specific work.
-8. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
-9. Do not recursively scan \`.codex/skills\`; the index is the routing surface.
+8. Run \`agent-bootstrap recall "<query>"\` silently when compact context is not enough for prior project decisions, facts, or handoffs.
+9. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
+10. Do not recursively scan \`.codex/skills\`; the index is the routing surface.
+
+## Automatic Memory
+
+- \`agent-bootstrap context --compact\` refreshes \`Artifacts/recall-index.json\` and includes bounded Auto Recall.
+- \`agent-bootstrap recall "<query>"\` searches project memory Markdown without external QMD, vector DB, server, or API key.
+- \`agent-bootstrap memory status\` reports vault, project capsule, memory index, recall index, session, export, and backup health.
+- \`agent-bootstrap memory sync-sessions\` writes a clean session summary under \`Sessions/\` and updates the recall index.
+- \`agent-bootstrap memory export\` writes a JSON export under \`Artifacts/Exports/\`.
+- \`agent-bootstrap memory backup\` writes a timestamped plain-file backup under \`Artifacts/Backups/\`.
 `;
 }
 
@@ -301,9 +313,9 @@ Project capsule:
 
 ## Read order
 
-Before meaningful work, run \`agent-bootstrap context --compact\`. Do not ask the user whether to run it; this is automatic agent startup.
+Before meaningful work, run \`agent-bootstrap context --compact\`. Do not ask the user whether to run it; this is automatic agent startup and includes bounded Auto Recall from the vault.
 
-If compact context is insufficient, run \`agent-bootstrap context --why\` to see what was loaded or skipped. Use \`agent-bootstrap context --full\` only when the daily log or full session context is needed.
+If compact context is insufficient, run \`agent-bootstrap recall "<task topic>"\` silently to retrieve narrow prior memory. Run \`agent-bootstrap context --why\` to see what was loaded or skipped. Use \`agent-bootstrap context --full\` only when the daily log or full session context is needed.
 
 The compact context includes this read order:
 
@@ -318,7 +330,8 @@ The compact context includes this read order:
 9. \`${projectRoot}/Facts.md\`
 10. \`${projectRoot}/Open Questions.md\`
 11. \`${projectRoot}/Handoff.md\`
-12. relevant docs under \`docs/\`, targeted agent assets under \`.codex/\`, and workflows under \`.github/workflows/\`
+12. \`${projectRoot}/Sessions/\` summaries and \`${projectRoot}/Artifacts/recall-index.json\` through bounded Auto Recall
+13. relevant docs under \`docs/\`, targeted agent assets under \`.codex/\`, and workflows under \`.github/workflows/\`
 
 ## Context discipline
 
@@ -352,10 +365,12 @@ ${typeFocus(projectType).join('\n')}
 ## Fast paths
 
 - \`agent-bootstrap context --compact\`
+- \`agent-bootstrap recall "<query>"\`
+- \`agent-bootstrap memory status\`
 - \`agent-bootstrap context --why\`
 - \`agent-bootstrap context --full\`
 
-Running \`agent-bootstrap context --compact\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, loads routed repo/vault memory, and includes the project memory index so the agent does not need to scan the vault manually.
+Running \`agent-bootstrap context --compact\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, refreshes the recall index, loads routed repo/vault memory, and includes bounded Auto Recall so the agent does not need to scan the vault manually.
 
 ## Write-back rules
 
@@ -374,11 +389,17 @@ The repo runtime handles the low-friction automation:
 - it appends to today's daily note automatically
 - it routes \`research\` and \`note\` entries to project or global scope automatically unless you override \`--scope\`
 - it records routing reasons and keeps a compact project memory index under \`Artifacts/memory-index.json\`
+- it keeps a local QMD-inspired recall index under \`Artifacts/recall-index.json\`
+- it writes clean session summaries under \`Sessions/\` through \`compact\` or \`memory sync-sessions\`
 - it still supports explicit \`--scope project\` or \`--scope global\` when needed
+
+Before a final response after meaningful work, run \`node scripts/agent-memory.js compact\` silently when it would help the next session. Use \`node scripts/agent-memory.js memory sync-sessions\` for an explicit clean session replay note.
 
 ## Repo-local runtime
 
 - \`agent-bootstrap context\` for read-only session context
+- \`agent-bootstrap recall "<query>"\` or \`node scripts/agent-memory.js recall "<query>"\` for targeted memory search
+- \`agent-bootstrap memory <status|sync-sessions|export|backup>\` or \`node scripts/agent-memory.js memory <status|sync-sessions|export|backup>\` for memory health and backup
 - \`node scripts/agent-memory.js <task|decision|research|note|fact|question|handoff|compact>\` for write-back and memory compaction
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 `;
@@ -531,11 +552,12 @@ After meaningful work:
 - update \`Handoff.md\` with the latest concise next-session state
 - create project research notes under \`Research/\` when investigation happens
 - move reusable cross-project insights into the vault's global \`Research\` or \`Notes\`
+- run memory compaction or session sync after meaningful work so future agents can replay context quickly
 - rely on the repo git \`post-commit\` hook to keep a low-friction commit worklog
 
 Preferred repo-local runtime:
 
-\`node scripts/agent-memory.js <context|task|decision|research|note|fact|question|handoff|compact>\`
+\`node scripts/agent-memory.js <context|recall|memory|task|decision|research|note|fact|question|handoff|compact>\`
 
 The runtime will:
 
@@ -544,6 +566,8 @@ The runtime will:
 - load repo \`README.md\` and \`.codex/README.md\` so the agent understands the local kit
 - auto-route \`research\` and \`note\` entries to project or global scope by default
 - maintain a compact project memory index so \`context\` loads faster and with better recall
+- maintain a local QMD-inspired recall index without external services
+- support \`memory status\`, \`memory sync-sessions\`, \`memory export\`, and \`memory backup\`
 `;
 }
 
@@ -744,6 +768,7 @@ function createEmptyIndex(projectSlug, projectType) {
       facts: [],
       questions: [],
       handoffs: [],
+      sessions: [],
       daily: [],
     },
   };
@@ -764,6 +789,7 @@ function normalizeMemoryIndex(index, projectSlug, projectType) {
       facts: (index.recent && index.recent.facts) || [],
       questions: (index.recent && index.recent.questions) || [],
       handoffs: (index.recent && index.recent.handoffs) || [],
+      sessions: (index.recent && index.recent.sessions) || [],
       daily: (index.recent && index.recent.daily) || [],
     },
   };
@@ -825,6 +851,7 @@ function formatProjectMemoryIndex(index) {
     ['Recent Facts', index.recent.facts],
     ['Recent Questions', index.recent.questions],
     ['Recent Handoffs', index.recent.handoffs],
+    ['Recent Sessions', index.recent.sessions],
     ['Recent Daily Events', index.recent.daily],
   ];
 
@@ -853,6 +880,465 @@ function formatProjectMemoryIndex(index) {
   }
 
   return \`\${lines.join('\\n').trimEnd()}\\n\`;
+}
+
+function getRecallIndexPath(projectRoot) {
+  return path.join(projectRoot, 'Artifacts', 'recall-index.json');
+}
+
+function tokenize(value) {
+  const stopWords = new Set(['a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'in', 'is', 'it', 'of', 'on', 'or', 'the', 'to', 'with']);
+  return value
+    .toLowerCase()
+    .split(/[^a-z0-9_.\\/-]+/g)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 2 && !stopWords.has(token));
+}
+
+function titleFromMarkdown(filePath, content) {
+  const match = content.match(/^#\\s+(.+)$/m);
+  return match ? match[1].trim() : path.basename(filePath, path.extname(filePath));
+}
+
+function recentMarkdownFiles(dirPath, limit = 40) {
+  if (!fs.existsSync(dirPath)) {
+    return [];
+  }
+
+  return fs.readdirSync(dirPath, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
+    .map((entry) => path.join(dirPath, entry.name))
+    .sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs)
+    .slice(0, limit);
+}
+
+function documentKindFromPath(config, filePath) {
+  const relativeProjectPath = path.relative(config.project_root, filePath).replace(/\\\\/g, '/');
+  const relativeVaultPath = path.relative(config.vault_root, filePath).replace(/\\\\/g, '/');
+  if (relativeProjectPath === 'Tasks.md') return 'task';
+  if (relativeProjectPath === 'Decisions.md') return 'decision';
+  if (relativeProjectPath === 'Facts.md') return 'fact';
+  if (relativeProjectPath === 'Open Questions.md') return 'question';
+  if (relativeProjectPath === 'Handoff.md') return 'handoff';
+  if (relativeProjectPath.startsWith('Research/')) return 'research';
+  if (relativeProjectPath.startsWith('Notes/')) return 'note';
+  if (relativeProjectPath.startsWith('Sessions/')) return 'session';
+  if (relativeVaultPath.startsWith('Daily/')) return 'daily';
+  return 'memory';
+}
+
+function collectRecallFilePaths(config) {
+  const candidates = [
+    path.join(config.project_root, 'README.md'),
+    path.join(config.project_root, config.tasks_file),
+    path.join(config.project_root, config.decisions_file),
+    path.join(config.project_root, config.facts_file || 'Facts.md'),
+    path.join(config.project_root, config.open_questions_file || 'Open Questions.md'),
+    path.join(config.project_root, config.handoff_file || 'Handoff.md'),
+    path.join(config.project_root, 'Artifacts', 'session-summary.md'),
+    ...recentMarkdownFiles(path.join(config.project_root, config.research_dir)),
+    ...recentMarkdownFiles(path.join(config.project_root, config.notes_dir)),
+    ...recentMarkdownFiles(path.join(config.project_root, 'Sessions')),
+    ...recentMarkdownFiles(path.join(config.vault_root, 'Daily'), 8),
+  ];
+  return [...new Set(candidates)].filter((filePath) => fs.existsSync(filePath));
+}
+
+function createRecallDocument(config, filePath) {
+  const content = readFile(filePath);
+  if (!content || !content.trim()) {
+    return null;
+  }
+  const stat = fs.statSync(filePath);
+  const title = titleFromMarkdown(filePath, content);
+  const kind = documentKindFromPath(config, filePath);
+  return {
+    id: path.relative(config.vault_root, filePath).replace(/\\\\/g, '/'),
+    kind,
+    title,
+    path: filePath,
+    preview: compactPreview(content, 220).replace(/â€¦/g, '...'),
+    bytes: Buffer.byteLength(content, 'utf8'),
+    updatedAt: stat.mtime.toISOString(),
+    content,
+    tokens: tokenize(title + '\\n' + content),
+  };
+}
+
+function buildRecallIndex(config) {
+  const documents = collectRecallFilePaths(config)
+    .map((filePath) => createRecallDocument(config, filePath))
+    .filter(Boolean);
+  const index = {
+    project: {
+      slug: config.project_slug,
+      projectType: config.project_type,
+      generatedAt: getIsoTimestamp(),
+    },
+    documents: documents.map((document) => ({
+      id: document.id,
+      kind: document.kind,
+      title: document.title,
+      path: document.path,
+      preview: document.preview,
+      bytes: document.bytes,
+      updatedAt: document.updatedAt,
+    })),
+  };
+  const indexPath = getRecallIndexPath(config.project_root);
+  writeFile(indexPath, JSON.stringify(index, null, 2));
+  return { index, documents };
+}
+
+function termFrequency(tokens, term) {
+  return tokens.reduce((count, token) => count + (token === term ? 1 : 0), 0);
+}
+
+function snippetForTerms(content, terms) {
+  const normalized = content.toLowerCase();
+  const hits = terms.map((term) => normalized.indexOf(term)).filter((index) => index >= 0).sort((left, right) => left - right);
+  const firstHit = hits[0];
+  if (firstHit === undefined) {
+    return compactPreview(content, 360).replace(/â€¦/g, '...');
+  }
+  const start = Math.max(0, firstHit - 90);
+  const end = Math.min(content.length, firstHit + 260);
+  const prefix = start > 0 ? '... ' : '';
+  const suffix = end < content.length ? ' ...' : '';
+  return compactPreview(prefix + content.slice(start, end) + suffix, 360).replace(/â€¦/g, '...');
+}
+
+function recallProjectMemory(config, query, limit = 5) {
+  const built = buildRecallIndex(config);
+  const documents = built.documents;
+  const terms = [...new Set(tokenize(query))];
+  if (terms.length === 0 || documents.length === 0) {
+    return [];
+  }
+
+  const averageLength = documents.reduce((total, document) => total + document.tokens.length, 0) / documents.length || 1;
+  return documents.map((document) => {
+    let score = 0;
+    for (const term of terms) {
+      const frequency = termFrequency(document.tokens, term);
+      if (frequency === 0) continue;
+      const matchingDocs = documents.filter((candidate) => candidate.tokens.includes(term)).length;
+      const idf = Math.log(1 + ((documents.length - matchingDocs + 0.5) / (matchingDocs + 0.5)));
+      const lengthNorm = 1.5 * (1 - 0.75 + 0.75 * (document.tokens.length / averageLength));
+      score += idf * ((frequency * 2.5) / (frequency + lengthNorm));
+      if (document.title.toLowerCase().includes(term)) {
+        score += 1.25;
+      }
+    }
+    return {
+      id: document.id,
+      kind: document.kind,
+      title: document.title,
+      path: document.path,
+      preview: document.preview,
+      bytes: document.bytes,
+      updatedAt: document.updatedAt,
+      score,
+      snippet: snippetForTerms(document.content, terms),
+    };
+  }).filter((result) => result.score > 0).sort((left, right) => right.score - left.score).slice(0, limit);
+}
+
+function relativeMemoryPath(config, filePath) {
+  if (filePath.startsWith(config.project_root)) {
+    return path.relative(config.project_root, filePath).replace(/\\\\/g, '/');
+  }
+  return path.relative(config.vault_root, filePath).replace(/\\\\/g, '/');
+}
+
+function formatRecallResults(config, query, results) {
+  if (results.length === 0) {
+    return ['# Recall Results', '', 'No recall results for ' + JSON.stringify(query) + '.', ''].join('\\n');
+  }
+
+  const best = results[0];
+  const lines = [
+    '# Recall Results',
+    '',
+    'Query: ' + JSON.stringify(query),
+    '',
+    '## One Thing',
+    '- ' + best.title + ': ' + best.snippet,
+    '',
+    '## Matches',
+  ];
+
+  results.forEach((result, index) => {
+    lines.push(String(index + 1) + '. ' + result.title + ' [' + result.kind + ']');
+    lines.push('   - Source: ' + relativeMemoryPath(config, result.path));
+    lines.push('   - Score: ' + result.score.toFixed(3));
+    lines.push('   - Preview: ' + result.snippet);
+  });
+  lines.push('');
+  return lines.join('\\n');
+}
+
+function formatAutoRecallContext(config, limit = 5) {
+  const built = buildRecallIndex(config);
+  const index = readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type);
+  const recent = [
+    ...((index.recent && index.recent.sessions) || []),
+    ...index.recent.handoffs,
+    ...index.recent.facts,
+    ...index.recent.decisions,
+    ...index.recent.tasks,
+    ...index.recent.questions,
+    ...index.recent.research,
+    ...index.recent.notes,
+    ...index.recent.daily,
+  ].sort((left, right) => right.ts.localeCompare(left.ts)).slice(0, limit);
+  const lines = [
+    '# Auto Recall',
+    '',
+    'Recall index: ' + getRecallIndexPath(config.project_root),
+    'Indexed markdown memory docs: ' + built.index.documents.length,
+    'Full recall memory bodies are indexed on disk but not loaded into compact context.',
+    '',
+    '## Recent Durable Memory',
+  ];
+  if (recent.length === 0) {
+    lines.push('- none');
+  } else {
+    recent.forEach((item) => {
+      const source = item.path ? ' (source: ' + relativeMemoryPath(config, item.path) + ')' : '';
+      lines.push('- ' + item.kind + ': ' + item.title + ' - ' + item.preview + source);
+    });
+  }
+  lines.push('');
+  return lines.join('\\n');
+}
+
+function getGitSummary(repoRoot) {
+  try {
+    const branch = cp.execFileSync('git', ['branch', '--show-current'], { cwd: repoRoot, encoding: 'utf8' }).trim() || 'unknown';
+    const status = cp.execFileSync('git', ['status', '--short'], { cwd: repoRoot, encoding: 'utf8' })
+      .split(/\\r?\\n/)
+      .map((line) => line.trimEnd())
+      .filter(Boolean);
+    return { branch, dirty: status.length > 0, status };
+  } catch {
+    return { branch: 'unknown', dirty: false, status: [] };
+  }
+}
+
+function timestampForFile() {
+  return getIsoTimestamp().replace(/[:.]/g, '-');
+}
+
+function writeSessionSummary(repoRoot, config, reason) {
+  const sessionsRoot = path.join(config.project_root, 'Sessions');
+  ensureDir(sessionsRoot);
+  const stamp = timestampForFile();
+  const sessionPath = path.join(sessionsRoot, stamp + '.md');
+  const git = getGitSummary(repoRoot);
+  const index = readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type);
+  const summary = [
+    '# Session Summary',
+    '',
+    '- Project: \`' + config.project_slug + '\`',
+    '- Project type: \`' + config.project_type + '\`',
+    '- Repo: \`' + repoRoot + '\`',
+    '- Updated: \`' + getIsoTimestamp() + '\`',
+    '- Git branch: \`' + git.branch + '\`',
+    '- Git dirty: \`' + (git.dirty ? 'yes' : 'no') + '\`',
+    '',
+    '## Git Status',
+    ...(git.status.length > 0 ? git.status.map((line) => '- ' + line) : ['- clean or unavailable']),
+    '',
+    formatProjectMemoryIndex(index).trimEnd(),
+    '',
+  ].join('\\n');
+  const sessionSummaryPath = path.join(config.project_root, 'Artifacts', 'session-summary.md');
+  writeFile(sessionPath, summary);
+  writeFile(sessionSummaryPath, summary);
+  updateProjectMemoryIndex({
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    bucket: 'sessions',
+    item: createMemoryIndexRecord({
+      kind: 'session',
+      title: 'Session summary',
+      preview: summary,
+      scope: 'project',
+      recordPath: sessionPath,
+      reason,
+    }),
+  });
+  appendDailyLog(
+    config.vault_root,
+    'Session memory synced for \`' + config.project_slug + '\`',
+    buildMemoryLogMarker('session', config.project_slug, stamp, 'project'),
+  );
+  buildRecallIndex(config);
+  return { sessionPath, sessionSummaryPath };
+}
+
+function listFiles(dirPath, predicate) {
+  if (!fs.existsSync(dirPath)) {
+    return [];
+  }
+  return fs.readdirSync(dirPath).filter(predicate).map((fileName) => path.join(dirPath, fileName)).sort();
+}
+
+function latestFile(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    return null;
+  }
+  const files = fs.readdirSync(dirPath)
+    .map((fileName) => path.join(dirPath, fileName))
+    .filter((filePath) => fs.statSync(filePath).isFile())
+    .sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs);
+  return files[0] || null;
+}
+
+function memoryRecordCount(config) {
+  const index = readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type);
+  return Object.values(index.recent).reduce((total, records) => total + records.length, 0);
+}
+
+function getCriticalMemoryPaths(config) {
+  const files = [
+    path.join(config.project_root, 'README.md'),
+    path.join(config.project_root, config.tasks_file),
+    path.join(config.project_root, config.decisions_file),
+    path.join(config.project_root, config.facts_file || 'Facts.md'),
+    path.join(config.project_root, config.open_questions_file || 'Open Questions.md'),
+    path.join(config.project_root, config.handoff_file || 'Handoff.md'),
+    getProjectMemoryIndexPath(config.project_root),
+    getRecallIndexPath(config.project_root),
+    path.join(config.project_root, 'Artifacts', 'session-summary.md'),
+  ];
+  [config.research_dir, config.notes_dir, 'Sessions'].forEach((dirName) => {
+    const root = path.join(config.project_root, dirName);
+    if (!fs.existsSync(root)) return;
+    const stack = [root];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      fs.readdirSync(current, { withFileTypes: true }).forEach((entry) => {
+        const entryPath = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(entryPath);
+        } else if (entry.isFile()) {
+          files.push(entryPath);
+        }
+      });
+    }
+  });
+  return [...new Set(files)].filter((filePath) => fs.existsSync(filePath));
+}
+
+function memoryStatus(repoRoot, config) {
+  const built = buildRecallIndex(config);
+  const sessionsRoot = path.join(config.project_root, 'Sessions');
+  const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
+  const backupsRoot = path.join(config.project_root, 'Artifacts', 'Backups');
+  const latestSession = latestFile(sessionsRoot);
+  return {
+    ok: fs.existsSync(config.vault_root) && fs.existsSync(config.project_root),
+    repoRoot,
+    vaultRoot: config.vault_root,
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    checks: {
+      vaultRoot: fs.existsSync(config.vault_root),
+      projectRoot: fs.existsSync(config.project_root),
+      memoryIndex: fs.existsSync(getProjectMemoryIndexPath(config.project_root)),
+      recallIndex: fs.existsSync(getRecallIndexPath(config.project_root)),
+      sessionsDir: fs.existsSync(sessionsRoot),
+    },
+    counts: {
+      memoryRecords: memoryRecordCount(config),
+      recallDocuments: built.index.documents.length,
+      sessions: listFiles(sessionsRoot, (fileName) => fileName.endsWith('.md')).length,
+      exports: listFiles(exportsRoot, (fileName) => fileName.endsWith('.json')).length,
+      backups: fs.existsSync(backupsRoot)
+        ? fs.readdirSync(backupsRoot).filter((entry) => fs.statSync(path.join(backupsRoot, entry)).isDirectory()).length
+        : 0,
+    },
+    latestSession: latestSession ? { path: latestSession, updatedAt: fs.statSync(latestSession).mtime.toISOString() } : null,
+  };
+}
+
+function exportMemory(repoRoot, config) {
+  const built = buildRecallIndex(config);
+  const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
+  ensureDir(exportsRoot);
+  const exportPath = path.join(exportsRoot, 'agent-bootstrap-memory-' + timestampForFile() + '.json');
+  const files = getCriticalMemoryPaths(config).map((filePath) => ({
+    relativePath: path.relative(config.project_root, filePath).replace(/\\\\/g, '/'),
+    path: filePath,
+    content: readFile(filePath) || '',
+  }));
+  writeFile(exportPath, JSON.stringify({
+    exportedAt: getIsoTimestamp(),
+    repoRoot,
+    project: {
+      slug: config.project_slug,
+      type: config.project_type,
+      root: config.project_root,
+      vaultRoot: config.vault_root,
+    },
+    memoryIndex: readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type),
+    recallIndex: built.index,
+    files,
+  }, null, 2));
+  return { exportPath, files: files.length, recallDocuments: built.index.documents.length };
+}
+
+function backupMemory(repoRoot, config) {
+  buildRecallIndex(config);
+  const backupPath = path.join(config.project_root, 'Artifacts', 'Backups', timestampForFile());
+  ensureDir(backupPath);
+  const copied = [];
+  getCriticalMemoryPaths(config).forEach((sourcePath) => {
+    const relative = path.relative(config.project_root, sourcePath);
+    const targetPath = path.join(backupPath, relative);
+    ensureDir(path.dirname(targetPath));
+    fs.copyFileSync(sourcePath, targetPath);
+    copied.push(relative.replace(/\\\\/g, '/'));
+  });
+  const manifestPath = path.join(backupPath, 'manifest.json');
+  writeFile(manifestPath, JSON.stringify({
+    createdAt: getIsoTimestamp(),
+    repoRoot,
+    vaultRoot: config.vault_root,
+    projectRoot: config.project_root,
+    projectSlug: config.project_slug,
+    projectType: config.project_type,
+    files: copied,
+    note: 'Plain-file backup; zip compression is intentionally not required.',
+  }, null, 2));
+  return { backupPath, manifestPath, files: copied.length };
+}
+
+function runMemoryCommand(repoRoot, config, subcommand) {
+  switch (subcommand) {
+    case 'status':
+      return memoryStatus(repoRoot, config);
+    case 'sync-sessions': {
+      const synced = writeSessionSummary(repoRoot, config, 'memory sync-sessions');
+      const built = buildRecallIndex(config);
+      return {
+        sessionPath: synced.sessionPath,
+        sessionSummaryPath: synced.sessionSummaryPath,
+        recallIndexPath: getRecallIndexPath(config.project_root),
+        indexedDocuments: built.index.documents.length,
+      };
+    }
+    case 'export':
+      return exportMemory(repoRoot, config);
+    case 'backup':
+      return backupMemory(repoRoot, config);
+    default:
+      throw new Error('Unknown memory command. Use: status, sync-sessions, export, backup.');
+  }
 }
 
 function resolveRoutingDecision(mode, title, content, scope, projectSlug, repoName) {
@@ -1012,6 +1498,7 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
   const skipped = [
     '.codex/agents/** recursive agent bodies (load only the routed TOML when needed)',
     '.codex/skills/** recursive skill bodies (load only the routed SKILL.md when needed)',
+    'Full recall memory bodies (indexed on disk; compact context receives bounded snippets only)',
   ];
   if (mode === 'compact') {
     skipped.push('Daily/** daily logs (run agent-bootstrap context --full when needed)');
@@ -1062,6 +1549,8 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
     );
     output.push(\`===== Project Memory Index =====\\n\${memoryIndex.trimEnd()}\\n\`);
     loaded.push({ label: 'Project Memory Index', filePath: path.join(config.project_root, 'Artifacts', 'memory-index.json') });
+    output.push(\`===== Auto Recall =====\\n\${formatAutoRecallContext(config, mode === 'full' ? 8 : 5).trimEnd()}\\n\`);
+    loaded.push({ label: 'Recall Index', filePath: getRecallIndexPath(config.project_root) });
   } else {
     output.push([
       '===== Source Repo Context =====',
@@ -1233,24 +1722,14 @@ function appendHandoff(config, content) {
 }
 
 function compactSessionMemory(config) {
-  const summaryPath = path.join(config.project_root, 'Artifacts', 'session-summary.md');
-  const index = readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type);
-  const summary = [
-    '# Session Summary',
-    '',
-    \`- Project: \\\`\${config.project_slug}\\\`\`,
-    \`- Updated: \\\`\${getIsoTimestamp()}\\\`\`,
-    '',
-    formatProjectMemoryIndex(index).trimEnd(),
-    '',
-  ].join('\\n');
-  writeFile(summaryPath, summary);
+  const repoRoot = findRepoRoot(process.cwd());
+  const synced = writeSessionSummary(repoRoot, config, 'memory compact');
   appendDailyLog(
     config.vault_root,
     \`Compacted session memory for \\\`\${config.project_slug}\\\`\`,
     buildMemoryLogMarker('compact', config.project_slug, 'session-summary', 'project'),
   );
-  return summaryPath;
+  return synced.sessionSummaryPath;
 }
 
 function createNote(config, noteType, title, content, scope, extraTags = []) {
@@ -1393,6 +1872,22 @@ function main(argv) {
   }
 
   const config = readRepoConfig(repoRoot);
+
+  if (command === 'recall') {
+    if (!maybeContent) {
+      throw new Error('Recall requires a query: node scripts/agent-memory.js recall "<query>"');
+    }
+    process.stdout.write(\`\${formatRecallResults(config, maybeContent, recallProjectMemory(config, maybeContent))}\\n\`);
+    return;
+  }
+
+  if (command === 'memory') {
+    if (!maybeContent) {
+      throw new Error('Memory requires a subcommand: status, sync-sessions, export, backup.');
+    }
+    process.stdout.write(\`\${JSON.stringify(runMemoryCommand(repoRoot, config, maybeContent), null, 2)}\\n\`);
+    return;
+  }
 
   if (command === 'post-commit') {
     process.stdout.write(\`\${writeMemory(repoRoot, config, 'post-commit', '', '', 'project')}\\n\`);
