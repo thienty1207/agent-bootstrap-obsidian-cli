@@ -149,9 +149,10 @@ agent-bootstrap memory backup "D:\project\nodejs\srcEcommerce"
 
 - `memory status` reports vault, project capsule, memory index, recall index,
   semantic recall mode, automatic Codex session import health, sessions,
-  exports, and backups.
+  exports, backups, diagnostics, and recommended next actions.
 - `memory import-sessions` runs the same automatic Codex session importer used
-  by `context --compact`; it is a maintenance command for inspection, not a
+  by `context --compact`; it reports a plain summary and next action when no
+  sessions are imported, but it is a maintenance command for inspection, not a
   normal manual step.
 - `memory sync-sessions` writes a clean Markdown session summary under
   `Projects/<slug>/Sessions/` and refreshes recall.
@@ -177,6 +178,9 @@ next session. This keeps memory automatic without asking the user to run command
 Imported Codex session notes are written under
 `Projects/<slug>/Sessions/Imported/`. Import progress and dedupe state live in
 `Projects/<slug>/Artifacts/session-import-state.json`.
+
+When recall has no match, the output reports how many Markdown memory documents
+were indexed and suggests how to narrow the query or refresh context.
 
 ### Backup Before Reinstalling Windows
 

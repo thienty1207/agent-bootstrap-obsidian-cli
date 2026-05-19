@@ -252,8 +252,8 @@ This package is documented around install/update, setup, init, project update, a
 
 - \`agent-bootstrap context --compact\` imports matched Codex sessions, redacts obvious secrets, dedupes imports, refreshes \`Artifacts/recall-index.json\`, and includes bounded semantic Auto Recall.
 - \`agent-bootstrap recall "<query>"\` searches project memory Markdown with hybrid lexical + concept recall without external QMD, vector DB, server, or API key.
-- \`agent-bootstrap memory status\` reports vault, project capsule, memory index, recall index, import state, session, export, and backup health.
-- \`agent-bootstrap memory import-sessions\` runs the same Codex session importer for maintenance inspection; normal AI startup runs it automatically through compact context.
+- \`agent-bootstrap memory status\` reports vault, project capsule, memory index, recall index, import state, session, export, backup health, diagnostics, and recommended next actions.
+- \`agent-bootstrap memory import-sessions\` runs the same Codex session importer for maintenance inspection and reports a plain summary plus next action; normal AI startup runs it automatically through compact context.
 - \`agent-bootstrap memory sync-sessions\` writes a clean session summary under \`Sessions/\` and updates the recall index.
 - \`agent-bootstrap memory export\` writes a JSON export under \`Artifacts/Exports/\`.
 - \`agent-bootstrap memory backup\` writes a timestamped plain-file backup under \`Artifacts/Backups/\`.
@@ -1119,7 +1119,25 @@ function relativeMemoryPath(config, filePath) {
 
 function formatRecallResults(config, query, results) {
   if (results.length === 0) {
-    return ['# Recall Results', '', 'No recall results for ' + JSON.stringify(query) + '.', ''].join('\\n');
+    let indexedDocuments = 0;
+    try {
+      const raw = readFile(getRecallIndexPath(config.project_root));
+      const parsed = raw ? JSON.parse(raw) : null;
+      indexedDocuments = parsed && Array.isArray(parsed.documents) ? parsed.documents.length : 0;
+    } catch {
+      indexedDocuments = 0;
+    }
+    return [
+      '# Recall Results',
+      '',
+      'No recall results for ' + JSON.stringify(query) + '.',
+      '',
+      '- Recall mode: hybrid',
+      '- Indexed markdown memory docs: ' + indexedDocuments,
+      '- Try a narrower query with repo terms, feature names, decisions, files, or domain words.',
+      '- If memory looks stale, run agent-bootstrap context --compact to refresh recall and import matched sessions.',
+      '',
+    ].join('\\n');
   }
 
   const best = results[0];
@@ -1442,11 +1460,57 @@ function importCodexSessions(repoRoot, config, options = {}) {
   return report;
 }
 
+function describeSessionImportReport(report) {
+  if (report.imported > 0) {
+    return {
+      summary: 'Imported ' + report.imported + ' new Codex session' + (report.imported === 1 ? '' : 's') + '.',
+      nextAction: 'Run agent-bootstrap recall "<query>" when compact context needs targeted prior memory.',
+    };
+  }
+  if (report.skippedDuplicate > 0) {
+    return {
+      summary: 'No new Codex sessions imported; matching sessions were already imported.',
+      nextAction: 'Run agent-bootstrap recall "<query>" to search the imported session memory.',
+    };
+  }
+  if (report.rootsChecked.length === 0) {
+    return {
+      summary: 'No matching Codex sessions imported; no Codex session roots were found.',
+      nextAction: 'Check session roots or set AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT if your Codex history lives elsewhere.',
+    };
+  }
+  if (report.scannedFiles === 0) {
+    return {
+      summary: 'No matching Codex sessions imported; no session files were found in checked roots.',
+      nextAction: 'Check session roots or set AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT to a folder containing Codex JSONL logs.',
+    };
+  }
+  if (report.skippedUnmatched > 0) {
+    return {
+      summary: 'No matching Codex sessions imported for this repo.',
+      nextAction: 'Confirm the session log contains this repo path; importer skips ambiguous sessions to avoid cross-project memory leaks.',
+    };
+  }
+  if (report.skippedLowValue > 0) {
+    return {
+      summary: 'No matching Codex sessions imported; matched logs did not contain durable user or assistant memory.',
+      nextAction: 'Run context again after a session with decisions, handoffs, unresolved questions, or useful summaries.',
+    };
+  }
+  return {
+    summary: 'No matching Codex sessions imported.',
+    nextAction: 'Run agent-bootstrap context --compact later; importer is bounded and deduped.',
+  };
+}
+
 function formatSessionImportReport(report) {
+  const guidance = describeSessionImportReport(report);
   return [
     '# Session Import',
     '',
     '- mode: automatic Codex session importer',
+    '- summary: ' + guidance.summary,
+    '- next action: ' + guidance.nextAction,
     '- roots checked: ' + report.rootsChecked.length,
     '- session files scanned: ' + report.scannedFiles,
     '- imported: ' + report.imported,
@@ -1622,6 +1686,7 @@ function memoryStatus(repoRoot, config) {
   const backupsRoot = path.join(config.project_root, 'Artifacts', 'Backups');
   const latestSession = latestFile(sessionsRoot);
   const importState = readSessionImportState(config);
+  const diagnostics = buildMemoryDiagnostics(built.index.documents.length, importState);
   return {
     ok: fs.existsSync(config.vault_root) && fs.existsSync(config.project_root),
     recallMode: built.index.mode,
@@ -1659,6 +1724,8 @@ function memoryStatus(repoRoot, config) {
       parseErrors: importState.parse_errors,
       lastImportAt: importState.last_run ? importState.last_run.at : null,
     },
+    diagnostics: diagnostics.diagnostics,
+    nextActions: diagnostics.nextActions,
     latestSession: latestSession ? { path: latestSession, updatedAt: fs.statSync(latestSession).mtime.toISOString() } : null,
   };
 }
@@ -1715,6 +1782,47 @@ function backupMemory(repoRoot, config) {
   return { backupPath, manifestPath, files: copied.length };
 }
 
+function uniqueValues(values) {
+  return [...new Set(values)];
+}
+
+function buildMemoryDiagnostics(recallDocuments, importState) {
+  const diagnostics = [];
+  const nextActions = ['agent-bootstrap context --compact'];
+  if (recallDocuments > 0) {
+    diagnostics.push({
+      level: 'ok',
+      code: 'recall-index-ready',
+      message: 'Hybrid recall has ' + recallDocuments + ' indexed markdown memory document' + (recallDocuments === 1 ? '' : 's') + '.',
+    });
+    nextActions.push('agent-bootstrap recall "<query>"');
+  } else {
+    diagnostics.push({
+      level: 'warn',
+      code: 'recall-index-empty',
+      message: 'Hybrid recall has no indexed markdown memory documents yet.',
+    });
+  }
+  if (importState.last_run) {
+    diagnostics.push({
+      level: 'ok',
+      code: 'session-import-ready',
+      message: 'Session importer last ran at ' + importState.last_run.at + '; imported ' + importState.imported.length + ' total session note' + (importState.imported.length === 1 ? '' : 's') + '.',
+    });
+  } else {
+    diagnostics.push({
+      level: 'warn',
+      code: 'session-import-not-run',
+      message: 'Session importer has not recorded a run for this project yet.',
+    });
+  }
+  if (importState.roots_checked.length === 0) {
+    nextActions.push('agent-bootstrap memory import-sessions');
+  }
+  nextActions.push('agent-bootstrap memory backup');
+  return { diagnostics, nextActions: uniqueValues(nextActions) };
+}
+
 function runMemoryCommand(repoRoot, config, subcommand) {
   switch (subcommand) {
     case 'status':
@@ -1722,7 +1830,10 @@ function runMemoryCommand(repoRoot, config, subcommand) {
     case 'import-sessions': {
       const imported = importCodexSessions(repoRoot, config, { maxFiles: 400, maxImports: 32 });
       const built = buildRecallIndex(config);
+      const guidance = describeSessionImportReport(imported);
       return {
+        summary: guidance.summary,
+        nextAction: guidance.nextAction,
         imported: imported.imported,
         skippedUnmatched: imported.skippedUnmatched,
         skippedDuplicate: imported.skippedDuplicate,

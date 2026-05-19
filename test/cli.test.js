@@ -312,7 +312,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '0.4.0');
+  assert.equal(packageJson.version, '0.4.1');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -1249,6 +1249,8 @@ test('recall searches durable project memory and handles empty results', () => {
   const empty = runCli(['recall', 'nonexistent-zebra-query', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(empty.status, 0, empty.stderr);
   assert.match(empty.stdout, /No recall results/);
+  assert.match(empty.stdout, /Indexed markdown memory docs:/);
+  assert.match(empty.stdout, /Try a narrower query/i);
 });
 
 test('compact context auto-refreshes recall index and includes bounded auto recall', () => {
@@ -1337,6 +1339,7 @@ test('context compact automatically imports matching Codex sessions with redacti
     env: { AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT: codexSessionsRoot },
   });
   assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /already imported/i);
   const afterSecondRun = fs.readdirSync(importedRoot).filter((file) => file.endsWith('.md'));
   assert.equal(afterSecondRun.length, 1);
 
@@ -1350,6 +1353,8 @@ test('context compact automatically imports matching Codex sessions with redacti
   assert.equal(status.recallMode, 'hybrid');
   assert.equal(status.imports.importedSessions, 1);
   assert.ok(status.imports.skippedUnmatched >= 1);
+  assert.ok(status.diagnostics.some((item) => item.code === 'session-import-ready'));
+  assert.ok(status.nextActions.includes('agent-bootstrap recall "<query>"'));
 });
 
 test('hybrid semantic recall finds related memory without exact keyword overlap', () => {
@@ -1407,6 +1412,21 @@ test('memory commands report status sync sessions export and backup project memo
   assert.equal(status.recallMode, 'hybrid');
   assert.equal(status.checks.projectRoot, true);
   assert.ok(status.counts.memoryRecords >= 1);
+  assert.ok(status.diagnostics.some((item) => item.code === 'session-import-not-run'));
+  assert.ok(status.nextActions.includes('agent-bootstrap context --compact'));
+
+  const emptySessionsRoot = path.join(root, 'empty-codex-sessions');
+  fs.mkdirSync(emptySessionsRoot, { recursive: true });
+  result = runCli(['memory', 'import-sessions', repoRoot], {
+    configHome,
+    cwd: repoRoot,
+    env: { AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT: emptySessionsRoot },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const imported = parseJson(result.stdout);
+  assert.equal(imported.imported, 0);
+  assert.match(imported.summary, /No matching Codex sessions imported/i);
+  assert.match(imported.nextAction, /Check session roots/i);
 
   result = runCli(['memory', 'sync-sessions', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);

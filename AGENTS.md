@@ -46,7 +46,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep `agent-bootstrap update [projectPath]` sufficient to refresh kit-managed `.codex` and bridge files in projects already being built.
 - Keep `agent-bootstrap context --compact` as the automatic first command agents run at the start of a fresh project session.
 - Keep `agent-bootstrap recall "<query>" [projectPath]` available for targeted memory search when compact context is insufficient.
-- Keep `agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup> [projectPath]` available for memory health, automatic Codex session import inspection, clean session summaries, JSON export, and plain-file backup.
+- Keep `agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup> [projectPath]` available for memory health diagnostics, automatic Codex session import inspection, clean session summaries, JSON export, and plain-file backup.
 - Use `agent-bootstrap context --why` before expanding context, and `agent-bootstrap context --full` only when daily history is needed.
 - Keep `docs/project-map.md` generated and type-aware so a new agent session can orient quickly.
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.

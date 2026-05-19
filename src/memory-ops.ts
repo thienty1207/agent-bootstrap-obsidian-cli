@@ -20,6 +20,7 @@ import {
   recallProjectMemory,
 } from './recall';
 import {
+  describeSessionImportReport,
   getSessionImportStatePath,
   importCodexSessionsForProject,
   readSessionImportState,
@@ -117,6 +118,60 @@ function resolveConfig(options: MemoryCommandOptions): { repoRoot: string; confi
   return { repoRoot, config: readRepoConfig(repoRoot) };
 }
 
+function uniqueValues(values: string[]): string[] {
+  return [...new Set(values)];
+}
+
+function buildMemoryDiagnostics({
+  recallDocuments,
+  importState,
+}: {
+  recallDocuments: number;
+  importState: ReturnType<typeof readSessionImportState>;
+}): {
+  diagnostics: Array<{ level: 'ok' | 'warn'; code: string; message: string }>;
+  nextActions: string[];
+} {
+  const diagnostics: Array<{ level: 'ok' | 'warn'; code: string; message: string }> = [];
+  const nextActions = ['agent-bootstrap context --compact'];
+
+  if (recallDocuments > 0) {
+    diagnostics.push({
+      level: 'ok',
+      code: 'recall-index-ready',
+      message: `Hybrid recall has ${recallDocuments} indexed markdown memory document${recallDocuments === 1 ? '' : 's'}.`,
+    });
+    nextActions.push('agent-bootstrap recall "<query>"');
+  } else {
+    diagnostics.push({
+      level: 'warn',
+      code: 'recall-index-empty',
+      message: 'Hybrid recall has no indexed markdown memory documents yet.',
+    });
+  }
+
+  if (importState.last_run) {
+    diagnostics.push({
+      level: 'ok',
+      code: 'session-import-ready',
+      message: `Session importer last ran at ${importState.last_run.at}; imported ${importState.imported.length} total session note${importState.imported.length === 1 ? '' : 's'}.`,
+    });
+  } else {
+    diagnostics.push({
+      level: 'warn',
+      code: 'session-import-not-run',
+      message: 'Session importer has not recorded a run for this project yet.',
+    });
+  }
+
+  if (importState.roots_checked.length === 0) {
+    nextActions.push('agent-bootstrap memory import-sessions');
+  }
+
+  nextActions.push('agent-bootstrap memory backup');
+  return { diagnostics, nextActions: uniqueValues(nextActions) };
+}
+
 export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<string, unknown> {
   const { repoRoot, config } = resolveConfig(options);
   const recall = buildRecallIndex(config);
@@ -125,6 +180,10 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
   const backupsRoot = path.join(config.project_root, 'Artifacts', 'Backups');
   const latestSession = latestFile(sessionsRoot);
   const importState = readSessionImportState(config);
+  const diagnostics = buildMemoryDiagnostics({
+    recallDocuments: recall.index.documents.length,
+    importState,
+  });
 
   return {
     ok: fs.existsSync(config.vault_root) && fs.existsSync(config.project_root),
@@ -163,6 +222,8 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
       parseErrors: importState.parse_errors,
       lastImportAt: importState.last_run?.at || null,
     },
+    diagnostics: diagnostics.diagnostics,
+    nextActions: diagnostics.nextActions,
     latestSession: latestSession
       ? {
         path: latestSession,
@@ -187,8 +248,11 @@ export function importProjectSessions(options: MemoryCommandOptions = {}): Recor
     maxImports: 32,
   });
   const recall = buildRecallIndex(config);
+  const guidance = describeSessionImportReport(report);
 
   return {
+    summary: guidance.summary,
+    nextAction: guidance.nextAction,
     imported: report.imported,
     skippedUnmatched: report.skippedUnmatched,
     skippedDuplicate: report.skippedDuplicate,

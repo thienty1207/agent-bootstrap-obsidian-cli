@@ -7,6 +7,7 @@ exports.getSessionImportStatePath = getSessionImportStatePath;
 exports.readSessionImportState = readSessionImportState;
 exports.redactSecrets = redactSecrets;
 exports.importCodexSessionsForProject = importCodexSessionsForProject;
+exports.describeSessionImportReport = describeSessionImportReport;
 exports.formatSessionImportReport = formatSessionImportReport;
 const node_crypto_1 = __importDefault(require("node:crypto"));
 const node_fs_1 = __importDefault(require("node:fs"));
@@ -448,11 +449,56 @@ function importCodexSessionsForProject(repoRoot, config, options = {}) {
     writeSessionImportState(config, state);
     return report;
 }
+function describeSessionImportReport(report) {
+    if (report.imported > 0) {
+        return {
+            summary: `Imported ${report.imported} new Codex session${report.imported === 1 ? '' : 's'}.`,
+            nextAction: 'Run agent-bootstrap recall "<query>" when compact context needs targeted prior memory.',
+        };
+    }
+    if (report.skippedDuplicate > 0) {
+        return {
+            summary: 'No new Codex sessions imported; matching sessions were already imported.',
+            nextAction: 'Run agent-bootstrap recall "<query>" to search the imported session memory.',
+        };
+    }
+    if (report.rootsChecked.length === 0) {
+        return {
+            summary: 'No matching Codex sessions imported; no Codex session roots were found.',
+            nextAction: 'Check session roots or set AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT if your Codex history lives elsewhere.',
+        };
+    }
+    if (report.scannedFiles === 0) {
+        return {
+            summary: 'No matching Codex sessions imported; no session files were found in checked roots.',
+            nextAction: 'Check session roots or set AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT to a folder containing Codex JSONL logs.',
+        };
+    }
+    if (report.skippedUnmatched > 0) {
+        return {
+            summary: 'No matching Codex sessions imported for this repo.',
+            nextAction: 'Confirm the session log contains this repo path; importer skips ambiguous sessions to avoid cross-project memory leaks.',
+        };
+    }
+    if (report.skippedLowValue > 0) {
+        return {
+            summary: 'No matching Codex sessions imported; matched logs did not contain durable user or assistant memory.',
+            nextAction: 'Run context again after a session with decisions, handoffs, unresolved questions, or useful summaries.',
+        };
+    }
+    return {
+        summary: 'No matching Codex sessions imported.',
+        nextAction: 'Run agent-bootstrap context --compact later; importer is bounded and deduped.',
+    };
+}
 function formatSessionImportReport(report) {
+    const guidance = describeSessionImportReport(report);
     return [
         '# Session Import',
         '',
         '- mode: automatic Codex session importer',
+        `- summary: ${guidance.summary}`,
+        `- next action: ${guidance.nextAction}`,
         `- roots checked: ${report.rootsChecked.length}`,
         `- session files scanned: ${report.scannedFiles}`,
         `- imported: ${report.imported}`,

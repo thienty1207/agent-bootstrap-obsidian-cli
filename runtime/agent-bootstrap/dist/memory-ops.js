@@ -98,6 +98,47 @@ function resolveConfig(options) {
     const repoRoot = (0, context_1.resolveRepoRoot)(options.repoRoot);
     return { repoRoot, config: (0, context_1.readRepoConfig)(repoRoot) };
 }
+function uniqueValues(values) {
+    return [...new Set(values)];
+}
+function buildMemoryDiagnostics({ recallDocuments, importState, }) {
+    const diagnostics = [];
+    const nextActions = ['agent-bootstrap context --compact'];
+    if (recallDocuments > 0) {
+        diagnostics.push({
+            level: 'ok',
+            code: 'recall-index-ready',
+            message: `Hybrid recall has ${recallDocuments} indexed markdown memory document${recallDocuments === 1 ? '' : 's'}.`,
+        });
+        nextActions.push('agent-bootstrap recall "<query>"');
+    }
+    else {
+        diagnostics.push({
+            level: 'warn',
+            code: 'recall-index-empty',
+            message: 'Hybrid recall has no indexed markdown memory documents yet.',
+        });
+    }
+    if (importState.last_run) {
+        diagnostics.push({
+            level: 'ok',
+            code: 'session-import-ready',
+            message: `Session importer last ran at ${importState.last_run.at}; imported ${importState.imported.length} total session note${importState.imported.length === 1 ? '' : 's'}.`,
+        });
+    }
+    else {
+        diagnostics.push({
+            level: 'warn',
+            code: 'session-import-not-run',
+            message: 'Session importer has not recorded a run for this project yet.',
+        });
+    }
+    if (importState.roots_checked.length === 0) {
+        nextActions.push('agent-bootstrap memory import-sessions');
+    }
+    nextActions.push('agent-bootstrap memory backup');
+    return { diagnostics, nextActions: uniqueValues(nextActions) };
+}
 function getMemoryStatus(options = {}) {
     const { repoRoot, config } = resolveConfig(options);
     const recall = (0, recall_1.buildRecallIndex)(config);
@@ -106,6 +147,10 @@ function getMemoryStatus(options = {}) {
     const backupsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Backups');
     const latestSession = latestFile(sessionsRoot);
     const importState = (0, session_importer_1.readSessionImportState)(config);
+    const diagnostics = buildMemoryDiagnostics({
+        recallDocuments: recall.index.documents.length,
+        importState,
+    });
     return {
         ok: node_fs_1.default.existsSync(config.vault_root) && node_fs_1.default.existsSync(config.project_root),
         recallMode: recall.index.mode,
@@ -143,6 +188,8 @@ function getMemoryStatus(options = {}) {
             parseErrors: importState.parse_errors,
             lastImportAt: importState.last_run?.at || null,
         },
+        diagnostics: diagnostics.diagnostics,
+        nextActions: diagnostics.nextActions,
         latestSession: latestSession
             ? {
                 path: latestSession,
@@ -166,7 +213,10 @@ function importProjectSessions(options = {}) {
         maxImports: 32,
     });
     const recall = (0, recall_1.buildRecallIndex)(config);
+    const guidance = (0, session_importer_1.describeSessionImportReport)(report);
     return {
+        summary: guidance.summary,
+        nextAction: guidance.nextAction,
         imported: report.imported,
         skippedUnmatched: report.skippedUnmatched,
         skippedDuplicate: report.skippedDuplicate,

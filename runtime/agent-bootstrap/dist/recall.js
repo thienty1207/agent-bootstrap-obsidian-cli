@@ -336,6 +336,19 @@ function recallProjectMemory(config, query, limit = DEFAULT_RECALL_LIMIT) {
     const { documents } = buildRecallIndex(config);
     return scoreDocuments(query, documents).slice(0, limit);
 }
+function readRecallIndexDocumentCount(config) {
+    const raw = (0, fs_utils_1.readIfExists)(getRecallIndexPath(config.project_root));
+    if (!raw) {
+        return 0;
+    }
+    try {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed.documents) ? parsed.documents.length : 0;
+    }
+    catch {
+        return 0;
+    }
+}
 function relativeMemoryPath(config, filePath) {
     if (filePath.startsWith(config.project_root)) {
         return node_path_1.default.relative(config.project_root, filePath).replace(/\\/g, '/');
@@ -344,10 +357,16 @@ function relativeMemoryPath(config, filePath) {
 }
 function formatRecallResults(config, query, results) {
     if (results.length === 0) {
+        const indexedDocuments = readRecallIndexDocumentCount(config);
         return [
             '# Recall Results',
             '',
             `No recall results for \`${query}\`.`,
+            '',
+            `- Recall mode: hybrid`,
+            `- Indexed markdown memory docs: ${indexedDocuments}`,
+            '- Try a narrower query with repo terms, feature names, decisions, files, or domain words.',
+            '- If memory looks stale, run `agent-bootstrap context --compact` to refresh recall and import matched sessions.',
             '',
         ].join('\n');
     }

@@ -8,7 +8,7 @@ folder recursively.
 
 - Run `agent-bootstrap context --compact` before meaningful repo work. It also imports matched Codex sessions, redacts obvious secrets, dedupes imports, and refreshes hybrid recall.
 - Use `agent-bootstrap recall "<query>"` when compact context is not enough for prior decisions, facts, handoffs, or session summaries.
-- Use `agent-bootstrap memory status` when memory health, import state, export, backup, or session sync needs inspection.
+- Use `agent-bootstrap memory status` when memory health, import state, diagnostics, next actions, export, backup, or session sync needs inspection.
 - Use `agent-bootstrap memory import-sessions` only for explicit maintenance; normal startup already runs it through compact context.
 - Use `agent-bootstrap context --why` before expanding context.
 - Use `agent-bootstrap context --full` only when daily/session history is needed.
