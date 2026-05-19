@@ -104,9 +104,12 @@ agent-bootstrap context --full
 ## Automatic Memory Recall
 
 The kit now includes a local, Obsidian-first recall layer inspired by QMD-style
-Markdown search and AgentMemory-style status/export/backup workflows. It does
-not require QMD, AgentMemory, a server, MCP plugin, vector database, API key, or
-background daemon.
+Markdown search and AgentMemory-style status/export/backup workflows. Recall is
+hybrid: it still uses exact keyword ranking, but also understands small local
+concept aliases such as `security`/`bảo mật`, tenant isolation, Supabase RLS,
+auth/login, database/db, frontend/UI, and backend/API. It does not require QMD,
+AgentMemory, a server, MCP plugin, vector database, API key, or background
+daemon.
 
 AI agents should run this automatically:
 
@@ -114,9 +117,11 @@ AI agents should run this automatically:
 agent-bootstrap context --compact
 ```
 
-That command refreshes `Artifacts/recall-index.json`, loads the project memory
-index, and injects a bounded `Auto Recall` section into context. It does not
-dump full daily logs or recursively scan the vault.
+That command imports recent matched Codex session logs, redacts obvious secrets,
+dedupes already imported logs, refreshes `Artifacts/recall-index.json`, loads
+the project memory index, and injects a bounded `Auto Recall` section into
+context. It does not dump full daily logs or recursively scan the vault. Normal
+AI work does not require the user to manually import sessions.
 
 Targeted recall:
 
@@ -136,13 +141,18 @@ Memory maintenance:
 
 ```bash
 agent-bootstrap memory status "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory import-sessions "D:\project\nodejs\srcEcommerce"
 agent-bootstrap memory sync-sessions "D:\project\nodejs\srcEcommerce"
 agent-bootstrap memory export "D:\project\nodejs\srcEcommerce"
 agent-bootstrap memory backup "D:\project\nodejs\srcEcommerce"
 ```
 
 - `memory status` reports vault, project capsule, memory index, recall index,
-  sessions, exports, and backups.
+  semantic recall mode, automatic Codex session import health, sessions,
+  exports, and backups.
+- `memory import-sessions` runs the same automatic Codex session importer used
+  by `context --compact`; it is a maintenance command for inspection, not a
+  normal manual step.
 - `memory sync-sessions` writes a clean Markdown session summary under
   `Projects/<slug>/Sessions/` and refreshes recall.
 - `memory export` writes a JSON export under
@@ -155,6 +165,7 @@ Generated project agents should also use the repo-local runtime silently:
 ```bash
 node scripts/agent-memory.js recall "<query>"
 node scripts/agent-memory.js memory status
+node scripts/agent-memory.js memory import-sessions
 node scripts/agent-memory.js memory sync-sessions
 node scripts/agent-memory.js compact
 ```
@@ -162,6 +173,10 @@ node scripts/agent-memory.js compact
 After meaningful work, agents should write durable memory with the existing
 runtime commands and run `compact` or `memory sync-sessions` when it helps the
 next session. This keeps memory automatic without asking the user to run commands.
+
+Imported Codex session notes are written under
+`Projects/<slug>/Sessions/Imported/`. Import progress and dedupe state live in
+`Projects/<slug>/Artifacts/session-import-state.json`.
 
 ### Backup Before Reinstalling Windows
 
@@ -307,9 +322,9 @@ agents and are not obsolete managed agents.
 The vault bridge is stable across `init` and `update`:
 
 - `vault.config.json` links repo, vault, project slug, project type, and kit version
-- `agent-bootstrap context --compact` loads repo context, vault context, project memory index, and bounded Auto Recall
-- `agent-bootstrap recall "<query>"` searches durable project memory Markdown
-- `agent-bootstrap memory <status|sync-sessions|export|backup>` handles health, session replay, export, and backup
+- `agent-bootstrap context --compact` loads repo context, vault context, project memory index, automatic Codex session import, and bounded semantic Auto Recall
+- `agent-bootstrap recall "<query>"` searches durable project memory Markdown with hybrid lexical + concept recall
+- `agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup>` handles health, import inspection, session replay, export, and backup
 - `scripts/agent-memory.js` writes tasks, decisions, facts, questions, handoffs, research, notes, recall output, memory maintenance, and compact summaries
 - `Facts.md` is for source-backed facts
 - `Open Questions.md` is for unresolved assumptions

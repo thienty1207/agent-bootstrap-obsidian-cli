@@ -176,7 +176,7 @@ This is the graph-friendly entrypoint for the vault and the first note an AI age
 - Project template: [[Projects/_template/README|Project Template]]
 
 ## Agent Runtime
-- In a bootstrapped repo, run \`agent-bootstrap context --compact\` first.
+- In a bootstrapped repo, run \`agent-bootstrap context --compact\` first; it imports matched Codex sessions, refreshes semantic recall, and keeps context bounded.
 - Use \`agent-bootstrap recall "<query>"\` for targeted prior memory when compact context is insufficient.
 - Keep short-term execution in [[Daily/README|Daily]].
 - Keep durable project facts in [[Projects/README|Projects]].
@@ -184,7 +184,7 @@ This is the graph-friendly entrypoint for the vault and the first note an AI age
 
 ## Memory Model
 - The vault can grow without a fixed memory ceiling because notes stay on disk.
-- Agents should load compact context first, use bounded Auto Recall, then open only the narrow notes needed for the task.
+- Agents should load compact context first, use bounded semantic Auto Recall, then open only the narrow notes needed for the task.
 - Stable cross-project learnings should become reusable notes instead of staying buried in daily logs.
 `;
 }

@@ -11,11 +11,13 @@ export interface RecallIndexDocument {
   title: string;
   path: string;
   preview: string;
+  concepts: string[];
   bytes: number;
   updatedAt: string;
 }
 
 export interface RecallIndex {
+  mode: 'hybrid';
   project: {
     slug: string;
     projectType: string;
@@ -27,6 +29,13 @@ export interface RecallIndex {
 export interface RecallResult extends RecallIndexDocument {
   score: number;
   snippet: string;
+  scoreBreakdown: {
+    lexical: number;
+    concept: number;
+    title: number;
+    kind: number;
+    recency: number;
+  };
 }
 
 interface RecallDocument extends RecallIndexDocument {
@@ -58,6 +67,81 @@ const STOP_WORDS = new Set([
   'with',
 ]);
 
+const CONCEPT_ALIASES: Record<string, string[]> = {
+  security: [
+    'security',
+    'secure',
+    'bao mat',
+    'rls',
+    'policy',
+    'policies',
+    'access control',
+    'secret',
+    'secrets',
+    'authz',
+    'authorization',
+  ],
+  tenant_data: [
+    'tenant',
+    'tenant isolation',
+    'isolation',
+    'rls',
+    'customer',
+    'customers',
+    'khach hang',
+    'du lieu',
+    'du lieu khach hang',
+  ],
+  auth: [
+    'auth',
+    'authentication',
+    'authorization',
+    'login',
+    'signin',
+    'sign in',
+    'dang nhap',
+  ],
+  database: [
+    'database',
+    'db',
+    'postgres',
+    'postgresql',
+    'sql',
+    'supabase',
+    'rls',
+  ],
+  frontend: [
+    'frontend',
+    'front end',
+    'ui',
+    'browser',
+    'react',
+    'nextjs',
+    'next js',
+    'css',
+  ],
+  backend: [
+    'backend',
+    'back end',
+    'api',
+    'server',
+    'endpoint',
+    'rust',
+    'go',
+    'python',
+  ],
+  memory: [
+    'memory',
+    'recall',
+    'session',
+    'handoff',
+    'vault',
+    'obsidian',
+    'nho',
+    'ghi nho',
+  ],
+};
+
 export function getRecallIndexPath(projectRoot: string): string {
   return path.join(projectRoot, 'Artifacts', 'recall-index.json');
 }
@@ -67,12 +151,40 @@ function compactPreview(value: string, maxLength = 220): string {
   return singleLine.length > maxLength ? `${singleLine.slice(0, maxLength - 3)}...` : singleLine;
 }
 
-function tokenize(value: string): string[] {
+function normalizeForSearch(value: string): string {
   return value
-    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+function tokenize(value: string): string[] {
+  return normalizeForSearch(value)
     .split(/[^a-z0-9_./-]+/g)
     .map((token) => token.trim())
     .filter((token) => token.length >= 2 && !STOP_WORDS.has(token));
+}
+
+function extractConcepts(value: string): string[] {
+  const normalized = normalizeForSearch(value).replace(/\s+/g, ' ').trim();
+  const tokenSet = new Set(tokenize(value));
+  const concepts = new Set<string>();
+
+  for (const [concept, aliases] of Object.entries(CONCEPT_ALIASES)) {
+    for (const alias of aliases) {
+      const normalizedAlias = normalizeForSearch(alias).replace(/\s+/g, ' ').trim();
+      const aliasTokens = normalizedAlias.split(/\s+/g).filter(Boolean);
+      if (
+        normalized.includes(normalizedAlias)
+        || aliasTokens.every((token) => tokenSet.has(token))
+      ) {
+        concepts.add(concept);
+        break;
+      }
+    }
+  }
+
+  return [...concepts].sort();
 }
 
 function titleFromMarkdown(filePath: string, content: string): string {
@@ -96,15 +208,33 @@ function documentKindFromPath(config: RepoConfig, filePath: string): string {
   return 'memory';
 }
 
-function recentMarkdownFiles(dirPath: string, limit = MAX_MARKDOWN_FILES_PER_DIR): string[] {
+function recentMarkdownFiles(dirPath: string, limit = MAX_MARKDOWN_FILES_PER_DIR, recursive = false): string[] {
   if (!fs.existsSync(dirPath)) {
     return [];
   }
 
-  const files = fs.readdirSync(dirPath, { withFileTypes: true })
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
-    .map((entry) => path.join(dirPath, entry.name))
-    .sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs);
+  const files: string[] = [];
+  const stack = [dirPath];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        if (recursive) {
+          stack.push(entryPath);
+        }
+        continue;
+      }
+
+      if (entry.isFile() && entry.name.endsWith('.md')) {
+        files.push(entryPath);
+      }
+    }
+  }
+
+  files.sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs);
 
   return files.slice(0, limit);
 }
@@ -120,7 +250,7 @@ function collectRecallFilePaths(config: RepoConfig): string[] {
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
     ...recentMarkdownFiles(path.join(config.project_root, config.research_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, config.notes_dir)),
-    ...recentMarkdownFiles(path.join(config.project_root, 'Sessions')),
+    ...recentMarkdownFiles(path.join(config.project_root, 'Sessions'), MAX_MARKDOWN_FILES_PER_DIR, true),
     ...recentMarkdownFiles(path.join(config.vault_root, 'Daily'), 8),
   ];
 
@@ -137,6 +267,7 @@ function createRecallDocument(config: RepoConfig, filePath: string): RecallDocum
   const title = titleFromMarkdown(filePath, content);
   const kind = documentKindFromPath(config, filePath);
   const tokens = tokenize(`${title}\n${content}`);
+  const concepts = extractConcepts(`${kind}\n${path.relative(config.project_root, filePath)}\n${title}\n${content}`);
 
   return {
     id: path.relative(config.vault_root, filePath).replace(/\\/g, '/'),
@@ -144,6 +275,7 @@ function createRecallDocument(config: RepoConfig, filePath: string): RecallDocum
     title,
     path: filePath,
     preview: compactPreview(content),
+    concepts,
     bytes: Buffer.byteLength(content, 'utf8'),
     updatedAt: stat.mtime.toISOString(),
     content,
@@ -157,6 +289,7 @@ export function buildRecallIndex(config: RepoConfig): { index: RecallIndex; docu
     .filter((document): document is RecallDocument => Boolean(document));
 
   const index: RecallIndex = {
+    mode: 'hybrid',
     project: {
       slug: config.project_slug,
       projectType: config.project_type,
@@ -177,13 +310,20 @@ function termFrequency(tokens: string[], term: string): number {
 
 function scoreDocuments(query: string, documents: RecallDocument[]): RecallResult[] {
   const queryTerms = [...new Set(tokenize(query))];
-  if (queryTerms.length === 0 || documents.length === 0) {
+  const queryConcepts = extractConcepts(query);
+  if ((queryTerms.length === 0 && queryConcepts.length === 0) || documents.length === 0) {
     return [];
   }
 
   const averageLength = documents.reduce((total, document) => total + document.tokens.length, 0) / documents.length || 1;
   const results = documents.map((document) => {
-    let score = 0;
+    const breakdown = {
+      lexical: 0,
+      concept: 0,
+      title: 0,
+      kind: 0,
+      recency: 0,
+    };
 
     for (const term of queryTerms) {
       const frequency = termFrequency(document.tokens, term);
@@ -194,15 +334,33 @@ function scoreDocuments(query: string, documents: RecallDocument[]): RecallResul
       const matchingDocs = documents.filter((candidate) => candidate.tokens.includes(term)).length;
       const idf = Math.log(1 + ((documents.length - matchingDocs + 0.5) / (matchingDocs + 0.5)));
       const lengthNorm = 1.5 * (1 - 0.75 + 0.75 * (document.tokens.length / averageLength));
-      score += idf * ((frequency * 2.5) / (frequency + lengthNorm));
+      breakdown.lexical += idf * ((frequency * 2.5) / (frequency + lengthNorm));
 
-      if (document.title.toLowerCase().includes(term)) {
-        score += 1.25;
+      if (normalizeForSearch(document.title).includes(term)) {
+        breakdown.title += 1.25;
       }
     }
 
+    const matchingConcepts = document.concepts.filter((concept) => queryConcepts.includes(concept));
+    breakdown.concept = matchingConcepts.length * 2.25;
+    if (queryTerms.includes(document.kind) || queryConcepts.includes(document.kind)) {
+      breakdown.kind = 0.75;
+    }
+    const ageMs = Date.now() - new Date(document.updatedAt).getTime();
+    if (Number.isFinite(ageMs) && ageMs >= 0) {
+      const ageDays = ageMs / (24 * 60 * 60 * 1000);
+      breakdown.recency = Math.max(0, 0.35 - Math.min(ageDays, 30) * 0.01);
+    }
+
+    const signalScore = breakdown.lexical + breakdown.concept + breakdown.title + breakdown.kind;
+    const score = signalScore > 0 ? signalScore + breakdown.recency : 0;
     const { content: _content, tokens: _tokens, ...publicDocument } = document;
-    return { ...publicDocument, score, snippet: snippetForTerms(document.content, queryTerms) };
+    return {
+      ...publicDocument,
+      score,
+      scoreBreakdown: breakdown,
+      snippet: snippetForTerms(document.content, queryTerms, matchingConcepts),
+    };
   });
 
   return results
@@ -210,12 +368,18 @@ function scoreDocuments(query: string, documents: RecallDocument[]): RecallResul
     .sort((left, right) => right.score - left.score);
 }
 
-function snippetForTerms(content: string, terms: string[]): string {
-  const normalized = content.toLowerCase();
-  const firstHit = terms
+function snippetForTerms(content: string, terms: string[], concepts: string[] = []): string {
+  const normalized = normalizeForSearch(content);
+  const lexicalHit = terms
     .map((term) => normalized.indexOf(term))
     .filter((index) => index >= 0)
     .sort((left, right) => left - right)[0];
+  const conceptAliases = concepts.flatMap((concept) => CONCEPT_ALIASES[concept] || []);
+  const conceptHit = conceptAliases
+    .map((alias) => normalized.indexOf(normalizeForSearch(alias)))
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0];
+  const firstHit = lexicalHit ?? conceptHit;
 
   if (firstHit === undefined) {
     return compactPreview(content);

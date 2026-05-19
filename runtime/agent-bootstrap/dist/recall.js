@@ -36,6 +36,80 @@ const STOP_WORDS = new Set([
     'to',
     'with',
 ]);
+const CONCEPT_ALIASES = {
+    security: [
+        'security',
+        'secure',
+        'bao mat',
+        'rls',
+        'policy',
+        'policies',
+        'access control',
+        'secret',
+        'secrets',
+        'authz',
+        'authorization',
+    ],
+    tenant_data: [
+        'tenant',
+        'tenant isolation',
+        'isolation',
+        'rls',
+        'customer',
+        'customers',
+        'khach hang',
+        'du lieu',
+        'du lieu khach hang',
+    ],
+    auth: [
+        'auth',
+        'authentication',
+        'authorization',
+        'login',
+        'signin',
+        'sign in',
+        'dang nhap',
+    ],
+    database: [
+        'database',
+        'db',
+        'postgres',
+        'postgresql',
+        'sql',
+        'supabase',
+        'rls',
+    ],
+    frontend: [
+        'frontend',
+        'front end',
+        'ui',
+        'browser',
+        'react',
+        'nextjs',
+        'next js',
+        'css',
+    ],
+    backend: [
+        'backend',
+        'back end',
+        'api',
+        'server',
+        'endpoint',
+        'rust',
+        'go',
+        'python',
+    ],
+    memory: [
+        'memory',
+        'recall',
+        'session',
+        'handoff',
+        'vault',
+        'obsidian',
+        'nho',
+        'ghi nho',
+    ],
+};
 function getRecallIndexPath(projectRoot) {
     return node_path_1.default.join(projectRoot, 'Artifacts', 'recall-index.json');
 }
@@ -43,12 +117,34 @@ function compactPreview(value, maxLength = 220) {
     const singleLine = value.replace(/\s+/g, ' ').trim();
     return singleLine.length > maxLength ? `${singleLine.slice(0, maxLength - 3)}...` : singleLine;
 }
-function tokenize(value) {
+function normalizeForSearch(value) {
     return value
-        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+}
+function tokenize(value) {
+    return normalizeForSearch(value)
         .split(/[^a-z0-9_./-]+/g)
         .map((token) => token.trim())
         .filter((token) => token.length >= 2 && !STOP_WORDS.has(token));
+}
+function extractConcepts(value) {
+    const normalized = normalizeForSearch(value).replace(/\s+/g, ' ').trim();
+    const tokenSet = new Set(tokenize(value));
+    const concepts = new Set();
+    for (const [concept, aliases] of Object.entries(CONCEPT_ALIASES)) {
+        for (const alias of aliases) {
+            const normalizedAlias = normalizeForSearch(alias).replace(/\s+/g, ' ').trim();
+            const aliasTokens = normalizedAlias.split(/\s+/g).filter(Boolean);
+            if (normalized.includes(normalizedAlias)
+                || aliasTokens.every((token) => tokenSet.has(token))) {
+                concepts.add(concept);
+                break;
+            }
+        }
+    }
+    return [...concepts].sort();
 }
 function titleFromMarkdown(filePath, content) {
     const heading = content.match(/^#\s+(.+)$/m);
@@ -77,14 +173,30 @@ function documentKindFromPath(config, filePath) {
         return 'daily';
     return 'memory';
 }
-function recentMarkdownFiles(dirPath, limit = MAX_MARKDOWN_FILES_PER_DIR) {
+function recentMarkdownFiles(dirPath, limit = MAX_MARKDOWN_FILES_PER_DIR, recursive = false) {
     if (!node_fs_1.default.existsSync(dirPath)) {
         return [];
     }
-    const files = node_fs_1.default.readdirSync(dirPath, { withFileTypes: true })
-        .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
-        .map((entry) => node_path_1.default.join(dirPath, entry.name))
-        .sort((left, right) => node_fs_1.default.statSync(right).mtimeMs - node_fs_1.default.statSync(left).mtimeMs);
+    const files = [];
+    const stack = [dirPath];
+    while (stack.length > 0) {
+        const current = stack.pop();
+        if (!current)
+            continue;
+        for (const entry of node_fs_1.default.readdirSync(current, { withFileTypes: true })) {
+            const entryPath = node_path_1.default.join(current, entry.name);
+            if (entry.isDirectory()) {
+                if (recursive) {
+                    stack.push(entryPath);
+                }
+                continue;
+            }
+            if (entry.isFile() && entry.name.endsWith('.md')) {
+                files.push(entryPath);
+            }
+        }
+    }
+    files.sort((left, right) => node_fs_1.default.statSync(right).mtimeMs - node_fs_1.default.statSync(left).mtimeMs);
     return files.slice(0, limit);
 }
 function collectRecallFilePaths(config) {
@@ -98,7 +210,7 @@ function collectRecallFilePaths(config) {
         node_path_1.default.join(config.project_root, 'Artifacts', 'session-summary.md'),
         ...recentMarkdownFiles(node_path_1.default.join(config.project_root, config.research_dir)),
         ...recentMarkdownFiles(node_path_1.default.join(config.project_root, config.notes_dir)),
-        ...recentMarkdownFiles(node_path_1.default.join(config.project_root, 'Sessions')),
+        ...recentMarkdownFiles(node_path_1.default.join(config.project_root, 'Sessions'), MAX_MARKDOWN_FILES_PER_DIR, true),
         ...recentMarkdownFiles(node_path_1.default.join(config.vault_root, 'Daily'), 8),
     ];
     return [...new Set(candidates)].filter((filePath) => node_fs_1.default.existsSync(filePath));
@@ -112,12 +224,14 @@ function createRecallDocument(config, filePath) {
     const title = titleFromMarkdown(filePath, content);
     const kind = documentKindFromPath(config, filePath);
     const tokens = tokenize(`${title}\n${content}`);
+    const concepts = extractConcepts(`${kind}\n${node_path_1.default.relative(config.project_root, filePath)}\n${title}\n${content}`);
     return {
         id: node_path_1.default.relative(config.vault_root, filePath).replace(/\\/g, '/'),
         kind,
         title,
         path: filePath,
         preview: compactPreview(content),
+        concepts,
         bytes: Buffer.byteLength(content, 'utf8'),
         updatedAt: stat.mtime.toISOString(),
         content,
@@ -129,6 +243,7 @@ function buildRecallIndex(config) {
         .map((filePath) => createRecallDocument(config, filePath))
         .filter((document) => Boolean(document));
     const index = {
+        mode: 'hybrid',
         project: {
             slug: config.project_slug,
             projectType: config.project_type,
@@ -146,12 +261,19 @@ function termFrequency(tokens, term) {
 }
 function scoreDocuments(query, documents) {
     const queryTerms = [...new Set(tokenize(query))];
-    if (queryTerms.length === 0 || documents.length === 0) {
+    const queryConcepts = extractConcepts(query);
+    if ((queryTerms.length === 0 && queryConcepts.length === 0) || documents.length === 0) {
         return [];
     }
     const averageLength = documents.reduce((total, document) => total + document.tokens.length, 0) / documents.length || 1;
     const results = documents.map((document) => {
-        let score = 0;
+        const breakdown = {
+            lexical: 0,
+            concept: 0,
+            title: 0,
+            kind: 0,
+            recency: 0,
+        };
         for (const term of queryTerms) {
             const frequency = termFrequency(document.tokens, term);
             if (frequency === 0) {
@@ -160,24 +282,47 @@ function scoreDocuments(query, documents) {
             const matchingDocs = documents.filter((candidate) => candidate.tokens.includes(term)).length;
             const idf = Math.log(1 + ((documents.length - matchingDocs + 0.5) / (matchingDocs + 0.5)));
             const lengthNorm = 1.5 * (1 - 0.75 + 0.75 * (document.tokens.length / averageLength));
-            score += idf * ((frequency * 2.5) / (frequency + lengthNorm));
-            if (document.title.toLowerCase().includes(term)) {
-                score += 1.25;
+            breakdown.lexical += idf * ((frequency * 2.5) / (frequency + lengthNorm));
+            if (normalizeForSearch(document.title).includes(term)) {
+                breakdown.title += 1.25;
             }
         }
+        const matchingConcepts = document.concepts.filter((concept) => queryConcepts.includes(concept));
+        breakdown.concept = matchingConcepts.length * 2.25;
+        if (queryTerms.includes(document.kind) || queryConcepts.includes(document.kind)) {
+            breakdown.kind = 0.75;
+        }
+        const ageMs = Date.now() - new Date(document.updatedAt).getTime();
+        if (Number.isFinite(ageMs) && ageMs >= 0) {
+            const ageDays = ageMs / (24 * 60 * 60 * 1000);
+            breakdown.recency = Math.max(0, 0.35 - Math.min(ageDays, 30) * 0.01);
+        }
+        const signalScore = breakdown.lexical + breakdown.concept + breakdown.title + breakdown.kind;
+        const score = signalScore > 0 ? signalScore + breakdown.recency : 0;
         const { content: _content, tokens: _tokens, ...publicDocument } = document;
-        return { ...publicDocument, score, snippet: snippetForTerms(document.content, queryTerms) };
+        return {
+            ...publicDocument,
+            score,
+            scoreBreakdown: breakdown,
+            snippet: snippetForTerms(document.content, queryTerms, matchingConcepts),
+        };
     });
     return results
         .filter((result) => result.score > 0)
         .sort((left, right) => right.score - left.score);
 }
-function snippetForTerms(content, terms) {
-    const normalized = content.toLowerCase();
-    const firstHit = terms
+function snippetForTerms(content, terms, concepts = []) {
+    const normalized = normalizeForSearch(content);
+    const lexicalHit = terms
         .map((term) => normalized.indexOf(term))
         .filter((index) => index >= 0)
         .sort((left, right) => left - right)[0];
+    const conceptAliases = concepts.flatMap((concept) => CONCEPT_ALIASES[concept] || []);
+    const conceptHit = conceptAliases
+        .map((alias) => normalized.indexOf(normalizeForSearch(alias)))
+        .filter((index) => index >= 0)
+        .sort((left, right) => left - right)[0];
+    const firstHit = lexicalHit ?? conceptHit;
     if (firstHit === undefined) {
         return compactPreview(content);
     }

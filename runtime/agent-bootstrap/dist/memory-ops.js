@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMemoryStatus = getMemoryStatus;
+exports.importProjectSessions = importProjectSessions;
 exports.syncProjectSessions = syncProjectSessions;
 exports.exportProjectMemory = exportProjectMemory;
 exports.backupProjectMemory = backupProjectMemory;
@@ -18,6 +19,7 @@ const fs_utils_1 = require("./fs-utils");
 const vault_1 = require("./vault");
 const date_1 = require("./date");
 const recall_1 = require("./recall");
+const session_importer_1 = require("./session-importer");
 function timestampForFile() {
     return (0, date_1.getIsoTimestamp)().replace(/[:.]/g, '-');
 }
@@ -103,8 +105,10 @@ function getMemoryStatus(options = {}) {
     const exportsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Exports');
     const backupsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Backups');
     const latestSession = latestFile(sessionsRoot);
+    const importState = (0, session_importer_1.readSessionImportState)(config);
     return {
         ok: node_fs_1.default.existsSync(config.vault_root) && node_fs_1.default.existsSync(config.project_root),
+        recallMode: recall.index.mode,
         repoRoot,
         vaultRoot: config.vault_root,
         projectRoot: config.project_root,
@@ -116,15 +120,28 @@ function getMemoryStatus(options = {}) {
             memoryIndex: node_fs_1.default.existsSync((0, vault_1.getProjectMemoryIndexPath)(config.project_root)),
             recallIndex: node_fs_1.default.existsSync((0, recall_1.getRecallIndexPath)(config.project_root)),
             sessionsDir: node_fs_1.default.existsSync(sessionsRoot),
+            sessionImportState: node_fs_1.default.existsSync((0, session_importer_1.getSessionImportStatePath)(config.project_root)),
         },
         counts: {
             memoryRecords: countMemoryRecords(config),
             recallDocuments: recall.index.documents.length,
             sessions: listFiles(sessionsRoot, (fileName) => fileName.endsWith('.md')).length,
+            importedSessions: importState.imported.length,
             exports: listFiles(exportsRoot, (fileName) => fileName.endsWith('.json')).length,
             backups: node_fs_1.default.existsSync(backupsRoot)
                 ? node_fs_1.default.readdirSync(backupsRoot).filter((entry) => node_fs_1.default.statSync(node_path_1.default.join(backupsRoot, entry)).isDirectory()).length
                 : 0,
+        },
+        imports: {
+            mode: 'automatic Codex session importer',
+            statePath: (0, session_importer_1.getSessionImportStatePath)(config.project_root),
+            rootsChecked: importState.roots_checked,
+            importedSessions: importState.imported.length,
+            skippedUnmatched: importState.skipped_unmatched,
+            skippedDuplicate: importState.skipped_duplicate,
+            skippedLowValue: importState.skipped_low_value,
+            parseErrors: importState.parse_errors,
+            lastImportAt: importState.last_run?.at || null,
         },
         latestSession: latestSession
             ? {
@@ -135,10 +152,32 @@ function getMemoryStatus(options = {}) {
         commands: [
             'agent-bootstrap context --compact',
             'agent-bootstrap recall "<query>"',
+            'agent-bootstrap memory import-sessions',
             'agent-bootstrap memory sync-sessions',
             'agent-bootstrap memory export',
             'agent-bootstrap memory backup',
         ],
+    };
+}
+function importProjectSessions(options = {}) {
+    const { repoRoot, config } = resolveConfig(options);
+    const report = (0, session_importer_1.importCodexSessionsForProject)(repoRoot, config, {
+        maxFiles: 400,
+        maxImports: 32,
+    });
+    const recall = (0, recall_1.buildRecallIndex)(config);
+    return {
+        imported: report.imported,
+        skippedUnmatched: report.skippedUnmatched,
+        skippedDuplicate: report.skippedDuplicate,
+        skippedLowValue: report.skippedLowValue,
+        parseErrors: report.parseErrors,
+        rootsChecked: report.rootsChecked,
+        scannedFiles: report.scannedFiles,
+        statePath: report.statePath,
+        importedNotes: report.importedNotes,
+        recallMode: recall.index.mode,
+        recallDocuments: recall.index.documents.length,
     };
 }
 function syncProjectSessions(options = {}) {
@@ -268,6 +307,8 @@ function runMemoryCommand(subcommand, options = {}) {
     switch (subcommand) {
         case 'status':
             return getMemoryStatus(options);
+        case 'import-sessions':
+            return importProjectSessions(options);
         case 'sync-sessions':
             return syncProjectSessions(options);
         case 'export':
@@ -275,7 +316,7 @@ function runMemoryCommand(subcommand, options = {}) {
         case 'backup':
             return backupProjectMemory(options);
         default:
-            throw new Error('Unknown memory command. Use: status, sync-sessions, export, backup.');
+            throw new Error('Unknown memory command. Use: status, import-sessions, sync-sessions, export, backup.');
     }
 }
 function syncSessionsFromConfig(repoRoot, config) {

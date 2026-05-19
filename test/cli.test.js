@@ -289,6 +289,7 @@ test('--help prints the quickstart flow', () => {
   assert.match(result.stdout, /agent-bootstrap context/);
   assert.match(result.stdout, /agent-bootstrap recall/);
   assert.match(result.stdout, /agent-bootstrap memory status/);
+  assert.match(result.stdout, /agent-bootstrap memory import-sessions/);
   assert.match(result.stdout, /npm uninstall -g @kakasitink\/agent-bootstrap/);
 });
 
@@ -311,7 +312,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '0.3.0');
+  assert.equal(packageJson.version, '0.4.0');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -326,6 +327,8 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.match(readme, /AI agents should run it automatically from `AGENTS\.md`/);
   assert.match(readme, /agent-bootstrap recall "<query>"/);
   assert.match(readme, /agent-bootstrap memory backup/);
+  assert.match(readme, /semantic recall/i);
+  assert.match(readme, /automatic Codex session/i);
   assert.match(readme, /Add Project-Specific Skills/);
   assert.match(readme, /Add Project-Specific Agents/);
   assert.match(readme, /\.codex\/skills\/INDEX\.md/);
@@ -1282,6 +1285,103 @@ test('compact context auto-refreshes recall index and includes bounded auto reca
   assert.match(why.stdout, /full recall memory bodies/i);
 });
 
+test('context compact automatically imports matching Codex sessions with redaction and dedupe', () => {
+  const root = makeTempDir('agent-bootstrap-session-import-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+  const codexSessionsRoot = path.join(root, 'codex-sessions');
+  const sessionFile = path.join(codexSessionsRoot, 'session-001.jsonl');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+  writeFile(sessionFile, [
+    JSON.stringify({ type: 'session_meta', cwd: repoRoot, project_slug: 'repo' }),
+    JSON.stringify({ role: 'system', content: 'SYSTEM_PROMPT_SHOULD_NOT_IMPORT' }),
+    JSON.stringify({ role: 'user', content: 'Please remember tenant security for this repo. Token sk-test1234567890abcdef should be hidden.' }),
+    JSON.stringify({ role: 'assistant', content: 'Decision: Use Supabase RLS policies for tenant isolation.' }),
+    JSON.stringify({ role: 'tool', type: 'tool_call', content: 'TOOL_NOISE_SHOULD_NOT_IMPORT' }),
+    JSON.stringify({ type: 'session_meta', cwd: path.join(root, 'other-repo'), project_slug: 'other' }),
+    JSON.stringify({ role: 'assistant', content: 'Decision: This unmatched repo session must not import.' }),
+  ].join('\n'));
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['context', '--compact', '--why'], {
+    configHome,
+    cwd: repoRoot,
+    env: { AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT: codexSessionsRoot },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Session Import/);
+  assert.match(result.stdout, /imported: 1/i);
+
+  const importedRoot = path.join(vaultRoot, 'Projects', 'repo', 'Sessions', 'Imported');
+  const importedFiles = fs.readdirSync(importedRoot).filter((file) => file.endsWith('.md'));
+  assert.equal(importedFiles.length, 1);
+  const importedBody = readFile(path.join(importedRoot, importedFiles[0]));
+  assert.match(importedBody, /Please remember tenant security/);
+  assert.match(importedBody, /Use Supabase RLS policies/);
+  assert.match(importedBody, /\[REDACTED_SECRET\]/);
+  assert.doesNotMatch(importedBody, /sk-test1234567890abcdef/);
+  assert.doesNotMatch(importedBody, /SYSTEM_PROMPT_SHOULD_NOT_IMPORT/);
+  assert.doesNotMatch(importedBody, /TOOL_NOISE_SHOULD_NOT_IMPORT/);
+  assert.doesNotMatch(importedBody, /unmatched repo session/);
+
+  result = runCli(['context', '--compact'], {
+    configHome,
+    cwd: repoRoot,
+    env: { AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT: codexSessionsRoot },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const afterSecondRun = fs.readdirSync(importedRoot).filter((file) => file.endsWith('.md'));
+  assert.equal(afterSecondRun.length, 1);
+
+  const state = JSON.parse(readFile(path.join(vaultRoot, 'Projects', 'repo', 'Artifacts', 'session-import-state.json')));
+  assert.equal(state.imported.length, 1);
+  assert.ok(state.skipped_unmatched >= 1);
+
+  result = runCli(['memory', 'status', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const status = parseJson(result.stdout);
+  assert.equal(status.recallMode, 'hybrid');
+  assert.equal(status.imports.importedSessions, 1);
+  assert.ok(status.imports.skippedUnmatched >= 1);
+});
+
+test('hybrid semantic recall finds related memory without exact keyword overlap', () => {
+  const root = makeTempDir('agent-bootstrap-semantic-recall-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['decision', 'Use Supabase RLS policies for tenant isolation.', '--title', 'Tenant data isolation']);
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['recall', 'bảo mật dữ liệu khách hàng', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Tenant data isolation/);
+  assert.match(result.stdout, /Supabase RLS policies/);
+
+  const recallIndexPath = path.join(vaultRoot, 'Projects', 'repo', 'Artifacts', 'recall-index.json');
+  const recallIndex = JSON.parse(readFile(recallIndexPath));
+  const decisionDocument = recallIndex.documents.find((document) => document.path.endsWith('Decisions.md'));
+  assert.ok(decisionDocument);
+  assert.ok(decisionDocument.concepts.includes('security'));
+  assert.equal(recallIndex.mode, 'hybrid');
+});
+
 test('memory commands report status sync sessions export and backup project memory', () => {
   const root = makeTempDir('agent-bootstrap-memory-ops-');
   const vaultRoot = path.join(root, 'vault');
@@ -1304,6 +1404,7 @@ test('memory commands report status sync sessions export and backup project memo
   let status = parseJson(result.stdout);
   assert.equal(status.ok, true);
   assert.equal(status.projectSlug, 'repo');
+  assert.equal(status.recallMode, 'hybrid');
   assert.equal(status.checks.projectRoot, true);
   assert.ok(status.counts.memoryRecords >= 1);
 
@@ -1456,6 +1557,41 @@ test('repo-local runtime mirrors recall and memory status commands from nested p
   const status = parseJson(result.stdout);
   assert.equal(status.projectSlug, 'repo');
   assert.equal(status.ok, true);
+});
+
+test('repo-local runtime imports Codex sessions and recall finds imported memory', () => {
+  const root = makeTempDir('agent-bootstrap-runtime-import-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const nested = path.join(repoRoot, 'src', 'feature');
+  const configHome = path.join(root, 'config-home');
+  const codexSessionsRoot = path.join(root, 'codex-sessions');
+
+  fs.mkdirSync(nested, { recursive: true });
+  writeFile(path.join(codexSessionsRoot, 'session-runtime.jsonl'), [
+    JSON.stringify({ type: 'session_meta', cwd: repoRoot, project_slug: 'repo' }),
+    JSON.stringify({ role: 'user', content: 'Can you remember how we protected customer records?' }),
+    JSON.stringify({ role: 'assistant', content: 'Decision: Use Supabase RLS policies for tenant isolation in the backend.' }),
+  ].join('\n'));
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runRuntime(repoRoot, ['memory', 'import-sessions'], {
+    cwd: nested,
+    env: { AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT: codexSessionsRoot },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const imported = parseJson(result.stdout);
+  assert.equal(imported.imported, 1);
+
+  result = runRuntime(repoRoot, ['recall', 'bao mat du lieu khach hang'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Supabase RLS policies/);
+  assert.match(result.stdout, /tenant isolation/);
 });
 
 test('Codex indexes enforce workflow priority and compact-context guardrails', () => {

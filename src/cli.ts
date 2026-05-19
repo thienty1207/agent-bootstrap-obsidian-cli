@@ -117,6 +117,7 @@ function writeHelp(): void {
         'Automatic memory recall and maintenance:',
         '  agent-bootstrap recall "<query>" [project-path]',
         '  agent-bootstrap memory status [project-path]',
+        '  agent-bootstrap memory import-sessions [project-path]',
         '  agent-bootstrap memory sync-sessions [project-path]',
         '  agent-bootstrap memory export [project-path]',
         '  agent-bootstrap memory backup [project-path]',
@@ -190,7 +191,7 @@ export async function main(argv: string[]): Promise<void> {
     const { rest } = parseFlags(tail);
     const subcommand = rest[0];
     if (!subcommand) {
-      throw new Error('Memory requires a subcommand: status, sync-sessions, export, backup.');
+      throw new Error('Memory requires a subcommand: status, import-sessions, sync-sessions, export, backup.');
     }
 
     writeJson(runMemoryCommand(subcommand, { repoRoot: rest[1] }));

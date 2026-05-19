@@ -19,6 +19,11 @@ import {
   getRecallIndexPath,
   recallProjectMemory,
 } from './recall';
+import {
+  getSessionImportStatePath,
+  importCodexSessionsForProject,
+  readSessionImportState,
+} from './session-importer';
 
 interface MemoryCommandOptions {
   repoRoot?: string;
@@ -119,9 +124,11 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
   const backupsRoot = path.join(config.project_root, 'Artifacts', 'Backups');
   const latestSession = latestFile(sessionsRoot);
+  const importState = readSessionImportState(config);
 
   return {
     ok: fs.existsSync(config.vault_root) && fs.existsSync(config.project_root),
+    recallMode: recall.index.mode,
     repoRoot,
     vaultRoot: config.vault_root,
     projectRoot: config.project_root,
@@ -133,15 +140,28 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
       memoryIndex: fs.existsSync(getProjectMemoryIndexPath(config.project_root)),
       recallIndex: fs.existsSync(getRecallIndexPath(config.project_root)),
       sessionsDir: fs.existsSync(sessionsRoot),
+      sessionImportState: fs.existsSync(getSessionImportStatePath(config.project_root)),
     },
     counts: {
       memoryRecords: countMemoryRecords(config),
       recallDocuments: recall.index.documents.length,
       sessions: listFiles(sessionsRoot, (fileName) => fileName.endsWith('.md')).length,
+      importedSessions: importState.imported.length,
       exports: listFiles(exportsRoot, (fileName) => fileName.endsWith('.json')).length,
       backups: fs.existsSync(backupsRoot)
         ? fs.readdirSync(backupsRoot).filter((entry) => fs.statSync(path.join(backupsRoot, entry)).isDirectory()).length
         : 0,
+    },
+    imports: {
+      mode: 'automatic Codex session importer',
+      statePath: getSessionImportStatePath(config.project_root),
+      rootsChecked: importState.roots_checked,
+      importedSessions: importState.imported.length,
+      skippedUnmatched: importState.skipped_unmatched,
+      skippedDuplicate: importState.skipped_duplicate,
+      skippedLowValue: importState.skipped_low_value,
+      parseErrors: importState.parse_errors,
+      lastImportAt: importState.last_run?.at || null,
     },
     latestSession: latestSession
       ? {
@@ -152,10 +172,34 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
     commands: [
       'agent-bootstrap context --compact',
       'agent-bootstrap recall "<query>"',
+      'agent-bootstrap memory import-sessions',
       'agent-bootstrap memory sync-sessions',
       'agent-bootstrap memory export',
       'agent-bootstrap memory backup',
     ],
+  };
+}
+
+export function importProjectSessions(options: MemoryCommandOptions = {}): Record<string, unknown> {
+  const { repoRoot, config } = resolveConfig(options);
+  const report = importCodexSessionsForProject(repoRoot, config, {
+    maxFiles: 400,
+    maxImports: 32,
+  });
+  const recall = buildRecallIndex(config);
+
+  return {
+    imported: report.imported,
+    skippedUnmatched: report.skippedUnmatched,
+    skippedDuplicate: report.skippedDuplicate,
+    skippedLowValue: report.skippedLowValue,
+    parseErrors: report.parseErrors,
+    rootsChecked: report.rootsChecked,
+    scannedFiles: report.scannedFiles,
+    statePath: report.statePath,
+    importedNotes: report.importedNotes,
+    recallMode: recall.index.mode,
+    recallDocuments: recall.index.documents.length,
   };
 }
 
@@ -301,6 +345,8 @@ export function runMemoryCommand(subcommand: string, options: MemoryCommandOptio
   switch (subcommand) {
     case 'status':
       return getMemoryStatus(options);
+    case 'import-sessions':
+      return importProjectSessions(options);
     case 'sync-sessions':
       return syncProjectSessions(options);
     case 'export':
@@ -308,7 +354,7 @@ export function runMemoryCommand(subcommand: string, options: MemoryCommandOptio
     case 'backup':
       return backupProjectMemory(options);
     default:
-      throw new Error('Unknown memory command. Use: status, sync-sessions, export, backup.');
+      throw new Error('Unknown memory command. Use: status, import-sessions, sync-sessions, export, backup.');
   }
 }
 

@@ -9,6 +9,7 @@ import {
   readProjectMemoryIndex,
 } from './vault';
 import { formatAutoRecallContext, getRecallIndexPath } from './recall';
+import { formatSessionImportReport, importCodexSessionsForProject } from './session-importer';
 
 export interface RepoConfig {
   vault_root: string;
@@ -117,6 +118,7 @@ export function getContext({
 }): string {
   const resolvedRepoRoot = resolveRepoRoot(repoRoot);
   const config = readOptionalRepoConfig(resolvedRepoRoot);
+  let sessionImport: ReturnType<typeof importCodexSessionsForProject> | null = null;
   const sections: ContextSection[] = [
     { label: 'Repo AGENTS', filePath: path.join(resolvedRepoRoot, 'AGENTS.md') },
     { label: 'Agent Routing Index', filePath: path.join(resolvedRepoRoot, '.codex', 'INDEX.md') },
@@ -143,6 +145,10 @@ export function getContext({
       `Session started for \`${config.project_slug}\``,
       createDailyLogMarker(['session', config.project_slug, new Date().toISOString().slice(0, 13)]),
     );
+    sessionImport = importCodexSessionsForProject(resolvedRepoRoot, config, {
+      maxFiles: mode === 'full' ? 400 : 160,
+      maxImports: mode === 'full' ? 32 : 8,
+    });
     sections.push(
       { label: 'Vault Init', filePath: path.join(config.vault_root, 'Init.md') },
       { label: 'Vault AGENTS', filePath: path.join(config.vault_root, 'AGENTS.md') },
@@ -182,6 +188,10 @@ export function getContext({
     );
     output.push(`===== Project Memory Index =====\n${memoryIndex.trimEnd()}\n`);
     loaded.push({ label: 'Project Memory Index', filePath: path.join(config.project_root, 'Artifacts', 'memory-index.json') });
+    if (sessionImport) {
+      output.push(`===== Session Import =====\n${formatSessionImportReport(sessionImport).trimEnd()}\n`);
+      loaded.push({ label: 'Session Import State', filePath: sessionImport.statePath });
+    }
     const autoRecall = formatAutoRecallContext(config, mode === 'full' ? 8 : 5);
     output.push(`===== Auto Recall =====\n${autoRecall.trimEnd()}\n`);
     loaded.push({ label: 'Recall Index', filePath: getRecallIndexPath(config.project_root) });

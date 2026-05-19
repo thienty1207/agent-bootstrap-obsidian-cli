@@ -10,6 +10,7 @@ const node_path_1 = __importDefault(require("node:path"));
 const fs_utils_1 = require("./fs-utils");
 const vault_1 = require("./vault");
 const recall_1 = require("./recall");
+const session_importer_1 = require("./session-importer");
 function readRepoConfig(repoRoot) {
     const config = readOptionalRepoConfig(repoRoot);
     if (!config) {
@@ -59,6 +60,7 @@ function formatContextManifest({ mode, loaded, skipped, }) {
 function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
     const resolvedRepoRoot = resolveRepoRoot(repoRoot);
     const config = readOptionalRepoConfig(resolvedRepoRoot);
+    let sessionImport = null;
     const sections = [
         { label: 'Repo AGENTS', filePath: node_path_1.default.join(resolvedRepoRoot, 'AGENTS.md') },
         { label: 'Agent Routing Index', filePath: node_path_1.default.join(resolvedRepoRoot, '.codex', 'INDEX.md') },
@@ -81,6 +83,10 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
     if (config) {
         (0, vault_1.ensureDailyNote)(config.vault_root);
         (0, vault_1.appendDailyLog)(config.vault_root, `Session started for \`${config.project_slug}\``, (0, vault_1.createDailyLogMarker)(['session', config.project_slug, new Date().toISOString().slice(0, 13)]));
+        sessionImport = (0, session_importer_1.importCodexSessionsForProject)(resolvedRepoRoot, config, {
+            maxFiles: mode === 'full' ? 400 : 160,
+            maxImports: mode === 'full' ? 32 : 8,
+        });
         sections.push({ label: 'Vault Init', filePath: node_path_1.default.join(config.vault_root, 'Init.md') }, { label: 'Vault AGENTS', filePath: node_path_1.default.join(config.vault_root, 'AGENTS.md') }, { label: 'Project README', filePath: node_path_1.default.join(config.project_root, 'README.md') }, { label: 'Project Tasks', filePath: node_path_1.default.join(config.project_root, config.tasks_file) }, { label: 'Project Decisions', filePath: node_path_1.default.join(config.project_root, config.decisions_file) }, { label: 'Project Facts', filePath: node_path_1.default.join(config.project_root, config.facts_file || 'Facts.md') }, { label: 'Project Open Questions', filePath: node_path_1.default.join(config.project_root, config.open_questions_file || 'Open Questions.md') }, { label: 'Project Handoff', filePath: node_path_1.default.join(config.project_root, config.handoff_file || 'Handoff.md') }, { label: 'Today Daily Note', filePath: (0, vault_1.getDailyNotePath)(config.vault_root), fullOnly: true });
     }
     else {
@@ -105,6 +111,10 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
         const memoryIndex = (0, vault_1.formatProjectMemoryIndex)((0, vault_1.readProjectMemoryIndex)(config.project_root, config.project_slug, config.project_type));
         output.push(`===== Project Memory Index =====\n${memoryIndex.trimEnd()}\n`);
         loaded.push({ label: 'Project Memory Index', filePath: node_path_1.default.join(config.project_root, 'Artifacts', 'memory-index.json') });
+        if (sessionImport) {
+            output.push(`===== Session Import =====\n${(0, session_importer_1.formatSessionImportReport)(sessionImport).trimEnd()}\n`);
+            loaded.push({ label: 'Session Import State', filePath: sessionImport.statePath });
+        }
         const autoRecall = (0, recall_1.formatAutoRecallContext)(config, mode === 'full' ? 8 : 5);
         output.push(`===== Auto Recall =====\n${autoRecall.trimEnd()}\n`);
         loaded.push({ label: 'Recall Index', filePath: (0, recall_1.getRecallIndexPath)(config.project_root) });

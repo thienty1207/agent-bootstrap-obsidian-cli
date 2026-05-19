@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Implementation Notes - Semantic Recall + Session Importer 0.4.0</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Arial, sans-serif;
+      line-height: 1.55;
+    }
+    body {
+      max-width: 980px;
+      margin: 40px auto;
+      padding: 0 24px 48px;
+    }
+    h1, h2 {
+      line-height: 1.2;
+    }
+    code {
+      font-family: Consolas, "SFMono-Regular", monospace;
+      font-size: 0.95em;
+    }
+    li {
+      margin: 8px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Semantic Recall + Automatic Codex Session Importer 0.4.0 Notes</h1>
+
+  <h2>Các quyết định AI tự làm mà Spec yêu cầu</h2>
+  <ul>
+    <li>Giữ Obsidian vault là nguồn sự thật, không thêm server, vector DB, API key, MCP plugin, hoặc dependency ngoài.</li>
+    <li>Thêm <code>agent-bootstrap memory import-sessions [projectPath]</code>, nhưng để <code>agent-bootstrap context --compact</code> tự chạy importer trong luồng AI bình thường.</li>
+    <li>Thêm <code>src/session-importer.ts</code> để phát hiện session root, parse JSONL/log kiểu phòng thủ, lọc noise, redact secret, dedupe, và ghi Markdown sạch vào <code>Projects/&lt;slug&gt;/Sessions/Imported/</code>.</li>
+    <li>Mở rộng <code>Artifacts/session-import-state.json</code> để lưu trạng thái import, session đã import, skipped unmatched, duplicate, low-value, parse errors, roots đã scan, và lần chạy gần nhất.</li>
+    <li>Nâng recall lên hybrid: lexical BM25-style score kết hợp concept/alias score, title/kind boost và recency boost có điều kiện.</li>
+    <li>Thêm alias local cho các nhóm thường gặp: security/bảo mật, tenant data/RLS/isolation, auth/login, database/db/Supabase, frontend/UI, backend/API, memory/vault/session.</li>
+    <li>Mirror hành vi mới vào generated <code>scripts/agent-memory.js</code> để project sau khi init/update không phụ thuộc riêng global CLI.</li>
+    <li>Cập nhật root README, generated README, generated AGENTS, <code>.codex/INDEX.md</code>, <code>.codex/README.md</code>, và vault Init guidance để mô tả semantic recall và automatic Codex session import.</li>
+    <li>Bump version lên <code>0.4.0</code>, regenerate runtime dist, và giữ nguyên core: một skill <code>superpowers</code> plus 3 subagents core.</li>
+  </ul>
+
+  <h2>Thay đổi so với plan ban đầu</h2>
+  <ul>
+    <li>Importer ưu tiên repo path match. Project slug chỉ được dùng khi slug đủ riêng biệt, vì các slug quá chung như <code>repo</code> dễ import nhầm session từ lịch sử Codex thật trên máy.</li>
+    <li>Khi có <code>AGENT_BOOTSTRAP_CODEX_SESSIONS_ROOT</code>, importer chỉ scan root explicit đó. Điều này giữ test và smoke run cô lập, đồng thời giảm rủi ro scan nhầm common home roots khi user đã chỉ định nguồn session rõ ràng.</li>
+    <li>Recency boost chỉ được cộng khi đã có lexical/concept/title/kind signal thật. Nếu không, query rác vẫn có thể trả memory mới nhất, gây hallucination nhẹ.</li>
+    <li>Normal output của recall vẫn gọn; score breakdown tồn tại trong result object/runtime internals nhưng không phơi quá nhiều ra CLI output.</li>
+  </ul>
+
+  <h2>Tradeoff AI phải cân nhắc</h2>
+  <ul>
+    <li>Semantic recall không dùng embedding nên nhẹ, offline, dễ audit, nhưng chỉ hiểu tốt các concept/alias đã khai báo hoặc suy ra từ Markdown hiện có.</li>
+    <li>Importer không cố parse mọi schema session ngoài Codex. Nó đọc JSONL/log-like records phòng thủ, đủ cho Codex session hiện tại và dễ mở rộng adapter sau.</li>
+    <li>Redaction luôn bật dù máy local. Tradeoff là có thể redact hơi rộng với vài text giống token, nhưng bảo vệ vault khỏi accidental secret capture.</li>
+    <li>Bounded import giúp <code>context --compact</code> không bị treo trên history lớn, nhưng nếu có nhiều session cũ thì các lần context sau sẽ tiếp tục bắt kịp dần.</li>
+    <li>Không scan mọi skill/subagent body và không thêm skill core mới, để bộ kit vẫn xoay quanh Superpowers + 3 quality gates.</li>
+  </ul>
+
+  <h2>Bất cứ điều gì khác bạn nên biết</h2>
+  <ul>
+    <li>Đã chạy <code>npm test</code>: 51/51 tests pass, gồm tarball/global install smoke tests.</li>
+    <li>Đã smoke thủ công temp repo: setup, init, fake Codex JSONL, <code>context --compact</code> auto import, semantic recall query <code>bao mat du lieu khach hang</code>, <code>memory status</code>, và secret redaction.</li>
+    <li>File notes cũ <code>implementation-agent-bootstrap-memory-recall-0.3.0-notes.html</code> đang là untracked từ lần trước; file này không thuộc scope 0.4.0 và không cần stage trừ khi bạn muốn.</li>
+    <li>Npm publish không được chạy. Sau khi push GitHub, bạn vẫn tự publish thủ công như đã chốt.</li>
+  </ul>
+</body>
+</html>
