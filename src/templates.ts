@@ -194,8 +194,8 @@ It keeps the agent workspace under \`.codex\`, while GitHub automation stays und
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
 
-This package is documented around install/update, setup, init, project update, automatic context, semantic recall, memory status, automatic session import, backup, and uninstall.
-\`agent-bootstrap context --compact\` is automatic agent startup; \`recall\` and \`memory\` commands are available for targeted inspection and maintenance.
+This package is documented around install/update, setup, init, project update, automatic context, semantic recall, active plan state, memory status, automatic session import, backup, and uninstall.
+\`agent-bootstrap context --compact\` is automatic agent startup; \`plan\`, \`recall\`, and \`memory\` commands are available for targeted execution state, inspection, and maintenance.
 
 ## Structure
 
@@ -219,6 +219,7 @@ This package is documented around install/update, setup, init, project update, a
   - \`workflows/\`: GitHub Actions and YAML-only automation files
 - \`docs/\`: project documentation and reference notes
 - \`plans/\`: clean local planning templates and handoff report templates
+- \`docs/superpowers/plans/\`: active implementation plan state with \`CURRENT.md\`, \`INDEX.md\`, and dated plan folders
 - \`scripts/\`: repo-local runtime helpers for durable memory write-back
 
 ## Ownership Boundaries
@@ -254,6 +255,15 @@ This package is documented around install/update, setup, init, project update, a
 - \`agent-bootstrap memory sync-sessions\` writes a clean session summary under \`Sessions/\` and updates the recall index.
 - \`agent-bootstrap memory export\` writes a JSON export under \`Artifacts/Exports/\`.
 - \`agent-bootstrap memory backup\` writes a timestamped plain-file backup under \`Artifacts/Backups/\`.
+- \`agent-bootstrap plan status\` reports the active Superpowers plan dashboard; \`plan start/update/complete/interrupt\` keeps \`docs/superpowers/plans/\` and the vault \`Plans/\` mirror aligned.
+
+## Automatic Active Plan State
+
+- Real implementation plans live under \`docs/superpowers/plans/YYYY-MM-DD/\`.
+- \`CURRENT.md\` is the active dashboard for current focus, status, verification, and next action.
+- Vault \`Plans/\` mirrors the repo state for durable memory.
+- Agents run \`agent-bootstrap plan status\` after compact context and update plan state silently before the final response.
+- A plan is completed only when verification evidence is recorded; silence or shutdown never means completed.
 `;
 }
 
@@ -334,8 +344,9 @@ The compact context includes this read order:
 9. \`${projectRoot}/Facts.md\`
 10. \`${projectRoot}/Open Questions.md\`
 11. \`${projectRoot}/Handoff.md\`
-12. \`${projectRoot}/Sessions/\` summaries, \`${projectRoot}/Sessions/Imported/\` Codex imports, \`${projectRoot}/Artifacts/session-import-state.json\`, and \`${projectRoot}/Artifacts/recall-index.json\` through bounded Auto Recall
-13. relevant docs under \`docs/\`, targeted agent assets under \`.codex/\`, and workflows under \`.github/workflows/\`
+12. \`docs/superpowers/plans/CURRENT.md\`, the active plan body, and \`${projectRoot}/Plans/\` through bounded Active Plan State
+13. \`${projectRoot}/Sessions/\` summaries, \`${projectRoot}/Sessions/Imported/\` Codex imports, \`${projectRoot}/Artifacts/session-import-state.json\`, and \`${projectRoot}/Artifacts/recall-index.json\` through bounded Auto Recall
+14. relevant docs under \`docs/\`, targeted agent assets under \`.codex/\`, and workflows under \`.github/workflows/\`
 
 ## Context discipline
 
@@ -371,11 +382,18 @@ ${typeFocus(projectType).join('\n')}
 - \`agent-bootstrap context --compact\`
 - \`agent-bootstrap recall "<query>"\`
 - \`agent-bootstrap memory status\`
+- \`agent-bootstrap plan status\`
+- \`agent-bootstrap plan start "<task title>"\`
+- \`agent-bootstrap plan update "<progress note>"\`
+- \`agent-bootstrap plan complete "<verification summary>"\`
+- \`agent-bootstrap plan interrupt "<last known state>"\`
 - \`agent-bootstrap memory import-sessions\`
 - \`agent-bootstrap context --why\`
 - \`agent-bootstrap context --full\`
 
-Running \`agent-bootstrap context --compact\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, imports matched Codex sessions, refreshes the hybrid recall index, loads routed repo/vault memory, and includes bounded Auto Recall so the agent does not need to scan the vault manually.
+Running \`agent-bootstrap context --compact\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, imports matched Codex sessions, refreshes the hybrid recall index, loads routed repo/vault memory, loads bounded Active Plan State, and includes bounded Auto Recall so the agent does not need to scan the vault manually.
+
+Immediately after compact context, run \`agent-bootstrap plan status\` silently for implementation, fix, security, frontend, backend, or verification work. Before editing, create or resume a plan with \`agent-bootstrap plan start "<task title>"\`. During work, run \`agent-bootstrap plan update "<what changed, what remains, verification state>"\`. Before the final response, run \`agent-bootstrap plan complete "<verification command/result summary>"\` only when verification passed; otherwise run \`agent-bootstrap plan interrupt "<last known state and next action>"\`. Do not infer completion from silence, shutdown, or lack of user response.
 
 ## Write-back rules
 
@@ -386,6 +404,7 @@ After meaningful work, write back to the vault:
 - \`Facts.md\` for stable facts future sessions can trust
 - \`Open Questions.md\` for unresolved assumptions and blockers
 - \`Handoff.md\` for the latest concise next-session handoff
+- \`docs/superpowers/plans/CURRENT.md\` and the active dated plan through \`agent-bootstrap plan\` for execution state
 - \`Research/\` for project-specific research
 - global \`Research\` or \`Notes\` for reusable insights
 
@@ -396,6 +415,7 @@ The repo runtime handles the low-friction automation:
 - it records routing reasons and keeps a compact project memory index under \`Artifacts/memory-index.json\`
 - it keeps a local QMD-inspired semantic recall index under \`Artifacts/recall-index.json\`
 - it imports matched Codex sessions into \`Sessions/Imported/\`, redacts obvious secrets, and tracks dedupe state under \`Artifacts/session-import-state.json\`
+- it mirrors active plan state from \`docs/superpowers/plans/\` into vault \`Plans/\`
 - it writes clean session summaries under \`Sessions/\` through \`compact\` or \`memory sync-sessions\`
 - it still supports explicit \`--scope project\` or \`--scope global\` when needed
 
@@ -406,6 +426,7 @@ Before a final response after meaningful work, run \`node scripts/agent-memory.j
 - \`agent-bootstrap context\` for read-only session context
 - \`agent-bootstrap recall "<query>"\` or \`node scripts/agent-memory.js recall "<query>"\` for targeted memory search
 - \`agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup>\` or \`node scripts/agent-memory.js memory <status|import-sessions|sync-sessions|export|backup>\` for memory health, import inspection, and backup
+- \`agent-bootstrap plan <status|start|update|complete|interrupt>\` or \`node scripts/agent-memory.js plan <status|start|update|complete|interrupt>\` for active plan tracking
 - \`node scripts/agent-memory.js <task|decision|research|note|fact|question|handoff|compact>\` for write-back and memory compaction
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 `;
@@ -546,6 +567,7 @@ Before doing meaningful work in this repo, read:
 9. \`${projectRoot}/Facts.md\`
 10. \`${projectRoot}/Open Questions.md\`
 11. \`${projectRoot}/Handoff.md\`
+12. \`docs/superpowers/plans/CURRENT.md\` and \`${projectRoot}/Plans/CURRENT.md\`
 
 ## Write-back rules
 
@@ -556,6 +578,7 @@ After meaningful work:
 - update \`Facts.md\` for durable facts backed by repo/context/source evidence
 - update \`Open Questions.md\` for unresolved unknowns instead of guessing
 - update \`Handoff.md\` with the latest concise next-session state
+- update active plan state with \`agent-bootstrap plan update|complete|interrupt\`
 - create project research notes under \`Research/\` when investigation happens
 - move reusable cross-project insights into the vault's global \`Research\` or \`Notes\`
 - run memory compaction or session sync after meaningful work so future agents can replay context quickly
@@ -575,6 +598,7 @@ The runtime will:
 - maintain a local QMD-inspired semantic recall index without external services
 - import matched Codex sessions automatically during compact context and track dedupe state
 - support \`memory status\`, \`memory import-sessions\`, \`memory sync-sessions\`, \`memory export\`, and \`memory backup\`
+- support \`plan status\`, \`plan start\`, \`plan update\`, \`plan complete\`, and \`plan interrupt\`
 `;
 }
 
@@ -961,13 +985,16 @@ function recentMarkdownFiles(dirPath, limit = 40, recursive = false) {
 }
 
 function documentKindFromPath(config, filePath) {
+  const normalizedPath = filePath.replace(/\\\\/g, '/');
   const relativeProjectPath = path.relative(config.project_root, filePath).replace(/\\\\/g, '/');
   const relativeVaultPath = path.relative(config.vault_root, filePath).replace(/\\\\/g, '/');
+  if (normalizedPath.includes('/docs/superpowers/plans/')) return 'plan';
   if (relativeProjectPath === 'Tasks.md') return 'task';
   if (relativeProjectPath === 'Decisions.md') return 'decision';
   if (relativeProjectPath === 'Facts.md') return 'fact';
   if (relativeProjectPath === 'Open Questions.md') return 'question';
   if (relativeProjectPath === 'Handoff.md') return 'handoff';
+  if (relativeProjectPath.startsWith('Plans/')) return 'plan';
   if (relativeProjectPath.startsWith('Research/')) return 'research';
   if (relativeProjectPath.startsWith('Notes/')) return 'note';
   if (relativeProjectPath.startsWith('Sessions/')) return 'session';
@@ -984,6 +1011,7 @@ function collectRecallFilePaths(config) {
     path.join(config.project_root, config.open_questions_file || 'Open Questions.md'),
     path.join(config.project_root, config.handoff_file || 'Handoff.md'),
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
+    ...recentMarkdownFiles(path.join(config.project_root, 'Plans'), 40, true),
     ...recentMarkdownFiles(path.join(config.project_root, config.research_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, config.notes_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, 'Sessions'), 40, true),
@@ -1664,7 +1692,7 @@ function getCriticalMemoryPaths(config) {
     getRecallIndexPath(config.project_root),
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
   ];
-  [config.research_dir, config.notes_dir, 'Sessions'].forEach((dirName) => {
+  [config.research_dir, config.notes_dir, 'Sessions', 'Plans'].forEach((dirName) => {
     const root = path.join(config.project_root, dirName);
     if (!fs.existsSync(root)) return;
     const stack = [root];
@@ -1684,6 +1712,8 @@ function getCriticalMemoryPaths(config) {
 }
 
 function memoryStatus(repoRoot, config) {
+  ensurePlanState(repoRoot, config);
+  const planState = getPlanStatus(repoRoot, config);
   const built = buildRecallIndex(config);
   const sessionsRoot = path.join(config.project_root, 'Sessions');
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
@@ -1706,6 +1736,7 @@ function memoryStatus(repoRoot, config) {
       recallIndex: fs.existsSync(getRecallIndexPath(config.project_root)),
       sessionsDir: fs.existsSync(sessionsRoot),
       sessionImportState: fs.existsSync(getSessionImportStatePath(config.project_root)),
+      planState: fs.existsSync(planState.currentPath) && fs.existsSync(planState.vaultCurrentPath),
     },
     counts: {
       memoryRecords: memoryRecordCount(config),
@@ -1716,7 +1747,9 @@ function memoryStatus(repoRoot, config) {
       backups: fs.existsSync(backupsRoot)
         ? fs.readdirSync(backupsRoot).filter((entry) => fs.statSync(path.join(backupsRoot, entry)).isDirectory()).length
         : 0,
+      plans: planState.counts.total,
     },
+    planState,
     imports: {
       mode: 'automatic Codex session importer',
       statePath: getSessionImportStatePath(config.project_root),
@@ -2034,6 +2067,7 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
     skipped.push('Daily/** daily logs (run agent-bootstrap context --full when needed)');
   }
   if (config) {
+    ensurePlanState(repoRoot, config);
     ensureDailyNote(config.vault_root);
     appendDailyLog(
       config.vault_root,
@@ -2053,8 +2087,19 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
       { label: 'Project Facts', filePath: path.join(config.project_root, config.facts_file || 'Facts.md') },
       { label: 'Project Open Questions', filePath: path.join(config.project_root, config.open_questions_file || 'Open Questions.md') },
       { label: 'Project Handoff', filePath: path.join(config.project_root, config.handoff_file || 'Handoff.md') },
+      { label: 'Active Plan State', filePath: path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md') },
       { label: 'Today Daily Note', filePath: path.join(config.vault_root, 'Daily', \`\${getTodayString()}.md\`), fullOnly: true },
     );
+    const activePlan = getPlanStatus(repoRoot, config).current;
+    if (activePlan) {
+      sections.push({ label: 'Active Plan', filePath: activePlan.repoPath });
+    }
+    if (mode === 'full') {
+      collectPlanFiles(getRepoPlansRoot(repoRoot)).slice(0, 4).forEach((filePath) => {
+        sections.push({ label: 'Recent Plan', filePath, fullOnly: true });
+      });
+    }
+    skipped.push('Plan history date folders (compact context loads CURRENT.md and the active plan only)');
   } else {
     skipped.push('vault.config.json missing; loaded repo-local source context only');
     skipped.push('Vault/project memory files unavailable until agent-bootstrap setup and agent-bootstrap init run');
@@ -2310,6 +2355,339 @@ function createNote(config, noteType, title, content, scope, extraTags = []) {
   return notePath;
 }
 
+function getRepoPlansRoot(repoRoot) {
+  return path.join(repoRoot, 'docs', 'superpowers', 'plans');
+}
+
+function getVaultPlansRoot(config) {
+  return path.join(config.project_root, 'Plans');
+}
+
+function planSlug(value) {
+  const slug = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!slug) {
+    throw new Error('Could not derive a valid plan slug.');
+  }
+  return slug;
+}
+
+function parsePlanFields(content) {
+  const match = content.match(/^---\\r?\\n([\\s\\S]*?)\\r?\\n---/);
+  const fields = {};
+  if (!match) return fields;
+  match[1].split(/\\r?\\n/).forEach((line) => {
+    const index = line.indexOf(':');
+    if (index === -1) return;
+    fields[line.slice(0, index).trim()] = line.slice(index + 1).trim();
+  });
+  return fields;
+}
+
+function collectPlanFiles(plansRoot) {
+  if (!fs.existsSync(plansRoot)) return [];
+  const files = [];
+  const stack = [plansRoot];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    fs.readdirSync(current, { withFileTypes: true }).forEach((entry) => {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+      } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'CURRENT.md' && entry.name !== 'INDEX.md') {
+        files.push(entryPath);
+      }
+    });
+  }
+  return files.sort();
+}
+
+function planTitleFromContent(filePath, content) {
+  const fields = parsePlanFields(content);
+  if (fields.title) return fields.title;
+  const heading = content.match(/^#\\s+(.+)$/m);
+  return heading ? heading[1].trim() : path.basename(filePath, '.md');
+}
+
+function planNextAction(content) {
+  const match = content.match(/- Next action:\\s*(.+)/i);
+  return match ? match[1].trim() : 'continue from current task scope';
+}
+
+function readPlanRecord(repoRoot, config, filePath) {
+  const content = readFile(filePath);
+  if (!content) return null;
+  const fields = parsePlanFields(content);
+  const title = planTitleFromContent(filePath, content);
+  const relativePlansPath = path.relative(getRepoPlansRoot(repoRoot), filePath).replace(/\\\\/g, '/');
+  return {
+    title,
+    slug: fields.slug || planSlug(title),
+    status: fields.status || 'planned',
+    created: fields.created || path.basename(path.dirname(filePath)),
+    updated: fields.updated || fs.statSync(filePath).mtime.toISOString(),
+    verification: fields.verification === 'passed' ? 'passed' : 'not_run',
+    repoPath: filePath,
+    vaultPath: path.join(getVaultPlansRoot(config), relativePlansPath),
+    relativeRepoPath: path.relative(repoRoot, filePath).replace(/\\\\/g, '/'),
+    nextAction: planNextAction(content),
+  };
+}
+
+function readPlanRecords(repoRoot, config) {
+  return collectPlanFiles(getRepoPlansRoot(repoRoot))
+    .map((filePath) => readPlanRecord(repoRoot, config, filePath))
+    .filter(Boolean)
+    .sort((left, right) => String(right.updated).localeCompare(String(left.updated)));
+}
+
+function renderEmptyPlanCurrent() {
+  return [
+    '# Current Plan State',
+    '',
+    'Last updated: ' + getIsoTimestamp(),
+    '',
+    '## Current Focus',
+    '',
+    '- none',
+    '',
+    '## Active Plans',
+    '',
+    '- none',
+    '',
+    '## Completed Today',
+    '',
+    '- none',
+    '',
+    '## Interrupted Or Needs Correction',
+    '',
+    '- none',
+    '',
+    '## Rules For Agents',
+    '',
+    '- Do not mark completed without verification evidence.',
+    '- If the session is interrupted, keep status in_progress or interrupted.',
+    '- Same-scope fixes update the existing plan.',
+    '- Different-scope work starts a new plan with a specific filename.',
+    '- Do not infer completion from silence, shutdown, or lack of user response.',
+    '',
+  ].join('\\n');
+}
+
+function currentPlanFromRecords(plans) {
+  return plans.find((plan) => plan.status !== 'completed') || null;
+}
+
+function renderPlanCurrent(plans, current) {
+  const today = getTodayString();
+  const active = plans.filter((plan) => plan.status !== 'completed');
+  const completedToday = plans.filter((plan) => plan.status === 'completed' && String(plan.updated).startsWith(today));
+  const attention = plans.filter((plan) => ['interrupted', 'needs_correction', 'blocked'].includes(plan.status));
+  const lines = ['# Current Plan State', '', 'Last updated: ' + getIsoTimestamp(), '', '## Current Focus', ''];
+  if (current) {
+    lines.push('- Plan: ' + current.relativeRepoPath, '- Title: ' + current.title, '- Status: ' + current.status, '- Verification: ' + current.verification, '- Next action: ' + current.nextAction);
+  } else {
+    lines.push('- none');
+  }
+  lines.push('', '## Active Plans', '');
+  lines.push(...(active.length ? active.slice(0, 8).map((plan) => '- ' + plan.relativeRepoPath + ' - ' + plan.status + ' - ' + plan.title + ' - next: ' + plan.nextAction) : ['- none']));
+  lines.push('', '## Completed Today', '');
+  lines.push(...(completedToday.length ? completedToday.slice(0, 8).map((plan) => '- ' + plan.relativeRepoPath + ' - ' + plan.title) : ['- none']));
+  lines.push('', '## Interrupted Or Needs Correction', '');
+  lines.push(...(attention.length ? attention.slice(0, 8).map((plan) => '- ' + plan.relativeRepoPath + ' - ' + plan.status + ' - ' + plan.title + ' - next: ' + plan.nextAction) : ['- none']));
+  lines.push('', '## Rules For Agents', '', '- Do not mark completed without verification evidence.', '- If the session is interrupted, keep status in_progress or interrupted.', '- Same-scope fixes update the existing plan.', '- Different-scope work starts a new plan with a specific filename.', '- Do not infer completion from silence, shutdown, or lack of user response.', '');
+  return lines.join('\\n');
+}
+
+function renderPlanIndex(plans) {
+  const lines = ['# Plan Index', '', 'Last updated: ' + getIsoTimestamp(), '', 'This index tracks Superpowers implementation plans created by agent-bootstrap plan state.', 'Root plans/ remains a clean template/handoff area; active implementation plans live here.', ''];
+  if (!plans.length) {
+    lines.push('No implementation plans recorded yet.', '');
+    return lines.join('\\n');
+  }
+  const dates = [...new Set(plans.map((plan) => plan.created))].sort().reverse();
+  dates.forEach((date) => {
+    lines.push('## ' + date, '');
+    plans.filter((plan) => plan.created === date).sort((left, right) => left.title.localeCompare(right.title)).forEach((plan) => {
+      lines.push('- ' + plan.status + ' - [' + plan.title + '](' + plan.relativeRepoPath + ') - verification: ' + plan.verification);
+    });
+    lines.push('');
+  });
+  return lines.join('\\n');
+}
+
+function renderPlanFile(config, data) {
+  return [
+    '---',
+    'type: agent-bootstrap-plan',
+    'project: ' + config.project_slug,
+    'title: ' + data.title,
+    'slug: ' + planSlug(data.title),
+    'status: ' + data.status,
+    'created: ' + data.created,
+    'updated: ' + data.updated,
+    'verification: ' + data.verification,
+    '---',
+    '',
+    '# ' + data.created + ' - ' + data.title,
+    '',
+    '## Goal',
+    '',
+    data.title,
+    '',
+    '## Scope',
+    '',
+    '- Track work tied to this task only.',
+    '',
+    '## Checklist',
+    '',
+    '- [ ] Define implementation steps before editing if the task needs a full Superpowers plan.',
+    '- [ ] Implement the requested change.',
+    '- [ ] Verify the result.',
+    '- [ ] Update memory/handoff if meaningful.',
+    '',
+    '## Last Known State',
+    '',
+    '- Updated: ' + data.updated,
+    '- Current step: ' + data.currentStep,
+    '- Verification: ' + data.verification,
+    '- Next action: ' + data.nextAction,
+    '',
+    '## Progress Log',
+    '',
+    ...(data.progressLines.length ? data.progressLines : ['- none yet']),
+    '',
+    '## Corrections',
+    '',
+    ...(data.corrections.length ? data.corrections : ['- none yet']),
+    '',
+  ].join('\\n');
+}
+
+function readPlanParts(filePath) {
+  const content = readFile(filePath) || '';
+  const fields = parsePlanFields(content);
+  const progressMatch = content.match(/## Progress Log\\r?\\n\\r?\\n([\\s\\S]*?)(?:\\r?\\n## Corrections|\\s*$)/);
+  const correctionsMatch = content.match(/## Corrections\\r?\\n\\r?\\n([\\s\\S]*?)\\s*$/);
+  const clean = (value) => (value || '').split(/\\r?\\n/).map((line) => line.trimEnd()).filter((line) => line && line !== '- none yet');
+  return {
+    title: fields.title || planTitleFromContent(filePath, content),
+    created: fields.created || path.basename(path.dirname(filePath)),
+    progressLines: clean(progressMatch && progressMatch[1]),
+    corrections: clean(correctionsMatch && correctionsMatch[1]),
+  };
+}
+
+function mirrorPlanState(repoRoot, config) {
+  ensureDir(getRepoPlansRoot(repoRoot));
+  ensureDir(getVaultPlansRoot(config));
+  fs.cpSync(getRepoPlansRoot(repoRoot), getVaultPlansRoot(config), { recursive: true });
+}
+
+function refreshPlanSummaries(repoRoot, config, current) {
+  const plans = readPlanRecords(repoRoot, config);
+  const currentPlan = current === undefined ? currentPlanFromRecords(plans) : current;
+  writeFile(path.join(getRepoPlansRoot(repoRoot), 'CURRENT.md'), renderPlanCurrent(plans, currentPlan));
+  writeFile(path.join(getRepoPlansRoot(repoRoot), 'INDEX.md'), renderPlanIndex(plans));
+  mirrorPlanState(repoRoot, config);
+}
+
+function ensurePlanState(repoRoot, config) {
+  ensureDir(getRepoPlansRoot(repoRoot));
+  ensureDir(getVaultPlansRoot(config));
+  const currentPath = path.join(getRepoPlansRoot(repoRoot), 'CURRENT.md');
+  const indexPath = path.join(getRepoPlansRoot(repoRoot), 'INDEX.md');
+  if (!fs.existsSync(currentPath)) writeFile(currentPath, renderEmptyPlanCurrent());
+  if (!fs.existsSync(indexPath)) writeFile(indexPath, renderPlanIndex([]));
+  writeFile(path.join(getVaultPlansRoot(config), 'README.md'), '# Plans\\n\\nDurable mirror of repo active implementation plan state.\\n');
+  mirrorPlanState(repoRoot, config);
+  return getPlanStatus(repoRoot, config);
+}
+
+function getPlanStatus(repoRoot, config) {
+  const plans = readPlanRecords(repoRoot, config);
+  const current = currentPlanFromRecords(plans);
+  const today = getTodayString();
+  return {
+    ok: fs.existsSync(path.join(getRepoPlansRoot(repoRoot), 'CURRENT.md')) && fs.existsSync(path.join(getVaultPlansRoot(config), 'CURRENT.md')),
+    repoPlansRoot: getRepoPlansRoot(repoRoot),
+    vaultPlansRoot: getVaultPlansRoot(config),
+    currentPath: path.join(getRepoPlansRoot(repoRoot), 'CURRENT.md'),
+    vaultCurrentPath: path.join(getVaultPlansRoot(config), 'CURRENT.md'),
+    current,
+    counts: {
+      total: plans.length,
+      active: plans.filter((plan) => plan.status !== 'completed').length,
+      completedToday: plans.filter((plan) => plan.status === 'completed' && String(plan.updated).startsWith(today)).length,
+      interruptedOrNeedsCorrection: plans.filter((plan) => ['interrupted', 'needs_correction', 'blocked'].includes(plan.status)).length,
+    },
+    plans,
+  };
+}
+
+function writePlanUpdate(repoRoot, config, planPath, status, verification, currentStep, nextAction, logLine, correctionLine) {
+  const parts = readPlanParts(planPath);
+  const updated = getIsoTimestamp();
+  const progressLines = [...parts.progressLines, '- ' + updated + ' - ' + logLine];
+  const corrections = correctionLine ? [...parts.corrections, '- ' + updated + ' - ' + correctionLine] : parts.corrections;
+  writeFile(planPath, renderPlanFile(config, { title: parts.title, status, verification, currentStep, nextAction, progressLines, corrections, created: parts.created, updated }));
+  const record = readPlanRecord(repoRoot, config, planPath);
+  refreshPlanSummaries(repoRoot, config, status === 'completed' ? null : record);
+  return record;
+}
+
+function activePlanOrThrow(repoRoot, config) {
+  const current = getPlanStatus(repoRoot, config).current;
+  if (!current) {
+    throw new Error('No active plan. Run agent-bootstrap plan start "<title>" before updating plan state.');
+  }
+  return current;
+}
+
+function runPlanCommand(repoRoot, config, subcommand, value) {
+  ensurePlanState(repoRoot, config);
+  if (subcommand === 'status') return getPlanStatus(repoRoot, config);
+  if (subcommand === 'start') {
+    const title = (value || '').trim();
+    if (!title) throw new Error('Plan start requires a title.');
+    const slug = planSlug(title);
+    const existing = readPlanRecords(repoRoot, config).find((plan) => plan.slug === slug && plan.status !== 'completed');
+    if (existing) {
+      const resumed = writePlanUpdate(repoRoot, config, existing.repoPath, existing.status, existing.verification, 'resumed', existing.nextAction, 'Plan resumed.');
+      return { action: 'resumed', status: resumed.status, planPath: resumed.repoPath, vaultPlanPath: resumed.vaultPath };
+    }
+    const today = getTodayString();
+    const updated = getIsoTimestamp();
+    const planPath = path.join(getRepoPlansRoot(repoRoot), today, today + '-' + slug + '.md');
+    writeFile(planPath, renderPlanFile(config, { title, status: 'in_progress', verification: 'not_run', currentStep: 'started', nextAction: 'continue from current task scope', progressLines: ['- ' + updated + ' - Plan started.'], corrections: [], created: today, updated }));
+    const record = readPlanRecord(repoRoot, config, planPath);
+    refreshPlanSummaries(repoRoot, config, record);
+    return { action: 'started', status: record.status, planPath: record.repoPath, vaultPlanPath: record.vaultPath };
+  }
+  if (subcommand === 'update') {
+    const note = (value || '').trim();
+    if (!note) throw new Error('Plan update requires a progress note.');
+    const active = activePlanOrThrow(repoRoot, config);
+    const correction = /^correction:/i.test(note);
+    const record = writePlanUpdate(repoRoot, config, active.repoPath, correction ? 'needs_correction' : (active.status === 'interrupted' ? 'in_progress' : active.status), 'not_run', correction ? 'needs correction' : 'updated', note, note, correction ? note : undefined);
+    return { action: 'updated', status: record.status, planPath: record.repoPath, vaultPlanPath: record.vaultPath };
+  }
+  if (subcommand === 'interrupt') {
+    const note = (value || '').trim();
+    if (!note) throw new Error('Plan interrupt requires the last known state and next action.');
+    const active = activePlanOrThrow(repoRoot, config);
+    const record = writePlanUpdate(repoRoot, config, active.repoPath, 'interrupted', 'not_run', 'interrupted', note, 'Interrupted: ' + note);
+    return { action: 'interrupted', status: record.status, planPath: record.repoPath, vaultPlanPath: record.vaultPath };
+  }
+  if (subcommand === 'complete') {
+    const summary = (value || '').trim();
+    if (!summary) throw new Error('Plan complete requires a non-empty verification summary.');
+    const active = activePlanOrThrow(repoRoot, config);
+    const record = writePlanUpdate(repoRoot, config, active.repoPath, 'completed', 'passed', 'completed', 'none', 'Completed with verification: ' + summary);
+    return { action: 'completed', status: record.status, planPath: record.repoPath, vaultPlanPath: record.vaultPath };
+  }
+  throw new Error('Unknown plan command. Use: status, start, update, complete, interrupt.');
+}
+
 function parseFlags(argv) {
   const args = [...argv];
   const options = {};
@@ -2424,6 +2802,14 @@ function main(argv) {
       throw new Error('Memory requires a subcommand: status, import-sessions, sync-sessions, export, backup.');
     }
     process.stdout.write(\`\${JSON.stringify(runMemoryCommand(repoRoot, config, maybeContent), null, 2)}\\n\`);
+    return;
+  }
+
+  if (command === 'plan') {
+    if (!maybeContent) {
+      throw new Error('Plan requires a subcommand: status, start, update, complete, interrupt.');
+    }
+    process.stdout.write(\`\${JSON.stringify(runPlanCommand(repoRoot, config, maybeContent, rest[2]), null, 2)}\\n\`);
     return;
   }
 

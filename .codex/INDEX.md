@@ -6,7 +6,9 @@ folder recursively.
 
 ## Automatic Startup
 
-- Run `agent-bootstrap context --compact` before meaningful repo work. It also imports matched Codex sessions, redacts obvious secrets, dedupes imports, and refreshes hybrid recall.
+- Run `agent-bootstrap context --compact` before meaningful repo work. It also imports matched Codex sessions, redacts obvious secrets, dedupes imports, refreshes hybrid recall, and loads bounded Active Plan State.
+- Run `agent-bootstrap plan status` after compact context for implementation, fix, security, frontend, backend, or verification work.
+- Use `agent-bootstrap plan start|update|complete|interrupt` to keep `docs/superpowers/plans/` and vault `Plans/` aligned; never infer completion from silence.
 - Use `agent-bootstrap recall "<query>"` when compact context is not enough for prior decisions, facts, handoffs, or session summaries.
 - Use `agent-bootstrap memory status` when memory health, import state, diagnostics, next actions, export, backup, or session sync needs inspection.
 - Use `agent-bootstrap memory import-sessions` only for explicit maintenance; normal startup already runs it through compact context.
@@ -22,6 +24,7 @@ folder recursively.
 - `.codex/commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands.
 - `.codex/skills/`: one bundled Superpowers workflow skill, bundled optional domain skills, and optional custom skills registered in the skills index.
 - Vault `Artifacts/recall-index.json`, `Artifacts/session-import-state.json`, and `Sessions/`: generated semantic recall and imported session assets maintained by `context`, `recall`, and `memory` commands.
+- `docs/superpowers/plans/` and vault `Plans/`: Active Plan State maintained by `agent-bootstrap plan`.
 
 There is no `.codex/rules/` folder. Mandatory guardrails live in `AGENTS.md`,
 this index, and `.codex/skills/INDEX.md`. Security rule references live inside

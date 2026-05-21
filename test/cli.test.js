@@ -160,6 +160,13 @@ function assertCleanPlansWorkspace(repoRoot) {
   }
 }
 
+function assertActivePlanWorkspace(repoRoot, vaultProjectRoot) {
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'superpowers', 'plans', 'INDEX.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'Plans', 'CURRENT.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'Plans', 'INDEX.md')), true);
+}
+
 function assertLegacyGithubAgentAssetsRemoved(repoRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', 'AGENTS.md')), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
@@ -311,6 +318,8 @@ test('--help prints the quickstart flow', () => {
   assert.match(result.stdout, /agent-bootstrap recall/);
   assert.match(result.stdout, /agent-bootstrap memory status/);
   assert.match(result.stdout, /agent-bootstrap memory import-sessions/);
+  assert.match(result.stdout, /agent-bootstrap plan status/);
+  assert.match(result.stdout, /agent-bootstrap plan start/);
   assert.match(result.stdout, /npm uninstall -g @kakasitink\/agent-bootstrap/);
 });
 
@@ -324,7 +333,7 @@ test('global CLI rejects internal commands instead of treating them as project p
   for (const command of ['doctor', 'migrate', 'sync', 'projects', 'config', 'new']) {
     const result = runCli([command], { configHome, cwd: workspaceRoot });
     assert.notEqual(result.status, 0);
-    assert.match(result.stderr, /Public commands: setup, init, update, context, recall, memory/i);
+    assert.match(result.stderr, /Public commands: setup, init, update, context, recall, memory, plan/i);
   }
 });
 
@@ -333,7 +342,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '0.4.3');
+  assert.equal(packageJson.version, '0.5.0');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -343,11 +352,14 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.doesNotMatch(agentGuide, obsoleteSkillNamePattern());
   assert.match(agentGuide, /public cli surface/i);
   assert.match(readme, /Automatic Memory Recall/);
+  assert.match(readme, /Automatic Active Plan State/);
   assert.match(readme, /Update an existing project's kit files/);
   assert.match(readme, /Optional: AI Context/);
   assert.match(readme, /AI agents should run it automatically from `AGENTS\.md`/);
   assert.match(readme, /agent-bootstrap recall "<query>"/);
   assert.match(readme, /agent-bootstrap memory backup/);
+  assert.match(readme, /agent-bootstrap plan status/);
+  assert.match(readme, /docs\/superpowers\/plans/);
   assert.match(readme, /semantic recall/i);
   assert.match(readme, /automatic Codex session/i);
   assert.match(readme, /Add Project-Specific Skills/);
@@ -399,6 +411,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.ok(fs.existsSync(path.join(projectRoot, 'Facts.md')));
   assert.ok(fs.existsSync(path.join(projectRoot, 'Open Questions.md')));
   assert.ok(fs.existsSync(path.join(projectRoot, 'Handoff.md')));
+  assertActivePlanWorkspace(repoRoot, projectRoot);
   assert.ok(fs.existsSync(path.join(repoRoot, 'AGENTS.md')));
   assert.equal(fs.existsSync(path.join(repoRoot, legacyAgentFile)), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
@@ -430,6 +443,8 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(repoReadme, /`\.codex\/skills\/superpowers\/`/i);
   assert.match(repoReadme, /bundled optional domain skills/i);
   assert.match(repoReadme, /optional project-specific custom skills/i);
+  assert.match(repoReadme, /Automatic Active Plan State/i);
+  assert.match(repoReadme, /agent-bootstrap plan status/i);
   assert.doesNotMatch(repoReadme, /`\.codex\/skills\/agent-api\/`/i);
   assert.match(repoReadme, /`\.codex\/skills\/frontend-design\/`/i);
   assert.match(repoReadme, /`\.codex\/skills\/vibe-security-scan\/`/i);
@@ -438,6 +453,9 @@ test('setup stores portable config and init bootstraps current repo', () => {
 
   const rootAgent = readFile(path.join(repoRoot, 'AGENTS.md'));
   assert.match(rootAgent, /agent-bootstrap context --compact/);
+  assert.match(rootAgent, /agent-bootstrap plan status/);
+  assert.match(rootAgent, /agent-bootstrap plan start/);
+  assert.match(rootAgent, /Do not infer completion from silence/i);
   assert.match(rootAgent, /Do not ask the user whether to run it/);
   assert.match(rootAgent, /agent-bootstrap context --why/);
   assert.match(rootAgent, /agent-bootstrap context --full/);
@@ -646,6 +664,23 @@ test('update command refreshes Codex assets while preserving project and vault m
     writeFile(path.join(repoRoot, 'plans', fileName), '# Obsolete kit plan\n');
   }
   writeFile(path.join(repoRoot, 'plans', 'my-feature-plan.md'), '# User feature plan\n');
+  const existingPlanPath = path.join(repoRoot, 'docs', 'superpowers', 'plans', getTodayString(), `${getTodayString()}-keep-user-plan.md`);
+  writeFile(existingPlanPath, [
+    '---',
+    'type: agent-bootstrap-plan',
+    'project: repo',
+    'title: Keep User Plan',
+    'slug: keep-user-plan',
+    'status: in_progress',
+    `created: ${getTodayString()}`,
+    `updated: ${new Date().toISOString()}`,
+    'verification: not_run',
+    '---',
+    '',
+    '# Keep User Plan',
+    '',
+  ].join('\n'));
+  fs.rmSync(path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md'), { force: true });
 
   const projectConfigBefore = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
   const projectReadmeBefore = readFile(path.join(projectConfigBefore.project_root, 'README.md'));
@@ -673,11 +708,14 @@ test('update command refreshes Codex assets while preserving project and vault m
   assert.match(skillsIndexAfterUpdate, /superpowers/);
   assert.match(skillsIndexAfterUpdate, /frontend-design/);
   assert.match(skillsIndexAfterUpdate, /vibe-security-scan/);
+  const projectConfigAfter = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
   assertCleanPlansWorkspace(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'plans', 'my-feature-plan.md')), true);
+  assertActivePlanWorkspace(repoRoot, projectConfigAfter.project_root);
+  assert.equal(fs.existsSync(existingPlanPath), true);
+  assert.match(readFile(path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md')), /Current Plan State/);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
 
-  const projectConfigAfter = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
   assert.equal(projectConfigAfter.project_slug, projectConfigBefore.project_slug);
   assert.equal(projectConfigAfter.project_type, 'backend');
   assert.equal(readFile(path.join(projectConfigAfter.project_root, 'README.md')), projectReadmeBefore);
@@ -697,10 +735,16 @@ test('context modes keep compact context narrow and explain context choices', ()
   result = runCli(['init'], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
 
+  result = runCli(['plan', 'start', 'frontend HomePage'], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+
   const compact = runCli(['context', '--compact'], { configHome, cwd: nested });
   assert.equal(compact.status, 0, compact.stderr);
   assert.match(compact.stdout, /Agent Routing Index/);
   assert.match(compact.stdout, /Skills Routing Index/);
+  assert.match(compact.stdout, /Active Plan State/);
+  assert.match(compact.stdout, /Active Plan/);
+  assert.match(compact.stdout, /frontend HomePage/i);
   assert.match(compact.stdout, /Project Facts/);
   assert.doesNotMatch(compact.stdout, /Today Daily Note/);
   assert.doesNotMatch(compact.stdout, /# Test-Driven Development \(TDD\)/);
@@ -720,10 +764,12 @@ test('context modes keep compact context narrow and explain context choices', ()
   assert.match(why.stdout, /Skipped:/);
   assert.match(why.stdout, /\.codex\/skills\/\*\*/);
   assert.match(why.stdout, /Daily\/\*\*/);
+  assert.match(why.stdout, /Plan history date folders/);
 
   const full = runCli(['context', '--full'], { configHome, cwd: nested });
   assert.equal(full.status, 0, full.stderr);
   assert.match(full.stdout, /Today Daily Note/);
+  assert.match(full.stdout, /Recent Plan/);
   assert.ok(full.stdout.length > compact.stdout.length);
 });
 
@@ -1294,6 +1340,96 @@ test('recall searches durable project memory and handles empty results', () => {
   assert.match(empty.stdout, /Try a narrower query/i);
 });
 
+test('plan commands track active implementation state and mirror it to the vault', () => {
+  const root = makeTempDir('agent-bootstrap-plan-state-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const nested = path.join(repoRoot, 'src', 'ui');
+  const configHome = path.join(root, 'config-home');
+  const today = getTodayString();
+
+  fs.mkdirSync(nested, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['plan', 'status', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  let status = parseJson(result.stdout);
+  assert.equal(status.ok, true);
+  assert.equal(status.current, null);
+  assert.equal(status.counts.total, 0);
+  assertActivePlanWorkspace(repoRoot, path.join(vaultRoot, 'Projects', 'repo'));
+
+  result = runCli(['plan', 'start', 'frontend HomePage', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const started = parseJson(result.stdout);
+  assert.equal(started.action, 'started');
+  assert.equal(started.status, 'in_progress');
+  assert.match(started.planPath, new RegExp(`docs[\\\\/]superpowers[\\\\/]plans[\\\\/]${today}[\\\\/]${today}-frontend-homepage\\.md$`));
+  assert.equal(fs.existsSync(started.planPath), true);
+  assert.equal(fs.existsSync(started.vaultPlanPath), true);
+
+  let planBody = readFile(started.planPath);
+  assert.match(planBody, /type: agent-bootstrap-plan/);
+  assert.match(planBody, /status: in_progress/);
+  assert.match(planBody, /verification: not_run/);
+  assert.match(planBody, /# .*frontend HomePage/i);
+
+  const currentPath = path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md');
+  const currentBody = readFile(currentPath);
+  assert.match(currentBody, /Current Plan State/);
+  assert.match(currentBody, /frontend HomePage/);
+  assert.match(currentBody, /Do not mark completed without verification evidence/);
+  assert.match(readFile(path.join(vaultRoot, 'Projects', 'repo', 'Plans', 'CURRENT.md')), /frontend HomePage/);
+
+  result = runCli(['plan', 'start', 'frontend HomePage', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const resumed = parseJson(result.stdout);
+  assert.equal(resumed.action, 'resumed');
+  assert.equal(resumed.planPath, started.planPath);
+  const dailyFiles = fs.readdirSync(path.join(repoRoot, 'docs', 'superpowers', 'plans', today)).filter((file) => file.endsWith('.md'));
+  assert.deepEqual(dailyFiles, [`${today}-frontend-homepage.md`]);
+
+  result = runCli(['plan', 'update', 'Implemented desktop shell; mobile responsive verification remains.', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const updated = parseJson(result.stdout);
+  assert.equal(updated.status, 'in_progress');
+  planBody = readFile(started.planPath);
+  assert.match(planBody, /Implemented desktop shell/);
+  assert.match(planBody, /mobile responsive verification remains/);
+
+  result = runCli(['recall', 'homepage responsive', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /frontend HomePage/i);
+  assert.match(result.stdout, /\[plan\]/);
+
+  result = runCli(['plan', 'interrupt', 'Stopped before mobile screenshot verification. Next action: test responsive footer.', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const interrupted = parseJson(result.stdout);
+  assert.equal(interrupted.status, 'interrupted');
+  assert.match(readFile(currentPath), /Interrupted Or Needs Correction/);
+  assert.match(readFile(currentPath), /test responsive footer/);
+
+  result = runCli(['plan', 'complete'], { configHome, cwd: nested });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /verification summary/i);
+
+  result = runCli(['plan', 'complete', 'npm test passed and mobile screenshot verified', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const completed = parseJson(result.stdout);
+  assert.equal(completed.status, 'completed');
+  planBody = readFile(started.planPath);
+  assert.match(planBody, /status: completed/);
+  assert.match(planBody, /verification: passed/);
+  assert.match(planBody, /npm test passed/);
+  assert.match(readFile(currentPath), /Completed Today/);
+  assert.match(readFile(path.join(vaultRoot, 'Projects', 'repo', 'Plans', today, `${today}-frontend-homepage.md`)), /status: completed/);
+});
+
 test('compact context auto-refreshes recall index and includes bounded auto recall', () => {
   const root = makeTempDir('agent-bootstrap-auto-recall-');
   const vaultRoot = path.join(root, 'vault');
@@ -1445,12 +1581,18 @@ test('memory commands report status sync sessions export and backup project memo
   result = runRuntime(repoRoot, ['task', 'Ship automatic recall status commands']);
   assert.equal(result.status, 0, result.stderr);
 
+  result = runCli(['plan', 'start', 'memory status dashboard', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
   result = runCli(['memory', 'status', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
   let status = parseJson(result.stdout);
   assert.equal(status.ok, true);
   assert.equal(status.projectSlug, 'repo');
   assert.equal(status.recallMode, 'hybrid');
+  assert.equal(status.planState.current.title, 'memory status dashboard');
+  assert.equal(status.planState.current.status, 'in_progress');
+  assert.ok(status.checks.planState);
   assert.equal(status.checks.projectRoot, true);
   assert.ok(status.counts.memoryRecords >= 1);
   assert.ok(status.diagnostics.some((item) => item.code === 'session-import-not-run'));
@@ -1482,6 +1624,8 @@ test('memory commands report status sync sessions export and backup project memo
   const exportBody = JSON.parse(readFile(exported.exportPath));
   assert.equal(exportBody.project.slug, 'repo');
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Tasks.md'));
+  assert.ok(exportBody.files.some((file) => file.relativePath === 'Plans/CURRENT.md'));
+  assert.ok(exportBody.files.some((file) => file.relativePath === 'Repo/docs/superpowers/plans/CURRENT.md'));
 
   result = runCli(['memory', 'backup', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -1489,6 +1633,8 @@ test('memory commands report status sync sessions export and backup project memo
   assert.equal(fs.existsSync(backup.backupPath), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'manifest.json')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Tasks.md')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'Plans', 'CURRENT.md')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'Repo', 'docs', 'superpowers', 'plans', 'CURRENT.md')), true);
 
   result = runCli(['memory', 'status', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -1618,6 +1764,17 @@ test('repo-local runtime mirrors recall and memory status commands from nested p
   const status = parseJson(result.stdout);
   assert.equal(status.projectSlug, 'repo');
   assert.equal(status.ok, true);
+
+  result = runRuntime(repoRoot, ['plan', 'start', 'auth security review'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const started = parseJson(result.stdout);
+  assert.equal(started.status, 'in_progress');
+  assert.equal(fs.existsSync(started.planPath), true);
+
+  result = runRuntime(repoRoot, ['plan', 'status'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const planStatus = parseJson(result.stdout);
+  assert.equal(planStatus.current.title, 'auth security review');
 });
 
 test('repo-local runtime imports Codex sessions and recall finds imported memory', () => {
@@ -1661,6 +1818,8 @@ test('Codex indexes enforce workflow priority and compact-context guardrails', (
   const skillsIndex = readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'));
 
   assert.match(agentIndex, /Run `agent-bootstrap context --compact`/);
+  assert.match(agentIndex, /agent-bootstrap plan status/);
+  assert.match(agentIndex, /Active Plan State/);
   assert.match(agentIndex, /There is no `\.codex\/rules\/` folder/);
   assert.match(agentIndex, /agent-bootstrap managed prompt templates, not native Codex slash commands/);
   assert.match(agentIndex, /Superpowers \+ 3 core subagents/i);

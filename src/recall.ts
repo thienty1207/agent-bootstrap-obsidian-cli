@@ -193,14 +193,17 @@ function titleFromMarkdown(filePath: string, content: string): string {
 }
 
 function documentKindFromPath(config: RepoConfig, filePath: string): string {
+  const normalizedPath = filePath.replace(/\\/g, '/');
   const relativeProjectPath = path.relative(config.project_root, filePath).replace(/\\/g, '/');
   const relativeVaultPath = path.relative(config.vault_root, filePath).replace(/\\/g, '/');
 
+  if (normalizedPath.includes('/docs/superpowers/plans/')) return 'plan';
   if (relativeProjectPath === 'Tasks.md') return 'task';
   if (relativeProjectPath === 'Decisions.md') return 'decision';
   if (relativeProjectPath === 'Facts.md') return 'fact';
   if (relativeProjectPath === 'Open Questions.md') return 'question';
   if (relativeProjectPath === 'Handoff.md') return 'handoff';
+  if (relativeProjectPath.startsWith('Plans/')) return 'plan';
   if (relativeProjectPath.startsWith('Research/')) return 'research';
   if (relativeProjectPath.startsWith('Notes/')) return 'note';
   if (relativeProjectPath.startsWith('Sessions/')) return 'session';
@@ -239,7 +242,7 @@ function recentMarkdownFiles(dirPath: string, limit = MAX_MARKDOWN_FILES_PER_DIR
   return files.slice(0, limit);
 }
 
-function collectRecallFilePaths(config: RepoConfig): string[] {
+function collectRecallFilePaths(config: RepoConfig, repoRoot?: string): string[] {
   const candidates = [
     path.join(config.project_root, 'README.md'),
     path.join(config.project_root, config.tasks_file),
@@ -248,11 +251,15 @@ function collectRecallFilePaths(config: RepoConfig): string[] {
     path.join(config.project_root, config.open_questions_file || 'Open Questions.md'),
     path.join(config.project_root, config.handoff_file || 'Handoff.md'),
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
+    ...recentMarkdownFiles(path.join(config.project_root, 'Plans'), MAX_MARKDOWN_FILES_PER_DIR, true),
     ...recentMarkdownFiles(path.join(config.project_root, config.research_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, config.notes_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, 'Sessions'), MAX_MARKDOWN_FILES_PER_DIR, true),
     ...recentMarkdownFiles(path.join(config.vault_root, 'Daily'), 8),
   ];
+  if (repoRoot) {
+    candidates.push(...recentMarkdownFiles(path.join(repoRoot, 'docs', 'superpowers', 'plans'), MAX_MARKDOWN_FILES_PER_DIR, true));
+  }
 
   return [...new Set(candidates)].filter((filePath) => fs.existsSync(filePath));
 }
@@ -283,8 +290,8 @@ function createRecallDocument(config: RepoConfig, filePath: string): RecallDocum
   };
 }
 
-export function buildRecallIndex(config: RepoConfig): { index: RecallIndex; documents: RecallDocument[] } {
-  const documents = collectRecallFilePaths(config)
+export function buildRecallIndex(config: RepoConfig, repoRoot?: string): { index: RecallIndex; documents: RecallDocument[] } {
+  const documents = collectRecallFilePaths(config, repoRoot)
     .map((filePath) => createRecallDocument(config, filePath))
     .filter((document): document is RecallDocument => Boolean(document));
 
@@ -392,8 +399,8 @@ function snippetForTerms(content: string, terms: string[], concepts: string[] = 
   return compactPreview(`${prefix}${content.slice(start, end)}${suffix}`, 360);
 }
 
-export function recallProjectMemory(config: RepoConfig, query: string, limit = DEFAULT_RECALL_LIMIT): RecallResult[] {
-  const { documents } = buildRecallIndex(config);
+export function recallProjectMemory(config: RepoConfig, query: string, limit = DEFAULT_RECALL_LIMIT, repoRoot?: string): RecallResult[] {
+  const { documents } = buildRecallIndex(config, repoRoot);
   return scoreDocuments(query, documents).slice(0, limit);
 }
 

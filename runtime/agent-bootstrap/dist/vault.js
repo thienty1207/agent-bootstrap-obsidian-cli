@@ -67,6 +67,7 @@ The goal is compounding memory:
 - [[Daily/README|Daily]] for daily notes and logs
 - [[Notes/README|Notes]] for evergreen notes and distilled thinking
 - [[Projects/README|Projects]] for active project capsules
+- Project \`Plans/\` folders for mirrored active implementation state
 - [[Research/README|Research]] for global source-based research and synthesized findings
 - [[Tools/README|Tools]] for scripts, automations, agent workflows, and technical documentation
 - [[Archive/README|Archive]] for inactive or completed material
@@ -107,6 +108,7 @@ Minimum structure:
 - \`Tasks.md\` for next actions
 - \`Decisions.md\` for decision log
 - \`Sessions/\` for clean agent session summaries and replay
+- \`Plans/\` for active implementation plan state mirrored from the repo
 - \`Research/\` for project-only research
 - \`Notes/\` for working notes
 - \`Artifacts/\` for generated outputs when needed
@@ -138,6 +140,7 @@ After meaningful work, the agent should update the vault, not just the code.
 
 Write back at least one of these when appropriate:
 - \`Tasks.md\` after planning, execution, or status changes
+- \`Plans/CURRENT.md\` after active implementation plan state changes
 - \`Decisions.md\` after architecture or implementation choices
 - \`Research/\` after source-based investigation
 - \`Notes/\` for implementation notes that may help later
@@ -340,6 +343,7 @@ tags:
 - Open Questions: [[Open Questions]]
 - Handoff: [[Handoff]]
 - Sessions: [[Sessions]]
+- Plans: [[Plans]]
 - Research: [[Research]]
 - Notes: [[Notes]]
 - Artifacts: [[Artifacts]]
@@ -527,6 +531,7 @@ function ensureVaultScaffold(vaultRoot) {
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Notes'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Sessions'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Artifacts'));
+    (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Plans'));
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'AGENTS.md'), vaultAgentTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Init.md'), vaultInitTemplate());
     for (const folder of DEFAULT_FOLDERS) {
@@ -545,6 +550,7 @@ function ensureVaultScaffold(vaultRoot) {
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Notes', 'README.md'), '# Notes\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Sessions', 'README.md'), '# Sessions\n\nClean agent session summaries for recall and replay.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Artifacts', 'README.md'), '# Artifacts\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Plans', 'README.md'), '# Plans\n\nDurable mirror of repo active implementation plan state.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, '.obsidian', 'core-plugins.json'), corePluginsConfig());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, '.obsidian', 'daily-notes.json'), dailyNotesConfig());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, '.obsidian', 'app.json'), appConfig());

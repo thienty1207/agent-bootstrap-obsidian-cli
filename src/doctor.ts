@@ -46,6 +46,8 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     [config.handoff_file || 'Handoff.md', path.join(config.project_root, config.handoff_file || 'Handoff.md')],
     [config.research_dir, path.join(config.project_root, config.research_dir)],
     [config.notes_dir, path.join(config.project_root, config.notes_dir)],
+    ['Plans/CURRENT.md', path.join(config.project_root, 'Plans', 'CURRENT.md')],
+    ['Plans/INDEX.md', path.join(config.project_root, 'Plans', 'INDEX.md')],
   ]
     .filter(([, absolutePath]) => !fs.existsSync(absolutePath))
     .map(([relativePath]) => relativePath);
@@ -61,6 +63,8 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
       && fs.existsSync(path.join(resolvedRepoRoot, '.codex', 'commands', 'plan', 'brainstorm.md')),
     docs: fs.existsSync(path.join(resolvedRepoRoot, 'docs')),
     plans: fs.existsSync(path.join(resolvedRepoRoot, 'plans')),
+    planState: fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md'))
+      && fs.existsSync(path.join(config.project_root, 'Plans', 'CURRENT.md')),
     gitAvailable: hasGit(),
     registered,
     vaultProject: fs.existsSync(config.project_root),

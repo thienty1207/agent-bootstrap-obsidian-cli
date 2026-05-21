@@ -10,6 +10,7 @@ import {
 } from './vault';
 import { formatAutoRecallContext, getRecallIndexPath } from './recall';
 import { formatSessionImportReport, importCodexSessionsForProject } from './session-importer';
+import { ensurePlanState, getActivePlanFile, getRecentPlanFiles } from './plan-state';
 
 export interface RepoConfig {
   vault_root: string;
@@ -139,6 +140,7 @@ export function getContext({
     skipped.push('Daily/** daily logs (run `agent-bootstrap context --full` when needed)');
   }
   if (config) {
+    ensurePlanState(resolvedRepoRoot, config);
     ensureDailyNote(config.vault_root);
     appendDailyLog(
       config.vault_root,
@@ -158,8 +160,19 @@ export function getContext({
       { label: 'Project Facts', filePath: path.join(config.project_root, config.facts_file || 'Facts.md') },
       { label: 'Project Open Questions', filePath: path.join(config.project_root, config.open_questions_file || 'Open Questions.md') },
       { label: 'Project Handoff', filePath: path.join(config.project_root, config.handoff_file || 'Handoff.md') },
+      { label: 'Active Plan State', filePath: path.join(resolvedRepoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md') },
       { label: 'Today Daily Note', filePath: getDailyNotePath(config.vault_root), fullOnly: true },
     );
+    const activePlanFile = getActivePlanFile(resolvedRepoRoot, config);
+    if (activePlanFile) {
+      sections.push({ label: 'Active Plan', filePath: activePlanFile });
+    }
+    if (mode === 'full') {
+      for (const filePath of getRecentPlanFiles(resolvedRepoRoot, 4)) {
+        sections.push({ label: 'Recent Plan', filePath, fullOnly: true });
+      }
+    }
+    skipped.push('Plan history date folders (compact context loads CURRENT.md and the active plan only)');
   } else {
     skipped.push('vault.config.json missing; loaded repo-local source context only');
     skipped.push('Vault/project memory files unavailable until `agent-bootstrap setup` and `agent-bootstrap init` run');

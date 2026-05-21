@@ -4,17 +4,17 @@ Portable CLI for bootstrapping coding projects into an Obsidian-backed AI memory
 
 ## Public Flow
 
-The core bootstrap flow stays small, with automatic memory commands available for agents and maintenance:
+The core bootstrap flow stays small, with automatic memory and active-plan commands available for agents and maintenance:
 
 1. Install or update the CLI
 2. Set the Obsidian vault path
 3. Initialize a project
 4. Update an existing project's kit files
-5. Let AI agents auto-load context and recall memory
-6. Export or back up memory when needed
+5. Let AI agents auto-load context, active plan state, and recall memory
+6. Export or back up memory and plan state when needed
 7. Uninstall when no longer needed
 
-Generated `AGENTS.md` files tell AI agents to run compact context automatically. Users can inspect recall, status, export, and backup manually, but normal AI work should not depend on manual memory commands.
+Generated `AGENTS.md` files tell AI agents to run compact context and plan status automatically. Users can inspect recall, status, export, backup, and plan state manually, but normal AI work should not depend on manual memory commands.
 
 ## 1. Install Or Update CLI
 
@@ -60,6 +60,7 @@ If `--type` is omitted, the default is `tool`.
 - root `AGENTS.md`
 - `.codex/` with Codex config, 3 core quality subagents, command templates, one bundled workflow skill, bundled optional domain skills, and optional custom skills/agents
 - `docs/vault-memory.md` and `docs/project-map.md`
+- `docs/superpowers/plans/` with `CURRENT.md`, `INDEX.md`, and dated active plan folders
 - `plans/` with clean planning templates and handoff report templates only
 - `vault.config.json`
 - `scripts/agent-memory.js`
@@ -92,6 +93,44 @@ Legacy `.agent`, `.agents`, and old `.github/agents|commands|rules|skills|prompt
 ```bash
 npm uninstall -g @kakasitink/agent-bootstrap
 ```
+
+## Automatic Active Plan State
+
+The kit now tracks what the AI is actively implementing, not just what it
+remembers. Real Superpowers implementation plans live under:
+
+```text
+docs/superpowers/plans/
+  CURRENT.md
+  INDEX.md
+  YYYY-MM-DD/
+    YYYY-MM-DD-task-name.md
+```
+
+The same state is mirrored into the Obsidian vault:
+
+```text
+Projects/<slug>/Plans/
+  CURRENT.md
+  INDEX.md
+  YYYY-MM-DD/
+```
+
+AI agents run these silently during normal work:
+
+```bash
+agent-bootstrap plan status
+agent-bootstrap plan start "<task title>"
+agent-bootstrap plan update "<progress note>"
+agent-bootstrap plan complete "<verification summary>"
+agent-bootstrap plan interrupt "<last known state>"
+```
+
+`CURRENT.md` is the dashboard for the next session: active plan, status,
+verification state, and next action. A plan is only marked `completed` when the
+agent records verification evidence. If work stops halfway through, the plan
+stays `in_progress` or `interrupted`; agents must not infer completion from
+silence, shutdown, or lack of user response.
 
 ## Optional: AI Context
 
@@ -171,6 +210,8 @@ Generated project agents should also use the repo-local runtime silently:
 
 ```bash
 node scripts/agent-memory.js recall "<query>"
+node scripts/agent-memory.js plan status
+node scripts/agent-memory.js plan start "<task title>"
 node scripts/agent-memory.js memory status
 node scripts/agent-memory.js memory import-sessions
 node scripts/agent-memory.js memory sync-sessions
@@ -357,12 +398,14 @@ The vault bridge is stable across `init` and `update`:
 
 - `vault.config.json` links repo, vault, project slug, project type, and kit version
 - `agent-bootstrap context --compact` loads repo context, vault context, project memory index, automatic Codex session import, and bounded semantic Auto Recall
+- `agent-bootstrap plan <status|start|update|complete|interrupt>` tracks active implementation state in the repo and mirrors it into the vault
 - `agent-bootstrap recall "<query>"` searches durable project memory Markdown with hybrid lexical + concept recall
 - `agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup>` handles health, import inspection, session replay, export, and backup
 - `scripts/agent-memory.js` writes tasks, decisions, facts, questions, handoffs, research, notes, recall output, memory maintenance, and compact summaries
 - `Facts.md` is for source-backed facts
 - `Open Questions.md` is for unresolved assumptions
 - `Handoff.md` keeps the next-session state short
+- `Plans/CURRENT.md` keeps the active implementation state durable
 
 ## Contributor Verification
 

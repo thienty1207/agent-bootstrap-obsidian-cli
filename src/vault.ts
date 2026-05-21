@@ -96,6 +96,7 @@ The goal is compounding memory:
 - [[Daily/README|Daily]] for daily notes and logs
 - [[Notes/README|Notes]] for evergreen notes and distilled thinking
 - [[Projects/README|Projects]] for active project capsules
+- Project \`Plans/\` folders for mirrored active implementation state
 - [[Research/README|Research]] for global source-based research and synthesized findings
 - [[Tools/README|Tools]] for scripts, automations, agent workflows, and technical documentation
 - [[Archive/README|Archive]] for inactive or completed material
@@ -136,6 +137,7 @@ Minimum structure:
 - \`Tasks.md\` for next actions
 - \`Decisions.md\` for decision log
 - \`Sessions/\` for clean agent session summaries and replay
+- \`Plans/\` for active implementation plan state mirrored from the repo
 - \`Research/\` for project-only research
 - \`Notes/\` for working notes
 - \`Artifacts/\` for generated outputs when needed
@@ -167,6 +169,7 @@ After meaningful work, the agent should update the vault, not just the code.
 
 Write back at least one of these when appropriate:
 - \`Tasks.md\` after planning, execution, or status changes
+- \`Plans/CURRENT.md\` after active implementation plan state changes
 - \`Decisions.md\` after architecture or implementation choices
 - \`Research/\` after source-based investigation
 - \`Notes/\` for implementation notes that may help later
@@ -377,6 +380,7 @@ tags:
 - Open Questions: [[Open Questions]]
 - Handoff: [[Handoff]]
 - Sessions: [[Sessions]]
+- Plans: [[Plans]]
 - Research: [[Research]]
 - Notes: [[Notes]]
 - Artifacts: [[Artifacts]]
@@ -575,6 +579,7 @@ export function ensureVaultScaffold(vaultRoot: string): void {
   ensureDir(path.join(vaultRoot, 'Projects', '_template', 'Notes'));
   ensureDir(path.join(vaultRoot, 'Projects', '_template', 'Sessions'));
   ensureDir(path.join(vaultRoot, 'Projects', '_template', 'Artifacts'));
+  ensureDir(path.join(vaultRoot, 'Projects', '_template', 'Plans'));
 
   writeFileIfMissing(path.join(vaultRoot, 'AGENTS.md'), vaultAgentTemplate());
   writeFileIfMissing(path.join(vaultRoot, 'Init.md'), vaultInitTemplate());
@@ -594,6 +599,7 @@ export function ensureVaultScaffold(vaultRoot: string): void {
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Notes', 'README.md'), '# Notes\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Sessions', 'README.md'), '# Sessions\n\nClean agent session summaries for recall and replay.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
   writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Artifacts', 'README.md'), '# Artifacts\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
+  writeFileIfMissing(path.join(vaultRoot, 'Projects', '_template', 'Plans', 'README.md'), '# Plans\n\nDurable mirror of repo active implementation plan state.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
   writeFileIfMissing(path.join(vaultRoot, '.obsidian', 'core-plugins.json'), corePluginsConfig());
   writeFileIfMissing(path.join(vaultRoot, '.obsidian', 'daily-notes.json'), dailyNotesConfig());
   writeFileIfMissing(path.join(vaultRoot, '.obsidian', 'app.json'), appConfig());

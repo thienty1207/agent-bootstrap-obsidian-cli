@@ -20,6 +20,7 @@ const vault_1 = require("./vault");
 const date_1 = require("./date");
 const recall_1 = require("./recall");
 const session_importer_1 = require("./session-importer");
+const plan_state_1 = require("./plan-state");
 function timestampForFile() {
     return (0, date_1.getIsoTimestamp)().replace(/[:.]/g, '-');
 }
@@ -46,7 +47,7 @@ function countMemoryRecords(config) {
     const index = (0, vault_1.readProjectMemoryIndex)(config.project_root, config.project_slug, config.project_type);
     return Object.values(index.recent).reduce((total, records) => total + records.length, 0);
 }
-function getCriticalMemoryPaths(config) {
+function getCriticalMemoryFiles(config, repoRoot) {
     const files = [
         node_path_1.default.join(config.project_root, 'README.md'),
         node_path_1.default.join(config.project_root, config.tasks_file),
@@ -79,7 +80,43 @@ function getCriticalMemoryPaths(config) {
             }
         }
     }
-    return [...new Set(files)].filter((filePath) => node_fs_1.default.existsSync(filePath));
+    for (const dirPath of [
+        node_path_1.default.join(config.project_root, 'Plans'),
+        node_path_1.default.join(repoRoot, 'docs', 'superpowers', 'plans'),
+    ]) {
+        if (!node_fs_1.default.existsSync(dirPath)) {
+            continue;
+        }
+        const stack = [dirPath];
+        while (stack.length > 0) {
+            const current = stack.pop();
+            if (!current)
+                continue;
+            for (const entry of node_fs_1.default.readdirSync(current, { withFileTypes: true })) {
+                const entryPath = node_path_1.default.join(current, entry.name);
+                if (entry.isDirectory()) {
+                    stack.push(entryPath);
+                }
+                else if (entry.isFile()) {
+                    files.push(entryPath);
+                }
+            }
+        }
+    }
+    return [...new Set(files)]
+        .filter((filePath) => node_fs_1.default.existsSync(filePath))
+        .map((sourcePath) => {
+        if (sourcePath.startsWith(config.project_root)) {
+            return {
+                sourcePath,
+                relativePath: node_path_1.default.relative(config.project_root, sourcePath).replace(/\\/g, '/'),
+            };
+        }
+        return {
+            sourcePath,
+            relativePath: `Repo/${node_path_1.default.relative(repoRoot, sourcePath).replace(/\\/g, '/')}`,
+        };
+    });
 }
 function getGitSummary(repoRoot) {
     try {
@@ -141,7 +178,9 @@ function buildMemoryDiagnostics({ recallDocuments, importState, }) {
 }
 function getMemoryStatus(options = {}) {
     const { repoRoot, config } = resolveConfig(options);
-    const recall = (0, recall_1.buildRecallIndex)(config);
+    (0, plan_state_1.ensurePlanState)(repoRoot, config);
+    const planState = (0, plan_state_1.getPlanStatus)({ repoRoot, config });
+    const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
     const sessionsRoot = node_path_1.default.join(config.project_root, 'Sessions');
     const exportsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Exports');
     const backupsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Backups');
@@ -151,6 +190,14 @@ function getMemoryStatus(options = {}) {
         recallDocuments: recall.index.documents.length,
         importState,
     });
+    if (planState.current && planState.current.verification === 'not_run') {
+        diagnostics.diagnostics.push({
+            level: 'warn',
+            code: 'active-plan-unverified',
+            message: `Active plan "${planState.current.title}" is ${planState.current.status} and has no verification evidence yet.`,
+        });
+        diagnostics.nextActions.push('agent-bootstrap plan status');
+    }
     return {
         ok: node_fs_1.default.existsSync(config.vault_root) && node_fs_1.default.existsSync(config.project_root),
         recallMode: recall.index.mode,
@@ -166,6 +213,7 @@ function getMemoryStatus(options = {}) {
             recallIndex: node_fs_1.default.existsSync((0, recall_1.getRecallIndexPath)(config.project_root)),
             sessionsDir: node_fs_1.default.existsSync(sessionsRoot),
             sessionImportState: node_fs_1.default.existsSync((0, session_importer_1.getSessionImportStatePath)(config.project_root)),
+            planState: node_fs_1.default.existsSync(planState.currentPath) && node_fs_1.default.existsSync(planState.vaultCurrentPath),
         },
         counts: {
             memoryRecords: countMemoryRecords(config),
@@ -176,7 +224,9 @@ function getMemoryStatus(options = {}) {
             backups: node_fs_1.default.existsSync(backupsRoot)
                 ? node_fs_1.default.readdirSync(backupsRoot).filter((entry) => node_fs_1.default.statSync(node_path_1.default.join(backupsRoot, entry)).isDirectory()).length
                 : 0,
+            plans: planState.counts.total,
         },
+        planState,
         imports: {
             mode: 'automatic Codex session importer',
             statePath: (0, session_importer_1.getSessionImportStatePath)(config.project_root),
@@ -212,7 +262,7 @@ function importProjectSessions(options = {}) {
         maxFiles: 400,
         maxImports: 32,
     });
-    const recall = (0, recall_1.buildRecallIndex)(config);
+    const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
     const guidance = (0, session_importer_1.describeSessionImportReport)(report);
     return {
         summary: guidance.summary,
@@ -277,7 +327,7 @@ function syncProjectSessions(options = {}) {
         title: timestamp,
         scope: 'project',
     }));
-    const recall = (0, recall_1.buildRecallIndex)(config);
+    const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
     return {
         sessionPath,
         sessionSummaryPath,
@@ -287,15 +337,16 @@ function syncProjectSessions(options = {}) {
 }
 function exportProjectMemory(options = {}) {
     const { repoRoot, config } = resolveConfig(options);
-    const recall = (0, recall_1.buildRecallIndex)(config);
+    (0, plan_state_1.ensurePlanState)(repoRoot, config);
+    const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
     const exportsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Exports');
     (0, fs_utils_1.ensureDir)(exportsRoot);
     const exportPath = node_path_1.default.join(exportsRoot, `agent-bootstrap-memory-${timestampForFile()}.json`);
     const memoryIndex = (0, vault_1.readProjectMemoryIndex)(config.project_root, config.project_slug, config.project_type);
-    const files = getCriticalMemoryPaths(config).map((filePath) => ({
-        relativePath: node_path_1.default.relative(config.project_root, filePath).replace(/\\/g, '/'),
-        path: filePath,
-        content: (0, fs_utils_1.readIfExists)(filePath) || '',
+    const files = getCriticalMemoryFiles(config, repoRoot).map((file) => ({
+        relativePath: file.relativePath,
+        path: file.sourcePath,
+        content: (0, fs_utils_1.readIfExists)(file.sourcePath) || '',
     }));
     const payload = {
         exportedAt: (0, date_1.getIsoTimestamp)(),
@@ -319,17 +370,17 @@ function exportProjectMemory(options = {}) {
 }
 function backupProjectMemory(options = {}) {
     const { repoRoot, config } = resolveConfig(options);
-    (0, recall_1.buildRecallIndex)(config);
+    (0, plan_state_1.ensurePlanState)(repoRoot, config);
+    (0, recall_1.buildRecallIndex)(config, repoRoot);
     const backupRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Backups');
     const backupPath = node_path_1.default.join(backupRoot, timestampForFile());
     (0, fs_utils_1.ensureDir)(backupPath);
     const copied = [];
-    for (const sourcePath of getCriticalMemoryPaths(config)) {
-        const relative = node_path_1.default.relative(config.project_root, sourcePath);
-        const targetPath = node_path_1.default.join(backupPath, relative);
+    for (const file of getCriticalMemoryFiles(config, repoRoot)) {
+        const targetPath = node_path_1.default.join(backupPath, file.relativePath);
         (0, fs_utils_1.ensureDir)(node_path_1.default.dirname(targetPath));
-        node_fs_1.default.copyFileSync(sourcePath, targetPath);
-        copied.push(relative.replace(/\\/g, '/'));
+        node_fs_1.default.copyFileSync(file.sourcePath, targetPath);
+        copied.push(file.relativePath);
     }
     const manifestPath = node_path_1.default.join(backupPath, 'manifest.json');
     (0, fs_utils_1.writeFile)(manifestPath, JSON.stringify({
@@ -349,8 +400,8 @@ function backupProjectMemory(options = {}) {
     };
 }
 function runRecall(options) {
-    const { config } = resolveConfig(options);
-    const results = (0, recall_1.recallProjectMemory)(config, options.query, options.limit);
+    const { repoRoot, config } = resolveConfig(options);
+    const results = (0, recall_1.recallProjectMemory)(config, options.query, options.limit, repoRoot);
     return (0, recall_1.formatRecallResults)(config, options.query, results);
 }
 function runMemoryCommand(subcommand, options = {}) {
@@ -403,6 +454,6 @@ function syncSessionsFromConfig(repoRoot, config) {
             reason: 'memory compact',
         }),
     });
-    (0, recall_1.buildRecallIndex)(config);
+    (0, recall_1.buildRecallIndex)(config, repoRoot);
     return sessionPath;
 }

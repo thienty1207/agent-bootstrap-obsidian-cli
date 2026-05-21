@@ -30,6 +30,8 @@ function runDoctor({ repoRoot } = {}) {
         [config.handoff_file || 'Handoff.md', node_path_1.default.join(config.project_root, config.handoff_file || 'Handoff.md')],
         [config.research_dir, node_path_1.default.join(config.project_root, config.research_dir)],
         [config.notes_dir, node_path_1.default.join(config.project_root, config.notes_dir)],
+        ['Plans/CURRENT.md', node_path_1.default.join(config.project_root, 'Plans', 'CURRENT.md')],
+        ['Plans/INDEX.md', node_path_1.default.join(config.project_root, 'Plans', 'INDEX.md')],
     ]
         .filter(([, absolutePath]) => !node_fs_1.default.existsSync(absolutePath))
         .map(([relativePath]) => relativePath);
@@ -44,6 +46,8 @@ function runDoctor({ repoRoot } = {}) {
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, '.codex', 'commands', 'plan', 'brainstorm.md')),
         docs: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs')),
         plans: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'plans')),
+        planState: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'Plans', 'CURRENT.md')),
         gitAvailable: hasGit(),
         registered,
         vaultProject: node_fs_1.default.existsSync(config.project_root),

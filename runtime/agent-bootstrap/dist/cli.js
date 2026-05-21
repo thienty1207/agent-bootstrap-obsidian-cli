@@ -10,9 +10,10 @@ const bootstrap_1 = require("./bootstrap");
 const context_1 = require("./context");
 const vault_1 = require("./vault");
 const memory_ops_1 = require("./memory-ops");
+const plan_state_1 = require("./plan-state");
 const INSTALL_COMMAND = 'npm i -g --force @kakasitink/agent-bootstrap';
 const UNINSTALL_COMMAND = 'npm uninstall -g @kakasitink/agent-bootstrap';
-const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, memory. Use --help for quickstart.';
+const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, memory, plan. Use --help for quickstart.';
 function parseFlags(args) {
     const options = {};
     const rest = [];
@@ -101,6 +102,13 @@ function writeHelp() {
         '  agent-bootstrap memory export [project-path]',
         '  agent-bootstrap memory backup [project-path]',
         '',
+        'Automatic active plan state:',
+        '  agent-bootstrap plan status [project-path]',
+        '  agent-bootstrap plan start "<title>" [project-path]',
+        '  agent-bootstrap plan update "<progress note>" [project-path]',
+        '  agent-bootstrap plan complete "<verification summary>" [project-path]',
+        '  agent-bootstrap plan interrupt "<last known state>" [project-path]',
+        '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
     ].join('\n'));
@@ -162,6 +170,22 @@ async function main(argv) {
             throw new Error('Memory requires a subcommand: status, import-sessions, sync-sessions, export, backup.');
         }
         writeJson((0, memory_ops_1.runMemoryCommand)(subcommand, { repoRoot: rest[1] }));
+        return;
+    }
+    if (command === 'plan') {
+        const { rest } = parseFlags(tail);
+        const subcommand = rest[0];
+        if (!subcommand) {
+            throw new Error('Plan requires a subcommand: status, start, update, complete, interrupt.');
+        }
+        const payload = subcommand === 'status' ? undefined : rest[1];
+        const repoRoot = subcommand === 'status' ? rest[1] : rest[2];
+        const foundRepoRoot = (0, context_1.resolveRepoRoot)(repoRoot ? node_path_1.default.resolve(repoRoot) : process.cwd());
+        writeJson((0, plan_state_1.runPlanCommand)(subcommand, {
+            repoRoot: foundRepoRoot,
+            config: (0, context_1.readRepoConfig)(foundRepoRoot),
+            titleOrNote: payload,
+        }));
         return;
     }
     throw new Error(`Unknown command "${command}". ${PUBLIC_COMMANDS}`);

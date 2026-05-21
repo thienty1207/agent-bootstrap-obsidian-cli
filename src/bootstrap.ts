@@ -32,6 +32,7 @@ import { DEFAULT_PROJECT_TYPE, normalizeProjectType, type ProjectType } from './
 import { readRepoConfig } from './context';
 import { getKitVersion, getPackageRoot } from './kit';
 import { syncSeededScaffold } from './scaffold';
+import { ensurePlanState } from './plan-state';
 import {
   appendDailyLog,
   createMemoryIndexRecord,
@@ -376,6 +377,7 @@ function applyBootstrap({
     ensureDir(path.join(projectRoot, 'Notes'));
     ensureDir(path.join(projectRoot, 'Sessions'));
     ensureDir(path.join(projectRoot, 'Artifacts'));
+    ensureDir(path.join(projectRoot, 'Plans'));
 
     const writeVaultFile = projectRootAlreadyExisted ? writeFileIfMissing : writeFile;
     writeVaultFile(path.join(projectRoot, 'README.md'), projectReadmeTemplate(projectSlug, repoRoot, today, projectType));
@@ -388,6 +390,7 @@ function applyBootstrap({
 
   ensureDir(path.join(projectRoot, 'Sessions'));
   ensureDir(path.join(projectRoot, 'Artifacts'));
+  ensureDir(path.join(projectRoot, 'Plans'));
 
   copyRepoScaffold(repoRoot);
   removeObsoleteManagedPlanFiles(repoRoot);
@@ -409,6 +412,23 @@ function applyBootstrap({
   writeFile(rootAgentsPath, upsertManagedBlock(currentRootAgent, rootAgentTemplate(vaultRoot, projectRoot, projectType)));
   writeFile(vaultMemoryPath, vaultMemoryDoc(vaultRoot, projectRoot, projectType));
   writeFile(path.join(repoRoot, 'docs', 'project-map.md'), projectMapTemplate(repoName, projectSlug, projectType));
+  ensurePlanState(repoRoot, {
+    vault_root: vaultRoot,
+    project_slug: projectSlug,
+    project_root: projectRoot,
+    project_type: projectType,
+    tasks_file: 'Tasks.md',
+    decisions_file: 'Decisions.md',
+    facts_file: 'Facts.md',
+    open_questions_file: 'Open Questions.md',
+    handoff_file: 'Handoff.md',
+    research_dir: 'Research',
+    notes_dir: 'Notes',
+    runtime_script: 'scripts/agent-memory.js',
+    hooks_path: '.githooks',
+    git_initialized: false,
+    hooks_configured: false,
+  });
 
   fs.rmSync(legacyRootAgentPath, { force: true });
   removeLegacyAgentAssets(repoRoot);

@@ -40,6 +40,8 @@ exports.MANAGED_REPO_PATHS = [
     '.codex/skills/vibe-security-scan/rules/languages/rust/README.md',
     'docs/vault-memory.md',
     'docs/project-map.md',
+    'docs/superpowers/plans/CURRENT.md',
+    'docs/superpowers/plans/INDEX.md',
     'plans/templates/feature-implementation-plan.md',
     'scripts/agent-memory.js',
     '.githooks/post-commit',

@@ -8,11 +8,12 @@ without scanning every skill or subagent file.
 
 1. `AGENTS.md`
 2. `agent-bootstrap context --compact`
-3. `.codex/INDEX.md`
-4. `.codex/agents/INDEX.md`
-5. `.codex/skills/INDEX.md`
-6. `agent-bootstrap recall "<query>"` only when compact context is insufficient
-7. One targeted skill or subagent only when the task requires it
+3. `agent-bootstrap plan status` for implementation, fix, security, frontend, backend, or verification work
+4. `.codex/INDEX.md`
+5. `.codex/agents/INDEX.md`
+6. `.codex/skills/INDEX.md`
+7. `agent-bootstrap recall "<query>"` only when compact context is insufficient
+8. One targeted skill or subagent only when the task requires it
 
 ## Boundaries
 
@@ -22,7 +23,9 @@ without scanning every skill or subagent file.
 - `.codex/commands/` contains prompt templates managed by this kit, not native Codex slash commands.
 - `.codex/skills/` contains the bundled Superpowers workflow skill, bundled optional domain skills, and optional registered custom skills. Do not recursively read it.
 - `docs/` and the linked vault hold durable project memory.
-- `agent-bootstrap context --compact` imports matched Codex sessions, refreshes bounded hybrid Auto Recall from the linked vault, and keeps full memory bodies on disk until queried.
+- `docs/superpowers/plans/` and vault `Plans/` hold Active Plan State so agents know what is active, interrupted, completed, or unverified.
+- `agent-bootstrap context --compact` imports matched Codex sessions, refreshes bounded hybrid Auto Recall from the linked vault, loads bounded Active Plan State, and keeps full memory bodies on disk until queried.
+- `agent-bootstrap plan start|update|complete|interrupt` keeps the active plan dashboard current; completion requires verification evidence.
 - `agent-bootstrap memory import-sessions` is available for maintenance inspection, but agents normally rely on compact context to run it automatically.
 
 There is no `.codex/rules/` folder. Short mandatory guardrails are kept in the

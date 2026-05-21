@@ -11,6 +11,7 @@ const fs_utils_1 = require("./fs-utils");
 const vault_1 = require("./vault");
 const recall_1 = require("./recall");
 const session_importer_1 = require("./session-importer");
+const plan_state_1 = require("./plan-state");
 function readRepoConfig(repoRoot) {
     const config = readOptionalRepoConfig(repoRoot);
     if (!config) {
@@ -81,13 +82,24 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
         skipped.push('Daily/** daily logs (run `agent-bootstrap context --full` when needed)');
     }
     if (config) {
+        (0, plan_state_1.ensurePlanState)(resolvedRepoRoot, config);
         (0, vault_1.ensureDailyNote)(config.vault_root);
         (0, vault_1.appendDailyLog)(config.vault_root, `Session started for \`${config.project_slug}\``, (0, vault_1.createDailyLogMarker)(['session', config.project_slug, new Date().toISOString().slice(0, 13)]));
         sessionImport = (0, session_importer_1.importCodexSessionsForProject)(resolvedRepoRoot, config, {
             maxFiles: mode === 'full' ? 400 : 160,
             maxImports: mode === 'full' ? 32 : 8,
         });
-        sections.push({ label: 'Vault Init', filePath: node_path_1.default.join(config.vault_root, 'Init.md') }, { label: 'Vault AGENTS', filePath: node_path_1.default.join(config.vault_root, 'AGENTS.md') }, { label: 'Project README', filePath: node_path_1.default.join(config.project_root, 'README.md') }, { label: 'Project Tasks', filePath: node_path_1.default.join(config.project_root, config.tasks_file) }, { label: 'Project Decisions', filePath: node_path_1.default.join(config.project_root, config.decisions_file) }, { label: 'Project Facts', filePath: node_path_1.default.join(config.project_root, config.facts_file || 'Facts.md') }, { label: 'Project Open Questions', filePath: node_path_1.default.join(config.project_root, config.open_questions_file || 'Open Questions.md') }, { label: 'Project Handoff', filePath: node_path_1.default.join(config.project_root, config.handoff_file || 'Handoff.md') }, { label: 'Today Daily Note', filePath: (0, vault_1.getDailyNotePath)(config.vault_root), fullOnly: true });
+        sections.push({ label: 'Vault Init', filePath: node_path_1.default.join(config.vault_root, 'Init.md') }, { label: 'Vault AGENTS', filePath: node_path_1.default.join(config.vault_root, 'AGENTS.md') }, { label: 'Project README', filePath: node_path_1.default.join(config.project_root, 'README.md') }, { label: 'Project Tasks', filePath: node_path_1.default.join(config.project_root, config.tasks_file) }, { label: 'Project Decisions', filePath: node_path_1.default.join(config.project_root, config.decisions_file) }, { label: 'Project Facts', filePath: node_path_1.default.join(config.project_root, config.facts_file || 'Facts.md') }, { label: 'Project Open Questions', filePath: node_path_1.default.join(config.project_root, config.open_questions_file || 'Open Questions.md') }, { label: 'Project Handoff', filePath: node_path_1.default.join(config.project_root, config.handoff_file || 'Handoff.md') }, { label: 'Active Plan State', filePath: node_path_1.default.join(resolvedRepoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md') }, { label: 'Today Daily Note', filePath: (0, vault_1.getDailyNotePath)(config.vault_root), fullOnly: true });
+        const activePlanFile = (0, plan_state_1.getActivePlanFile)(resolvedRepoRoot, config);
+        if (activePlanFile) {
+            sections.push({ label: 'Active Plan', filePath: activePlanFile });
+        }
+        if (mode === 'full') {
+            for (const filePath of (0, plan_state_1.getRecentPlanFiles)(resolvedRepoRoot, 4)) {
+                sections.push({ label: 'Recent Plan', filePath, fullOnly: true });
+            }
+        }
+        skipped.push('Plan history date folders (compact context loads CURRENT.md and the active plan only)');
     }
     else {
         skipped.push('vault.config.json missing; loaded repo-local source context only');

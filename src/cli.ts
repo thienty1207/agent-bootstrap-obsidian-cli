@@ -1,13 +1,14 @@
 import path from 'node:path';
 import { loadConfig, saveConfig } from './config';
 import { initProject, updateProject } from './bootstrap';
-import { getContext, type ContextMode } from './context';
+import { getContext, readRepoConfig, resolveRepoRoot, type ContextMode } from './context';
 import { ensureVaultScaffold } from './vault';
 import { runMemoryCommand, runRecall } from './memory-ops';
+import { runPlanCommand } from './plan-state';
 
 const INSTALL_COMMAND = 'npm i -g --force @kakasitink/agent-bootstrap';
 const UNINSTALL_COMMAND = 'npm uninstall -g @kakasitink/agent-bootstrap';
-const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, memory. Use --help for quickstart.';
+const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, memory, plan. Use --help for quickstart.';
 
 interface ParsedArgs {
   rest: string[];
@@ -122,6 +123,13 @@ function writeHelp(): void {
         '  agent-bootstrap memory export [project-path]',
         '  agent-bootstrap memory backup [project-path]',
         '',
+        'Automatic active plan state:',
+        '  agent-bootstrap plan status [project-path]',
+        '  agent-bootstrap plan start "<title>" [project-path]',
+        '  agent-bootstrap plan update "<progress note>" [project-path]',
+        '  agent-bootstrap plan complete "<verification summary>" [project-path]',
+        '  agent-bootstrap plan interrupt "<last known state>" [project-path]',
+        '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
       ].join('\n'),
@@ -195,6 +203,24 @@ export async function main(argv: string[]): Promise<void> {
     }
 
     writeJson(runMemoryCommand(subcommand, { repoRoot: rest[1] }));
+    return;
+  }
+
+  if (command === 'plan') {
+    const { rest } = parseFlags(tail);
+    const subcommand = rest[0];
+    if (!subcommand) {
+      throw new Error('Plan requires a subcommand: status, start, update, complete, interrupt.');
+    }
+
+    const payload = subcommand === 'status' ? undefined : rest[1];
+    const repoRoot = subcommand === 'status' ? rest[1] : rest[2];
+    const foundRepoRoot = resolveRepoRoot(repoRoot ? path.resolve(repoRoot) : process.cwd());
+    writeJson(runPlanCommand(subcommand, {
+      repoRoot: foundRepoRoot,
+      config: readRepoConfig(foundRepoRoot),
+      titleOrNote: payload,
+    }));
     return;
   }
 
