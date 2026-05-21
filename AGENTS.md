@@ -25,7 +25,7 @@ The CLI bootstraps new coding projects so they get:
 - `test/`: Node test suite
 - `.codex/config.toml`, `.codex/agents`, `.codex/commands`, `.codex/skills`: template assets copied into generated project roots
 - `.github/workflows/`: CI for this CLI repo itself
-- `docs/` and `plans/`: template assets copied into generated project roots
+- `docs/` and `plans/`: bridge docs plus clean planning templates copied into generated project roots
 
 ## Public CLI surface
 
@@ -59,7 +59,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Use the 3 bundled core subagents only as quality gates: `code-reviewer`, `security-auditor`, and `test-engineer`.
 - Read `.codex/agents/INDEX.md` before dispatching a subagent. Optional project agents must be registered there before use.
 - Do not reintroduce `.codex/rules`; mandatory guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
-- Treat older dated files under `plans/` as historical context; do not read them by default unless the task is about lifecycle history.
+- Treat root `plans/` as clean template and handoff assets only. When Superpowers needs a real project plan, write it under `docs/superpowers/plans/`.
 - If a fact is not present in repo, context output, or a cited source, mark it unknown instead of guessing.
 - Treat `README.md` and `src/cli.ts` as the source of truth for the public CLI surface if an older plan file mentions superseded commands.
 - Keep the managed `AGENTS.md` block refreshable without overwriting user-written instructions outside the markers.

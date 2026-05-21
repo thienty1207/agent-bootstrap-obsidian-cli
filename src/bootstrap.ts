@@ -68,6 +68,10 @@ const OBSOLETE_MANAGED_AGENT_FILES = new Set([
   ['rev', 'iewer'].join(''),
   ['tes', 'ter'].join(''),
 ].map((name) => `${name}.toml`));
+const OBSOLETE_MANAGED_PLAN_FILES = [
+  '2026-04-21-kit-v2-implementation-plan.md',
+  '2026-04-21-kit-v3-lifecycle-plan.md',
+];
 const CUSTOM_SKILLS_START = '<!-- agent-bootstrap:custom-skills:start -->';
 const CUSTOM_SKILLS_END = '<!-- agent-bootstrap:custom-skills:end -->';
 const CUSTOM_AGENTS_START = '<!-- agent-bootstrap:custom-agents:start -->';
@@ -119,6 +123,12 @@ function removeLegacyAgentAssets(repoRoot: string): void {
 
   for (const relativePath of legacyPaths) {
     fs.rmSync(path.join(repoRoot, relativePath), { recursive: true, force: true });
+  }
+}
+
+function removeObsoleteManagedPlanFiles(repoRoot: string): void {
+  for (const fileName of OBSOLETE_MANAGED_PLAN_FILES) {
+    fs.rmSync(path.join(repoRoot, 'plans', fileName), { force: true });
   }
 }
 
@@ -380,6 +390,7 @@ function applyBootstrap({
   ensureDir(path.join(projectRoot, 'Artifacts'));
 
   copyRepoScaffold(repoRoot);
+  removeObsoleteManagedPlanFiles(repoRoot);
   if (preserveReadme) {
     writeFileIfMissing(path.join(repoRoot, 'README.md'), repoReadmeTemplate(repoName, projectSlug, projectType));
   } else {

@@ -60,7 +60,7 @@ If `--type` is omitted, the default is `tool`.
 - root `AGENTS.md`
 - `.codex/` with Codex config, 3 core quality subagents, command templates, one bundled workflow skill, bundled optional domain skills, and optional custom skills/agents
 - `docs/vault-memory.md` and `docs/project-map.md`
-- `plans/`
+- `plans/` with clean planning templates and handoff report templates only
 - `vault.config.json`
 - `scripts/agent-memory.js`
 - `.githooks/post-commit`
@@ -68,6 +68,12 @@ If `--type` is omitted, the default is `tool`.
 - `Tasks.md`, `Decisions.md`, `Facts.md`, `Open Questions.md`, and `Handoff.md`
 
 Existing repo `README.md` files are preserved.
+
+`plans/` is not seeded with this kit's old lifecycle history. It is only a
+local template area for user-owned planning notes and handoff report templates.
+When the Superpowers workflow creates a real implementation plan for a project,
+keep that plan under `docs/superpowers/plans/` so AI agents do not confuse kit
+maintenance history with the current project's work.
 
 ## 4. Update Project Kit
 

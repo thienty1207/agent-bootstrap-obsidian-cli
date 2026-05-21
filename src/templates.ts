@@ -218,7 +218,7 @@ This package is documented around install/update, setup, init, project update, a
 - \`.github/\`
   - \`workflows/\`: GitHub Actions and YAML-only automation files
 - \`docs/\`: project documentation and reference notes
-- \`plans/\`: implementation templates and handoff reports
+- \`plans/\`: clean local planning templates and handoff report templates
 - \`scripts/\`: repo-local runtime helpers for durable memory write-back
 
 ## Ownership Boundaries
@@ -228,7 +228,8 @@ This package is documented around install/update, setup, init, project update, a
 - \`.codex/\` is kit-managed and refreshed from the installed kit by \`agent-bootstrap init\` or \`agent-bootstrap update\`.
 - Bundled optional skill folders are refreshed by \`agent-bootstrap update\`; custom skill folders under \`.codex/skills/<custom-skill>/\` are preserved when they are registered in \`.codex/skills/INDEX.md\`.
 - Custom agent files under \`.codex/agents/<custom-agent>.toml\` are preserved by \`agent-bootstrap update\` when they are registered in \`.codex/agents/INDEX.md\`.
-- \`docs/\` and \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
+- \`docs/\` and clean \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
+- Real Superpowers implementation plans should live under \`docs/superpowers/plans/\` when a workflow creates them, so local template files are not mistaken for current project history.
 - Customized source files and an existing repo \`README.md\` are preserved.
 
 ## Suggested use

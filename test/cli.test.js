@@ -20,6 +20,10 @@ const shippedSkills = [
 const obsoleteSkillDirs = [
   [['kar', 'pathy'].join(''), 'coding', 'principles'].join('-'),
 ];
+const obsoleteManagedPlanFiles = [
+  '2026-04-21-kit-v2-implementation-plan.md',
+  '2026-04-21-kit-v3-lifecycle-plan.md',
+];
 const coreAgents = [
   'code-reviewer',
   'security-auditor',
@@ -139,6 +143,21 @@ function assertAgentWorkspacePresent(repoRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'rules')), false);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'INDEX.md')), true);
   assertCoreSkillsPresent(repoRoot);
+}
+
+function assertCleanPlansWorkspace(repoRoot) {
+  assert.equal(fs.existsSync(path.join(repoRoot, 'plans')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'plans', 'README.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'plans', 'templates', 'feature-implementation-plan.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'plans', 'templates', 'bugfix-plan.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'plans', 'reports', 'handover-report-template.md')), true);
+  for (const fileName of obsoleteManagedPlanFiles) {
+    assert.equal(
+      fs.existsSync(path.join(repoRoot, 'plans', fileName)),
+      false,
+      `Expected obsolete managed plan to be absent: ${fileName}`,
+    );
+  }
 }
 
 function assertLegacyGithubAgentAssetsRemoved(repoRoot) {
@@ -314,7 +333,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '0.4.2');
+  assert.equal(packageJson.version, '0.4.3');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -335,6 +354,8 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.match(readme, /Add Project-Specific Agents/);
   assert.match(readme, /\.codex\/skills\/INDEX\.md/);
   assert.match(readme, /\.codex\/agents\/INDEX\.md/);
+  assert.doesNotMatch(agentGuide, /older dated files under `plans\/`/i);
+  assert.doesNotMatch(readme, /lifecycle plan/i);
   assert.match(readme, /--type frontend/);
   assert.match(readme, /--type backend/);
   assert.doesNotMatch(readme, /--type web/);
@@ -383,7 +404,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.equal(fs.existsSync(path.join(repoRoot, '.github', legacyAgentFile)), false);
   assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'vault-memory.md')));
   assert.ok(fs.existsSync(path.join(repoRoot, 'docs', 'code-standards.md')));
-  assert.ok(fs.existsSync(path.join(repoRoot, 'plans', 'templates', 'feature-implementation-plan.md')));
+  assertCleanPlansWorkspace(repoRoot);
   assertAgentWorkspacePresent(repoRoot);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
   assert.equal(fs.existsSync(path.join(repoRoot, 'runtime')), false);
@@ -621,6 +642,10 @@ test('update command refreshes Codex assets while preserving project and vault m
     '',
   ].join('\n'));
   writeFile(path.join(repoRoot, '.github', 'skills', 'old.md'), '# Legacy GitHub skill\n');
+  for (const fileName of obsoleteManagedPlanFiles) {
+    writeFile(path.join(repoRoot, 'plans', fileName), '# Obsolete kit plan\n');
+  }
+  writeFile(path.join(repoRoot, 'plans', 'my-feature-plan.md'), '# User feature plan\n');
 
   const projectConfigBefore = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
   const projectReadmeBefore = readFile(path.join(projectConfigBefore.project_root, 'README.md'));
@@ -648,6 +673,8 @@ test('update command refreshes Codex assets while preserving project and vault m
   assert.match(skillsIndexAfterUpdate, /superpowers/);
   assert.match(skillsIndexAfterUpdate, /frontend-design/);
   assert.match(skillsIndexAfterUpdate, /vibe-security-scan/);
+  assertCleanPlansWorkspace(repoRoot);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'plans', 'my-feature-plan.md')), true);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
 
   const projectConfigAfter = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
@@ -1040,6 +1067,10 @@ test('migrate helper upgrades a legacy repo into the single-root-AGENTS kit layo
     '<!-- agent-bootstrap:custom-skills:end -->',
     '',
   ].join('\n'));
+  for (const fileName of obsoleteManagedPlanFiles) {
+    writeFile(path.join(repoRoot, 'plans', fileName), '# Obsolete kit plan\n');
+  }
+  writeFile(path.join(repoRoot, 'plans', 'legacy-user-plan.md'), '# Keep user plan\n');
 
   let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -1062,6 +1093,8 @@ test('migrate helper upgrades a legacy repo into the single-root-AGENTS kit layo
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'rust', 'SKILL.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', obsoleteSkillDirs[0])), false);
   assert.match(readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md')), /Rust services, Cargo workflows/);
+  assertCleanPlansWorkspace(repoRoot);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'plans', 'legacy-user-plan.md')), true);
   assert.match(readFile(path.join(repoRoot, 'AGENTS.md')), /Keep this note\./);
   assert.match(readFile(path.join(repoRoot, 'AGENTS.md')), /Project type: backend/);
   assert.match(readFile(path.join(repoRoot, 'README.md')), /Do not overwrite this\./);

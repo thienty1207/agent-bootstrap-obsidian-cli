@@ -49,6 +49,10 @@ const OBSOLETE_MANAGED_AGENT_FILES = new Set([
     ['rev', 'iewer'].join(''),
     ['tes', 'ter'].join(''),
 ].map((name) => `${name}.toml`));
+const OBSOLETE_MANAGED_PLAN_FILES = [
+    '2026-04-21-kit-v2-implementation-plan.md',
+    '2026-04-21-kit-v3-lifecycle-plan.md',
+];
 const CUSTOM_SKILLS_START = '<!-- agent-bootstrap:custom-skills:start -->';
 const CUSTOM_SKILLS_END = '<!-- agent-bootstrap:custom-skills:end -->';
 const CUSTOM_AGENTS_START = '<!-- agent-bootstrap:custom-agents:start -->';
@@ -74,6 +78,11 @@ function removeLegacyAgentAssets(repoRoot) {
     ];
     for (const relativePath of legacyPaths) {
         node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, relativePath), { recursive: true, force: true });
+    }
+}
+function removeObsoleteManagedPlanFiles(repoRoot) {
+    for (const fileName of OBSOLETE_MANAGED_PLAN_FILES) {
+        node_fs_1.default.rmSync(node_path_1.default.join(repoRoot, 'plans', fileName), { force: true });
     }
 }
 function extractMarkedBlock(content, startMarker, endMarker) {
@@ -270,6 +279,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Sessions'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Artifacts'));
     copyRepoScaffold(repoRoot);
+    removeObsoleteManagedPlanFiles(repoRoot);
     if (preserveReadme) {
         (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoRoot, 'README.md'), (0, templates_1.repoReadmeTemplate)(repoName, projectSlug, projectType));
     }
