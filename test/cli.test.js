@@ -13,7 +13,9 @@ const binPath = path.join(__dirname, '..', 'bin', 'agent-bootstrap.js');
 const repoRoot = path.join(__dirname, '..');
 const legacyAgentFile = ['AGENT', 'md'].join('.');
 const shippedSkills = [
+  'frontend-design',
   'superpowers',
+  'vibe-security-scan',
 ];
 const obsoleteSkillDirs = [
   [['kar', 'pathy'].join(''), 'coding', 'principles'].join('-'),
@@ -312,7 +314,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '0.4.1');
+  assert.equal(packageJson.version, '0.4.2');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -405,9 +407,11 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(repoReadme, /3 core subagents/i);
   assert.match(repoReadme, /`\.codex\/agents\/code-reviewer\.toml`/i);
   assert.match(repoReadme, /`\.codex\/skills\/superpowers\/`/i);
+  assert.match(repoReadme, /bundled optional domain skills/i);
   assert.match(repoReadme, /optional project-specific custom skills/i);
   assert.doesNotMatch(repoReadme, /`\.codex\/skills\/agent-api\/`/i);
-  assert.doesNotMatch(repoReadme, /`\.codex\/skills\/frontend-design\/`/i);
+  assert.match(repoReadme, /`\.codex\/skills\/frontend-design\/`/i);
+  assert.match(repoReadme, /`\.codex\/skills\/vibe-security-scan\/`/i);
   assert.doesNotMatch(repoReadme, obsoleteSkillNamePattern());
   assert.doesNotMatch(repoReadme, /prompts\//i);
 
@@ -462,7 +466,7 @@ test('context reads repo and vault files from a nested directory', () => {
   assert.match(result.stdout, /Project Handoff/);
   assert.match(result.stdout, /# Tasks/);
   assert.match(result.stdout, /Codex Workspace Guide/i);
-  assert.match(result.stdout, /There is no `rules\/` folder/i);
+  assert.match(result.stdout, /There is no `\.codex\/rules\/` folder/i);
 });
 
 test('global context command reads repo and vault files from the current project', () => {
@@ -566,7 +570,7 @@ test('init creates the Codex workspace and removes legacy agent workspaces', () 
   const skills = fs.readdirSync(path.join(repoRoot, '.codex', 'skills'))
     .filter((entry) => fs.statSync(path.join(repoRoot, '.codex', 'skills', entry)).isDirectory())
     .sort();
-  assert.deepEqual(skills, ['superpowers']);
+  assert.deepEqual(skills, shippedSkills);
 });
 
 test('update command refreshes Codex assets while preserving project and vault memory', () => {
@@ -635,11 +639,15 @@ test('update command refreshes Codex assets while preserving project and vault m
   assert.match(agentsIndexAfterUpdate, /\.codex\/agents\/mobile-reviewer\.toml/);
   assert.match(agentsIndexAfterUpdate, /code-reviewer/);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'nextjs', 'SKILL.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'frontend-design', 'SKILL.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', 'vibe-security-scan', 'SKILL.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'skills', obsoleteSkillDirs[0])), false);
   const skillsIndexAfterUpdate = readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'));
   assert.match(skillsIndexAfterUpdate, /Next\.js routes, React Server Components, or App Router behavior/);
   assert.match(skillsIndexAfterUpdate, /\.codex\/skills\/nextjs\/SKILL\.md/);
   assert.match(skillsIndexAfterUpdate, /superpowers/);
+  assert.match(skillsIndexAfterUpdate, /frontend-design/);
+  assert.match(skillsIndexAfterUpdate, /vibe-security-scan/);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
 
   const projectConfigAfter = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
@@ -1620,7 +1628,7 @@ test('Codex indexes enforce workflow priority and compact-context guardrails', (
   const skillsIndex = readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'));
 
   assert.match(agentIndex, /Run `agent-bootstrap context --compact`/);
-  assert.match(agentIndex, /There is no `rules\/` folder/);
+  assert.match(agentIndex, /There is no `\.codex\/rules\/` folder/);
   assert.match(agentIndex, /agent-bootstrap managed prompt templates, not native Codex slash commands/);
   assert.match(agentIndex, /Superpowers \+ 3 core subagents/i);
   assert.match(agentIndex, /code-reviewer/);
@@ -1636,7 +1644,7 @@ test('Codex indexes enforce workflow priority and compact-context guardrails', (
   assert.equal(fs.existsSync(path.join(repoRoot, '.codex', 'rules')), false);
 });
 
-test('skill routing keeps one bundled skill with custom extension points', () => {
+test('skill routing keeps one bundled workflow skill with optional domain skills', () => {
   const skillsIndex = readFile(path.join(repoRoot, '.codex', 'skills', 'INDEX.md'));
   const superpowersReadme = readFile(path.join(repoRoot, '.codex', 'skills', 'superpowers', 'README.md'));
   const skillDirs = fs.readdirSync(path.join(repoRoot, '.codex', 'skills'))
@@ -1644,9 +1652,12 @@ test('skill routing keeps one bundled skill with custom extension points', () =>
     .sort();
 
   assert.deepEqual(skillDirs, shippedSkills);
-  assert.match(skillsIndex, /`superpowers` is the only bundled skill/);
+  assert.match(skillsIndex, /`superpowers` is the only bundled workflow skill/);
+  assert.match(skillsIndex, /Bundled Optional Domain Skills/);
+  assert.match(skillsIndex, /\.codex\/skills\/frontend-design\/SKILL\.md/);
+  assert.match(skillsIndex, /\.codex\/skills\/vibe-security-scan\/SKILL\.md/);
+  assert.match(skillsIndex, /auth|API|server action|secrets|\.env|Supabase|RLS|storage|upload|payment|subscription|quota|dependency|CORS|JWT|rate limit|access control|tenant|admin|security review/);
   assert.match(skillsIndex, /Custom Skills/);
-  assert.doesNotMatch(skillsIndex, /frontend-design/);
   assert.doesNotMatch(skillsIndex, /agent-api/);
   assert.doesNotMatch(skillsIndex, obsoleteSkillNamePattern());
 
@@ -1660,16 +1671,18 @@ test('skill routing keeps one bundled skill with custom extension points', () =>
   assert.doesNotMatch(superpowersReadme, obsoleteSkillNamePattern());
 });
 
-test('optional domain skills stay out of bundled routing without expanding compact context', () => {
+test('bundled optional domain skills stay lazy-loaded without expanding compact context', () => {
   const skillsRoot = path.join(repoRoot, '.codex', 'skills');
   const skillsIndex = readFile(path.join(skillsRoot, 'INDEX.md'));
 
   assert.match(skillsIndex, /superpowers/);
+  assert.match(skillsIndex, /frontend-design/);
+  assert.match(skillsIndex, /vibe-security-scan/);
   assert.match(skillsIndex, /Custom Skills/);
   assert.doesNotMatch(skillsIndex, obsoleteSkillNamePattern());
-  assert.doesNotMatch(skillsIndex, /frontend-design/);
   assert.doesNotMatch(skillsIndex, /agent-api/);
-  assert.equal(fs.existsSync(path.join(skillsRoot, 'frontend-design')), false);
+  assert.equal(fs.existsSync(path.join(skillsRoot, 'frontend-design')), true);
+  assert.equal(fs.existsSync(path.join(skillsRoot, 'vibe-security-scan')), true);
   assert.equal(fs.existsSync(path.join(skillsRoot, 'agent-api')), false);
   assert.equal(fs.existsSync(path.join(skillsRoot, obsoleteSkillDirs[0])), false);
 
@@ -1696,7 +1709,6 @@ test('shipped skill metadata is triggerable and does not reference removed skill
   const removedSkillPattern = new RegExp([
     obsoleteStem,
     'agent-api',
-    'frontend-design',
     ['andrej', obsoleteStem, 'skills'].join('-'),
     'api-designer',
     'architecture-designer',
@@ -1713,6 +1725,34 @@ test('shipped skill metadata is triggerable and does not reference removed skill
   const superpowersReadme = readFile(path.join(skillsRoot, 'superpowers', 'README.md'));
   assert.doesNotMatch(skillsIndex, removedSkillPattern);
   assert.doesNotMatch(superpowersReadme, removedSkillPattern);
+});
+
+test('bundled optional skill contracts are triggerable and bounded', () => {
+  const skillsRoot = path.join(repoRoot, '.codex', 'skills');
+  const frontend = readFile(path.join(skillsRoot, 'frontend-design', 'SKILL.md'));
+  const security = readFile(path.join(skillsRoot, 'vibe-security-scan', 'SKILL.md'));
+  const securityReadme = readFile(path.join(skillsRoot, 'vibe-security-scan', 'rules', 'languages', 'rust', 'README.md'));
+  const genericRulesRoot = path.join(skillsRoot, 'vibe-security-scan', 'rules', 'generic');
+  const genericRules = fs.readdirSync(genericRulesRoot).filter((entry) => entry.endsWith('.md')).sort();
+
+  assert.match(frontend, /^---\r?\n[\s\S]*name: frontend-design/);
+  assert.match(frontend, /description: Use when/i);
+  assert.match(frontend, /license: Apache-2\.0/i);
+  assert.doesNotMatch(frontend, /TomoTy/i);
+
+  assert.match(security, /^---\r?\n[\s\S]*name: vibe-security-scan/);
+  assert.match(security, /description: Use when/i);
+  assert.match(security, /Superpowers/);
+  assert.match(security, /security-auditor/);
+  assert.match(security, /defensive/i);
+  assert.match(security, /Do not attack live systems/i);
+  assert.match(security, /Never write secrets/i);
+  assert.match(security, /evidence-first/i);
+  assert.match(security, /MIT/i);
+  assert.match(security, /tanviet12\/vbsec/i);
+  assert.match(security, /Rust/i);
+  assert.match(securityReadme, /Rust Security Overlay/i);
+  assert.equal(genericRules.length, 21);
 });
 
 test('Codex routing index exposes exactly three core subagents with vault-aware contracts', () => {

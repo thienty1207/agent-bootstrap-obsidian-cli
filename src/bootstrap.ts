@@ -43,7 +43,11 @@ type BootstrapAction = 'init' | 'new' | 'sync' | 'update' | 'migrate';
 
 const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
 const SEEDED_REPO_PATHS = ['.codex', 'docs', 'plans'];
-const BUNDLED_SKILL_DIRS = new Set(['superpowers']);
+const BUNDLED_SKILL_DIRS = new Set([
+  'superpowers',
+  'frontend-design',
+  'vibe-security-scan',
+]);
 const CORE_AGENT_FILES = new Set([
   'code-reviewer.toml',
   'security-auditor.toml',

@@ -58,7 +58,7 @@ If `--type` is omitted, the default is `tool`.
 `init` creates:
 
 - root `AGENTS.md`
-- `.codex/` with Codex config, 3 core quality subagents, command templates, one bundled workflow skill, and optional custom skills/agents
+- `.codex/` with Codex config, 3 core quality subagents, command templates, one bundled workflow skill, bundled optional domain skills, and optional custom skills/agents
 - `docs/vault-memory.md` and `docs/project-map.md`
 - `plans/`
 - `vault.config.json`
@@ -214,13 +214,20 @@ Generated projects use `.codex/`:
   - `.codex/agents/security-auditor.toml`: security, auth, secrets, injection, dependency, and vault-sensitive data handling
   - `.codex/agents/test-engineer.toml`: test strategy, regression coverage, smoke checks, and verification evidence
 - `commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands
-- `skills/`: one bundled workflow skill plus optional project-specific custom skills
+- `skills/`: one bundled workflow skill, bundled optional domain skills, and optional project-specific custom skills
   - `.codex/skills/superpowers/`: workflow discipline
+  - `.codex/skills/frontend-design/`: optional frontend/UI guidance
+  - `.codex/skills/vibe-security-scan/`: optional defensive appsec guidance
   - `.codex/skills/<custom-skill>/`: optional user-added project skills registered in `.codex/skills/INDEX.md`
 
-Shipped bundled skill:
+Shipped bundled workflow skill:
 
 - `superpowers`: workflow discipline for planning, TDD, debugging, review, verification, and finishing work
+
+Bundled optional domain skills:
+
+- `frontend-design`: UI, component, layout, responsive, accessibility, interaction-state, and visual-polish guidance.
+- `vibe-security-scan`: defensive security scan guidance for auth, API, secrets, Supabase/RLS/storage, uploads, payments, dependencies, CORS, JWT, rate limits, access control, tenants, and production readiness. It is adapted from `tanviet12/vbsec` under MIT and adds a Rust overlay.
 
 Core subagents:
 
@@ -228,21 +235,35 @@ Core subagents:
 - `security-auditor`: security gate for exploitable issues and sensitive-data handling
 - `test-engineer`: verification gate for tests, smoke checks, and missing coverage
 
-Frontend, backend, cloud, database, CI, provider, and framework-specific work is
-handled through repo context, registered custom skills, registered custom agents,
-and current official docs when API details matter. If a project needs reusable
-local guidance for a specific stack, add a custom skill or custom agent and
-register it in the matching index instead of changing the bundled Superpowers
-workflow or the 3 core subagents.
+Frontend and security-sensitive work can use the bundled optional skills above
+when `.codex/skills/INDEX.md` routes the task there. Backend, cloud, database,
+CI, provider, and framework-specific work without a bundled match is handled
+through repo context, registered custom skills, registered custom agents, and
+current official docs when API details matter. If a project needs reusable local
+guidance for a specific stack, add a custom skill or custom agent and register it
+in the matching index instead of changing the bundled Superpowers workflow or
+the 3 core subagents.
 
-There is no `rules/` folder. Always-on guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
+There is no `.codex/rules/` folder. Always-on guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`. Security rule references live inside the optional `vibe-security-scan` skill and load only when routed.
+
+## Automatic Skill Routing
+
+Agents should read `.codex/skills/INDEX.md` before choosing a skill. They should
+load only the narrow matching skill body:
+
+- workflow-heavy work routes to `superpowers`
+- frontend/UI work routes to `frontend-design`
+- auth/API/secret/upload/payment/dependency/Supabase/RLS/security-review work routes to `vibe-security-scan`
+- project-specific stack guidance routes to custom skills registered in the custom block
+
+This keeps the workflow automatic without loading every skill into every task.
 
 ## Add Project-Specific Skills
 
 Generated projects can add domain skills for their own stack while keeping
 Superpowers as the only bundled workflow skill. Agents should inspect
-`.codex/skills/INDEX.md` first, then load only the matching custom skill body.
-They should not recursively scan every skill folder.
+`.codex/skills/INDEX.md` first, then load only the matching bundled optional or
+custom skill body. They should not recursively scan every skill folder.
 
 To add a custom skill:
 
@@ -275,8 +296,11 @@ Example custom routing entries for `.codex/skills/INDEX.md`:
 | Supabase database, auth, storage, realtime, or edge function work | `.codex/skills/supabase/SKILL.md` |
 ```
 
-`agent-bootstrap update` preserves custom skill folders that are not bundled kit
-skills and are not obsolete managed skills.
+`agent-bootstrap update` refreshes bundled optional skill folders from the kit
+and preserves custom skill folders that are not bundled kit skills and are not
+obsolete managed skills. If a project needs to override bundled frontend or
+security behavior, create a new project-specific skill with a new name and route
+to it from the custom block instead of editing the managed bundled folders.
 
 ## Add Project-Specific Agents
 

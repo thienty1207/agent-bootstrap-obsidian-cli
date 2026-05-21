@@ -216,8 +216,10 @@ This package is documented around install/update, setup, init, project update, a
     - \`.codex/agents/security-auditor.toml\`: security, auth, secrets, injection, dependency, and vault-sensitive data handling
     - \`.codex/agents/test-engineer.toml\`: test strategy, regression coverage, smoke checks, and verification evidence
   - \`commands/\`: agent-bootstrap managed command templates, not native Codex slash commands
-  - \`skills/\`: bundled workflow skill plus optional project-specific custom skills
+  - \`skills/\`: bundled workflow skill, bundled optional domain skills, and optional project-specific custom skills
     - \`.codex/skills/superpowers/\`: workflow discipline
+    - \`.codex/skills/frontend-design/\`: optional frontend/UI guidance
+    - \`.codex/skills/vibe-security-scan/\`: optional defensive appsec guidance
     - \`.codex/skills/<custom-skill>/\`: optional custom skills registered in \`.codex/skills/INDEX.md\`
 - \`.github/\`
   - \`workflows/\`: GitHub Actions and YAML-only automation files
@@ -230,7 +232,7 @@ This package is documented around install/update, setup, init, project update, a
 - \`README.md\` is user-owned and preserved if it already exists.
 - \`AGENTS.md\`, \`.codex/README.md\`, \`docs/vault-memory.md\`, \`docs/project-map.md\`, \`scripts/agent-memory.js\`, and \`.githooks/post-commit\` are managed bridge files.
 - \`.codex/\` is kit-managed and refreshed from the installed kit by \`agent-bootstrap init\` or \`agent-bootstrap update\`.
-- Custom skill folders under \`.codex/skills/<custom-skill>/\` are preserved by \`agent-bootstrap update\` when they are registered in \`.codex/skills/INDEX.md\`.
+- Bundled optional skill folders are refreshed by \`agent-bootstrap update\`; custom skill folders under \`.codex/skills/<custom-skill>/\` are preserved when they are registered in \`.codex/skills/INDEX.md\`.
 - Custom agent files under \`.codex/agents/<custom-agent>.toml\` are preserved by \`agent-bootstrap update\` when they are registered in \`.codex/agents/INDEX.md\`.
 - \`docs/\` and \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
 - Customized source files and an existing repo \`README.md\` are preserved.
@@ -242,8 +244,8 @@ This package is documented around install/update, setup, init, project update, a
 3. Read \`.codex/README.md\` and \`.codex/INDEX.md\` for how Codex config, subagents, command templates, and skills fit together.
 4. Read \`.codex/agents/INDEX.md\`, then use one core or custom agent only when a task benefits from explicit subagent delegation.
 5. Treat \`.codex/commands/\` as reusable prompt templates managed by this kit.
-6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs workflow guidance or a registered custom skill.
-7. Use repo context, targeted subagents, registered custom skills, registered custom agents, and current official docs for frontend, backend, provider, cloud, database, CI, or framework-specific work.
+6. Read \`.codex/skills/INDEX.md\`, then load the narrowest relevant skill folder only when the task needs workflow guidance, bundled optional frontend/security guidance, or a registered custom skill.
+7. Use repo context, targeted subagents, bundled optional skills, registered custom skills, registered custom agents, and current official docs for frontend, backend, provider, cloud, database, CI, security, or framework-specific work.
 8. Run \`agent-bootstrap recall "<query>"\` silently when compact context is not enough for prior project decisions, facts, or handoffs.
 9. Read \`docs/project-map.md\` for the current repo surfaces and verification path.
 10. Do not recursively scan \`.codex/skills\`; the index is the routing surface.
@@ -344,7 +346,7 @@ The compact context includes this read order:
 - Read \`.codex/INDEX.md\` before choosing agent assets.
 - Read \`.codex/agents/INDEX.md\` before dispatching a subagent.
 - Read \`.codex/skills/INDEX.md\` before loading any skill.
-- Use Superpowers as the only bundled workflow skill. Optional project skills must be registered in \`.codex/skills/INDEX.md\` before loading.
+- Use Superpowers as the only bundled workflow skill. Bundled optional domain skills such as \`frontend-design\` and \`vibe-security-scan\` are lazy-loaded only when \`.codex/skills/INDEX.md\` routes the task there. Optional project skills must be registered in \`.codex/skills/INDEX.md\` before loading.
 - Superpowers is the workflow brain. The 3 bundled core subagents are quality gates: \`code-reviewer\`, \`security-auditor\`, and \`test-engineer\`.
 - Optional project agents must be registered in \`.codex/agents/INDEX.md\` before use.
 - Do not let subagents invoke other subagents; composition belongs to the parent agent, command, or user.

@@ -20,15 +20,17 @@ folder recursively.
 - `.codex/config.toml`: Codex subagent settings.
 - `.codex/agents/`: 3 core subagents plus optional custom agents registered in the agent index.
 - `.codex/commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands.
-- `.codex/skills/`: one bundled Superpowers workflow skill plus optional custom skills registered in the skills index.
+- `.codex/skills/`: one bundled Superpowers workflow skill, bundled optional domain skills, and optional custom skills registered in the skills index.
 - Vault `Artifacts/recall-index.json`, `Artifacts/session-import-state.json`, and `Sessions/`: generated semantic recall and imported session assets maintained by `context`, `recall`, and `memory` commands.
 
-There is no `rules/` folder. Mandatory guardrails live in `AGENTS.md`, this index,
-and `.codex/skills/INDEX.md`.
+There is no `.codex/rules/` folder. Mandatory guardrails live in `AGENTS.md`,
+this index, and `.codex/skills/INDEX.md`. Security rule references live inside
+the optional `vibe-security-scan` skill and load only when routed.
 
 ## Skill Routing
 
-- `superpowers` is the only bundled skill and owns workflow discipline: planning, TDD, debugging, review, verification, and finishing work.
+- `superpowers` is the only bundled workflow skill and owns workflow discipline: planning, TDD, debugging, review, verification, and finishing work.
+- `frontend-design` and `vibe-security-scan` are bundled optional domain skills. Load them only when `.codex/skills/INDEX.md` routes the task there.
 - Optional project-specific skills must be registered in `.codex/skills/INDEX.md` before loading.
 
 Load the narrowest matching skill from the index. If a fact is not in repo files,

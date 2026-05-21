@@ -55,7 +55,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep vault scaffold links centered around `Init.md` so Obsidian Graph View and agent memory navigation stay useful as the vault grows.
 - Treat `src/` as the source of truth; `dist/` and `runtime/agent-bootstrap/dist/` are generated build outputs.
 - Do not recursively scan `.codex/skills`; read `.codex/skills/INDEX.md` and load one narrow skill only when needed.
-- Use Superpowers as the only bundled workflow skill. Optional project skills must be registered in `.codex/skills/INDEX.md` before an agent loads them.
+- Use Superpowers as the only bundled workflow skill. Bundled optional domain skills such as `frontend-design` and `vibe-security-scan` are lazy-loaded only when `.codex/skills/INDEX.md` routes the task there. Optional project skills must be registered in `.codex/skills/INDEX.md` before an agent loads them.
 - Use the 3 bundled core subagents only as quality gates: `code-reviewer`, `security-auditor`, and `test-engineer`.
 - Read `.codex/agents/INDEX.md` before dispatching a subagent. Optional project agents must be registered there before use.
 - Do not reintroduce `.codex/rules`; mandatory guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
