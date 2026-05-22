@@ -22,6 +22,7 @@ const context_1 = require("./context");
 const kit_1 = require("./kit");
 const scaffold_1 = require("./scaffold");
 const plan_state_1 = require("./plan-state");
+const product_harness_1 = require("./product-harness");
 const vault_1 = require("./vault");
 const SCAFFOLD_MANIFEST_PATH = '.agent-bootstrap-manifest.json';
 const SEEDED_REPO_PATHS = ['.codex', 'docs', 'plans'];
@@ -270,6 +271,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Sessions'));
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Artifacts'));
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Plans'));
+        (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'ProductHarness'));
         const writeVaultFile = projectRootAlreadyExisted ? fs_utils_1.writeFileIfMissing : fs_utils_1.writeFile;
         writeVaultFile(node_path_1.default.join(projectRoot, 'README.md'), (0, templates_1.projectReadmeTemplate)(projectSlug, repoRoot, today, projectType));
         writeVaultFile(node_path_1.default.join(projectRoot, 'Tasks.md'), (0, templates_1.tasksTemplate)(projectSlug, today));
@@ -281,6 +283,7 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Sessions'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Artifacts'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'Plans'));
+    (0, fs_utils_1.ensureDir)(node_path_1.default.join(projectRoot, 'ProductHarness'));
     copyRepoScaffold(repoRoot);
     removeObsoleteManagedPlanFiles(repoRoot);
     if (preserveReadme) {
@@ -301,6 +304,23 @@ function applyBootstrap({ action, repoRoot, vaultRoot, projectSlug, projectType,
     (0, fs_utils_1.writeFile)(vaultMemoryPath, (0, templates_1.vaultMemoryDoc)(vaultRoot, projectRoot, projectType));
     (0, fs_utils_1.writeFile)(node_path_1.default.join(repoRoot, 'docs', 'project-map.md'), (0, templates_1.projectMapTemplate)(repoName, projectSlug, projectType));
     (0, plan_state_1.ensurePlanState)(repoRoot, {
+        vault_root: vaultRoot,
+        project_slug: projectSlug,
+        project_root: projectRoot,
+        project_type: projectType,
+        tasks_file: 'Tasks.md',
+        decisions_file: 'Decisions.md',
+        facts_file: 'Facts.md',
+        open_questions_file: 'Open Questions.md',
+        handoff_file: 'Handoff.md',
+        research_dir: 'Research',
+        notes_dir: 'Notes',
+        runtime_script: 'scripts/agent-memory.js',
+        hooks_path: '.githooks',
+        git_initialized: false,
+        hooks_configured: false,
+    });
+    (0, product_harness_1.ensureProductHarness)(repoRoot, {
         vault_root: vaultRoot,
         project_slug: projectSlug,
         project_root: projectRoot,

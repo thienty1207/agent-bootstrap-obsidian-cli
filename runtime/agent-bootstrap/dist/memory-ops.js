@@ -21,6 +21,7 @@ const date_1 = require("./date");
 const recall_1 = require("./recall");
 const session_importer_1 = require("./session-importer");
 const plan_state_1 = require("./plan-state");
+const product_harness_1 = require("./product-harness");
 function timestampForFile() {
     return (0, date_1.getIsoTimestamp)().replace(/[:.]/g, '-');
 }
@@ -82,7 +83,12 @@ function getCriticalMemoryFiles(config, repoRoot) {
     }
     for (const dirPath of [
         node_path_1.default.join(config.project_root, 'Plans'),
+        node_path_1.default.join(config.project_root, 'ProductHarness'),
         node_path_1.default.join(repoRoot, 'docs', 'superpowers', 'plans'),
+        node_path_1.default.join(repoRoot, 'docs', 'product'),
+        node_path_1.default.join(repoRoot, 'docs', 'stories'),
+        node_path_1.default.join(repoRoot, 'docs', 'validation'),
+        node_path_1.default.join(repoRoot, 'docs', 'decisions'),
     ]) {
         if (!node_fs_1.default.existsSync(dirPath)) {
             continue;
@@ -179,7 +185,9 @@ function buildMemoryDiagnostics({ recallDocuments, importState, }) {
 function getMemoryStatus(options = {}) {
     const { repoRoot, config } = resolveConfig(options);
     (0, plan_state_1.ensurePlanState)(repoRoot, config);
+    (0, product_harness_1.ensureProductHarness)(repoRoot, config);
     const planState = (0, plan_state_1.getPlanStatus)({ repoRoot, config });
+    const productHarness = (0, product_harness_1.getProductHarnessStatus)({ repoRoot, config });
     const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
     const sessionsRoot = node_path_1.default.join(config.project_root, 'Sessions');
     const exportsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Exports');
@@ -198,6 +206,14 @@ function getMemoryStatus(options = {}) {
         });
         diagnostics.nextActions.push('agent-bootstrap plan status');
     }
+    if (productHarness.proofGaps.length > 0) {
+        diagnostics.diagnostics.push({
+            level: 'warn',
+            code: 'product-harness-proof-gap',
+            message: productHarness.proofGaps.join(' '),
+        });
+        diagnostics.nextActions.push('agent-bootstrap harness status');
+    }
     return {
         ok: node_fs_1.default.existsSync(config.vault_root) && node_fs_1.default.existsSync(config.project_root),
         recallMode: recall.index.mode,
@@ -214,6 +230,7 @@ function getMemoryStatus(options = {}) {
             sessionsDir: node_fs_1.default.existsSync(sessionsRoot),
             sessionImportState: node_fs_1.default.existsSync((0, session_importer_1.getSessionImportStatePath)(config.project_root)),
             planState: node_fs_1.default.existsSync(planState.currentPath) && node_fs_1.default.existsSync(planState.vaultCurrentPath),
+            productHarness: productHarness.ok,
         },
         counts: {
             memoryRecords: countMemoryRecords(config),
@@ -225,8 +242,10 @@ function getMemoryStatus(options = {}) {
                 ? node_fs_1.default.readdirSync(backupsRoot).filter((entry) => node_fs_1.default.statSync(node_path_1.default.join(backupsRoot, entry)).isDirectory()).length
                 : 0,
             plans: planState.counts.total,
+            stories: productHarness.counts.stories,
         },
         planState,
+        productHarness,
         imports: {
             mode: 'automatic Codex session importer',
             statePath: (0, session_importer_1.getSessionImportStatePath)(config.project_root),
@@ -253,6 +272,7 @@ function getMemoryStatus(options = {}) {
             'agent-bootstrap memory sync-sessions',
             'agent-bootstrap memory export',
             'agent-bootstrap memory backup',
+            'agent-bootstrap harness status',
         ],
     };
 }
@@ -338,6 +358,7 @@ function syncProjectSessions(options = {}) {
 function exportProjectMemory(options = {}) {
     const { repoRoot, config } = resolveConfig(options);
     (0, plan_state_1.ensurePlanState)(repoRoot, config);
+    (0, product_harness_1.ensureProductHarness)(repoRoot, config);
     const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
     const exportsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Exports');
     (0, fs_utils_1.ensureDir)(exportsRoot);
@@ -371,6 +392,7 @@ function exportProjectMemory(options = {}) {
 function backupProjectMemory(options = {}) {
     const { repoRoot, config } = resolveConfig(options);
     (0, plan_state_1.ensurePlanState)(repoRoot, config);
+    (0, product_harness_1.ensureProductHarness)(repoRoot, config);
     (0, recall_1.buildRecallIndex)(config, repoRoot);
     const backupRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Backups');
     const backupPath = node_path_1.default.join(backupRoot, timestampForFile());

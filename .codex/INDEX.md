@@ -6,9 +6,11 @@ folder recursively.
 
 ## Automatic Startup
 
-- Run `agent-bootstrap context --compact` before meaningful repo work. It also imports matched Codex sessions, redacts obvious secrets, dedupes imports, refreshes hybrid recall, and loads bounded Active Plan State.
+- Run `agent-bootstrap context --compact` before meaningful repo work. It also imports matched Codex sessions, redacts obvious secrets, dedupes imports, refreshes hybrid recall, and loads bounded Active Plan State plus Product Harness.
 - Run `agent-bootstrap plan status` after compact context for implementation, fix, security, frontend, backend, or verification work.
 - Use `agent-bootstrap plan start|update|complete|interrupt` to keep `docs/superpowers/plans/` and vault `Plans/` aligned; never infer completion from silence.
+- Run `agent-bootstrap harness status` after plan status for medium/high-risk feature work.
+- Use `agent-bootstrap harness intake|proof|decision` to keep feature intent, risk, scope, proof, and product decisions aligned with vault `ProductHarness/`.
 - Use `agent-bootstrap recall "<query>"` when compact context is not enough for prior decisions, facts, handoffs, or session summaries.
 - Use `agent-bootstrap memory status` when memory health, import state, diagnostics, next actions, export, backup, or session sync needs inspection.
 - Use `agent-bootstrap memory import-sessions` only for explicit maintenance; normal startup already runs it through compact context.
@@ -25,6 +27,7 @@ folder recursively.
 - `.codex/skills/`: one bundled Superpowers workflow skill, bundled optional domain skills, and optional custom skills registered in the skills index.
 - Vault `Artifacts/recall-index.json`, `Artifacts/session-import-state.json`, and `Sessions/`: generated semantic recall and imported session assets maintained by `context`, `recall`, and `memory` commands.
 - `docs/superpowers/plans/` and vault `Plans/`: Active Plan State maintained by `agent-bootstrap plan`.
+- `docs/product/`, `docs/stories/`, `docs/validation/`, `docs/decisions/`, and vault `ProductHarness/`: Product Harness maintained by `agent-bootstrap harness`.
 
 There is no `.codex/rules/` folder. Mandatory guardrails live in `AGENTS.md`,
 this index, and `.codex/skills/INDEX.md`. Security rule references live inside
@@ -38,6 +41,13 @@ the optional `vibe-security-scan` skill and load only when routed.
 
 Load the narrowest matching skill from the index. If a fact is not in repo files,
 context output, or a cited source, mark it unknown instead of guessing.
+
+## Product Harness
+
+Product Harness is not a skill and does not replace Superpowers. It is the bounded
+product contract layer for feature intent, scope, risk, proof, and product
+decisions. Use it for medium/high-risk work; keep small docs/copy/polish tasks
+lightweight.
 
 ## Subagent Routing
 

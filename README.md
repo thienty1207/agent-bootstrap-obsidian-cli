@@ -4,17 +4,17 @@ Portable CLI for bootstrapping coding projects into an Obsidian-backed AI memory
 
 ## Public Flow
 
-The core bootstrap flow stays small, with automatic memory and active-plan commands available for agents and maintenance:
+The core bootstrap flow stays small, with automatic memory, active-plan, and Product Harness commands available for agents and maintenance:
 
 1. Install or update the CLI
 2. Set the Obsidian vault path
 3. Initialize a project
 4. Update an existing project's kit files
-5. Let AI agents auto-load context, active plan state, and recall memory
-6. Export or back up memory and plan state when needed
+5. Let AI agents auto-load context, active plan state, Product Harness, and recall memory
+6. Export or back up memory, plan state, and Product Harness when needed
 7. Uninstall when no longer needed
 
-Generated `AGENTS.md` files tell AI agents to run compact context and plan status automatically. Users can inspect recall, status, export, backup, and plan state manually, but normal AI work should not depend on manual memory commands.
+Generated `AGENTS.md` files tell AI agents to run compact context, plan status, and Product Harness automatically. Users can inspect recall, status, export, backup, plan state, and harness state manually, but normal AI work should not depend on manual memory commands.
 
 ## 1. Install Or Update CLI
 
@@ -61,6 +61,7 @@ If `--type` is omitted, the default is `tool`.
 - `.codex/` with Codex config, 3 core quality subagents, command templates, one bundled workflow skill, bundled optional domain skills, and optional custom skills/agents
 - `docs/vault-memory.md` and `docs/project-map.md`
 - `docs/superpowers/plans/` with `CURRENT.md`, `INDEX.md`, and dated active plan folders
+- `docs/product/`, `docs/stories/`, `docs/validation/`, and `docs/decisions/` for Product Harness
 - `plans/` with clean planning templates and handoff report templates only
 - `vault.config.json`
 - `scripts/agent-memory.js`
@@ -131,6 +132,49 @@ verification state, and next action. A plan is only marked `completed` when the
 agent records verification evidence. If work stops halfway through, the plan
 stays `in_progress` or `interrupted`; agents must not infer completion from
 silence, shutdown, or lack of user response.
+
+## Product Harness
+
+Product Harness is the product-understanding layer. It is not a skill, not a
+new core, and it does not replace Superpowers.
+
+Think of the four layers like this:
+
+- Daily log: what happened today.
+- Active Plan State: which step is active and whether verification ran.
+- Product Harness: what the feature must achieve, what is in scope, how risky it
+  is, and what proof is required.
+- Vault memory: durable long-term memory and recall.
+
+Generated projects keep Product Harness files under:
+
+```text
+docs/product/
+docs/stories/
+docs/validation/
+docs/decisions/
+```
+
+The same state is mirrored into:
+
+```text
+Projects/<slug>/ProductHarness/
+```
+
+AI agents run these silently for medium or high-risk work:
+
+```bash
+agent-bootstrap harness status
+agent-bootstrap harness intake "<feature title>"
+agent-bootstrap harness proof "<verification summary>"
+agent-bootstrap harness decision "<decision summary>"
+```
+
+Small docs, copy, and tiny polish tasks stay lightweight. Auth, login, payment,
+permissions, tenant/RLS, migrations, uploads, security, backend APIs, frontend
+flows, forms, dashboards, state, and integrations should get harness intake and
+proof tracking. `harness proof` records evidence, but only `agent-bootstrap plan
+complete` completes the active plan.
 
 ## Optional: AI Context
 
@@ -212,6 +256,8 @@ Generated project agents should also use the repo-local runtime silently:
 node scripts/agent-memory.js recall "<query>"
 node scripts/agent-memory.js plan status
 node scripts/agent-memory.js plan start "<task title>"
+node scripts/agent-memory.js harness status
+node scripts/agent-memory.js harness intake "<feature title>"
 node scripts/agent-memory.js memory status
 node scripts/agent-memory.js memory import-sessions
 node scripts/agent-memory.js memory sync-sessions
@@ -399,6 +445,7 @@ The vault bridge is stable across `init` and `update`:
 - `vault.config.json` links repo, vault, project slug, project type, and kit version
 - `agent-bootstrap context --compact` loads repo context, vault context, project memory index, automatic Codex session import, and bounded semantic Auto Recall
 - `agent-bootstrap plan <status|start|update|complete|interrupt>` tracks active implementation state in the repo and mirrors it into the vault
+- `agent-bootstrap harness <status|intake|proof|decision>` tracks feature intent, risk, scope, proof, and product decisions in the repo and mirrors it into the vault
 - `agent-bootstrap recall "<query>"` searches durable project memory Markdown with hybrid lexical + concept recall
 - `agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup>` handles health, import inspection, session replay, export, and backup
 - `scripts/agent-memory.js` writes tasks, decisions, facts, questions, handoffs, research, notes, recall output, memory maintenance, and compact summaries
@@ -406,6 +453,7 @@ The vault bridge is stable across `init` and `update`:
 - `Open Questions.md` is for unresolved assumptions
 - `Handoff.md` keeps the next-session state short
 - `Plans/CURRENT.md` keeps the active implementation state durable
+- `ProductHarness/` keeps feature intent and proof durable
 
 ## Contributor Verification
 

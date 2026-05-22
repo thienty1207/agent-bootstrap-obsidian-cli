@@ -26,6 +26,7 @@ import {
   readSessionImportState,
 } from './session-importer';
 import { ensurePlanState, getPlanStatus } from './plan-state';
+import { ensureProductHarness, getProductHarnessStatus } from './product-harness';
 
 interface MemoryCommandOptions {
   repoRoot?: string;
@@ -100,7 +101,12 @@ function getCriticalMemoryFiles(config: RepoConfig, repoRoot: string): Array<{ s
 
   for (const dirPath of [
     path.join(config.project_root, 'Plans'),
+    path.join(config.project_root, 'ProductHarness'),
     path.join(repoRoot, 'docs', 'superpowers', 'plans'),
+    path.join(repoRoot, 'docs', 'product'),
+    path.join(repoRoot, 'docs', 'stories'),
+    path.join(repoRoot, 'docs', 'validation'),
+    path.join(repoRoot, 'docs', 'decisions'),
   ]) {
     if (!fs.existsSync(dirPath)) {
       continue;
@@ -211,7 +217,9 @@ function buildMemoryDiagnostics({
 export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<string, unknown> {
   const { repoRoot, config } = resolveConfig(options);
   ensurePlanState(repoRoot, config);
+  ensureProductHarness(repoRoot, config);
   const planState = getPlanStatus({ repoRoot, config });
+  const productHarness = getProductHarnessStatus({ repoRoot, config });
   const recall = buildRecallIndex(config, repoRoot);
   const sessionsRoot = path.join(config.project_root, 'Sessions');
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
@@ -230,6 +238,14 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
     });
     diagnostics.nextActions.push('agent-bootstrap plan status');
   }
+  if (productHarness.proofGaps.length > 0) {
+    diagnostics.diagnostics.push({
+      level: 'warn',
+      code: 'product-harness-proof-gap',
+      message: productHarness.proofGaps.join(' '),
+    });
+    diagnostics.nextActions.push('agent-bootstrap harness status');
+  }
 
   return {
     ok: fs.existsSync(config.vault_root) && fs.existsSync(config.project_root),
@@ -247,6 +263,7 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
       sessionsDir: fs.existsSync(sessionsRoot),
       sessionImportState: fs.existsSync(getSessionImportStatePath(config.project_root)),
       planState: fs.existsSync(planState.currentPath) && fs.existsSync(planState.vaultCurrentPath),
+      productHarness: productHarness.ok,
     },
     counts: {
       memoryRecords: countMemoryRecords(config),
@@ -258,8 +275,10 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
         ? fs.readdirSync(backupsRoot).filter((entry) => fs.statSync(path.join(backupsRoot, entry)).isDirectory()).length
         : 0,
       plans: planState.counts.total,
+      stories: productHarness.counts.stories,
     },
     planState,
+    productHarness,
     imports: {
       mode: 'automatic Codex session importer',
       statePath: getSessionImportStatePath(config.project_root),
@@ -286,6 +305,7 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
       'agent-bootstrap memory sync-sessions',
       'agent-bootstrap memory export',
       'agent-bootstrap memory backup',
+      'agent-bootstrap harness status',
     ],
   };
 }
@@ -382,6 +402,7 @@ export function syncProjectSessions(options: MemoryCommandOptions = {}): Record<
 export function exportProjectMemory(options: MemoryCommandOptions = {}): Record<string, unknown> {
   const { repoRoot, config } = resolveConfig(options);
   ensurePlanState(repoRoot, config);
+  ensureProductHarness(repoRoot, config);
   const recall = buildRecallIndex(config, repoRoot);
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
   ensureDir(exportsRoot);
@@ -417,6 +438,7 @@ export function exportProjectMemory(options: MemoryCommandOptions = {}): Record<
 export function backupProjectMemory(options: MemoryCommandOptions = {}): Record<string, unknown> {
   const { repoRoot, config } = resolveConfig(options);
   ensurePlanState(repoRoot, config);
+  ensureProductHarness(repoRoot, config);
   buildRecallIndex(config, repoRoot);
   const backupRoot = path.join(config.project_root, 'Artifacts', 'Backups');
   const backupPath = path.join(backupRoot, timestampForFile());

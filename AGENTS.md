@@ -29,9 +29,9 @@ The CLI bootstraps new coding projects so they get:
 
 ## Public CLI surface
 
-The documented user-facing flow is install/update CLI, `setup`, `init`, project `update`, automatic `context`, active `plan` state, targeted `recall`, memory maintenance, and uninstall.
+The documented user-facing flow is install/update CLI, `setup`, `init`, project `update`, automatic `context`, active `plan` state, Product Harness, targeted `recall`, memory maintenance, and uninstall.
 
-`context` remains the automatic AI-context command. AI agents should run `agent-bootstrap context --compact` automatically from this file instead of asking the user to run it. `context --compact` also imports matched Codex sessions, refreshes hybrid semantic recall, loads bounded Active Plan State, and keeps the startup bounded. `plan`, `recall`, and `memory` commands are public helper commands for active execution state, targeted vault search, status, import inspection, export, backup, and session sync.
+`context` remains the automatic AI-context command. AI agents should run `agent-bootstrap context --compact` automatically from this file instead of asking the user to run it. `context --compact` also imports matched Codex sessions, refreshes hybrid semantic recall, loads bounded Active Plan State and Product Harness, and keeps the startup bounded. `plan`, `harness`, `recall`, and `memory` commands are public helper commands for active execution state, product understanding, targeted vault search, status, import inspection, export, backup, and session sync.
 
 This source repo also contains lifecycle helper modules such as `syncProject`, `migrateProject`, and `runDoctor`; `updateProject` backs the public `agent-bootstrap update [projectPath]` command.
 
@@ -46,6 +46,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep `agent-bootstrap update [projectPath]` sufficient to refresh kit-managed `.codex` and bridge files in projects already being built.
 - Keep `agent-bootstrap context --compact` as the automatic first command agents run at the start of a fresh project session.
 - Keep `agent-bootstrap plan <status|start|update|complete|interrupt> [projectPath]` available for active implementation state.
+- Keep `agent-bootstrap harness <status|intake|proof|decision> [projectPath]` available for Product Harness feature intent, risk, scope, proof, and product decisions.
 - Keep `agent-bootstrap recall "<query>" [projectPath]` available for targeted memory search when compact context is insufficient.
 - Keep `agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup> [projectPath]` available for memory health diagnostics, automatic Codex session import inspection, clean session summaries, JSON export, and plain-file backup.
 - Use `agent-bootstrap context --why` before expanding context, and `agent-bootstrap context --full` only when daily history is needed.
@@ -53,6 +54,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep repo-local memory writes appending to daily notes and auto-routing project vs global research by default.
 - Keep `context` loading a compact project memory index and bounded Auto Recall so large repos do not require broad vault scans.
 - Keep `context` loading `docs/superpowers/plans/CURRENT.md` and only the active plan in compact mode.
+- Keep `context` loading bounded Product Harness state without dumping every story history folder.
 - Keep automatic Codex session import bounded, deduped, redacted, and tied to confident repo matches only.
 - Keep vault scaffold links centered around `Init.md` so Obsidian Graph View and agent memory navigation stay useful as the vault grows.
 - Treat `src/` as the source of truth; `dist/` and `runtime/agent-bootstrap/dist/` are generated build outputs.
@@ -62,6 +64,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Read `.codex/agents/INDEX.md` before dispatching a subagent. Optional project agents must be registered there before use.
 - Do not reintroduce `.codex/rules`; mandatory guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
 - Treat root `plans/` as clean template and handoff assets only. When Superpowers needs a real project plan, write it under `docs/superpowers/plans/`.
+- Treat Product Harness as a product contract layer, not a skill or new core. It complements daily logs and Active Plan State.
 - Do not infer completion from silence, shutdown, or lack of user response; active plan state must remain `in_progress` or `interrupted` until verification is recorded.
 - If a fact is not present in repo, context output, or a cited source, mark it unknown instead of guessing.
 - Treat `README.md` and `src/cli.ts` as the source of truth for the public CLI surface if an older plan file mentions superseded commands.
@@ -87,5 +90,6 @@ These are always-on guardrails, not a separate skill. Superpowers owns planning,
 4. Confirm `README.md` and `src/cli.ts` still agree on the public command surface
 5. In generated projects, use `agent-bootstrap context --compact` as the automatic first-step context loader and Codex session importer for AI sessions
 6. Use `agent-bootstrap plan status` silently when implementation state matters
-7. Use `agent-bootstrap recall "<query>"` silently when prior project memory is needed
-8. Use `agent-bootstrap memory status` before import/backup/export troubleshooting
+7. Use `agent-bootstrap harness status` and `agent-bootstrap harness intake "<feature title>"` silently for medium/high-risk feature work
+8. Use `agent-bootstrap recall "<query>"` silently when prior project memory is needed
+9. Use `agent-bootstrap memory status` before import/backup/export troubleshooting

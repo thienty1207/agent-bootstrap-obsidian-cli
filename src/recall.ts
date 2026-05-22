@@ -198,12 +198,20 @@ function documentKindFromPath(config: RepoConfig, filePath: string): string {
   const relativeVaultPath = path.relative(config.vault_root, filePath).replace(/\\/g, '/');
 
   if (normalizedPath.includes('/docs/superpowers/plans/')) return 'plan';
+  if (normalizedPath.includes('/docs/product/')) return 'harness-product';
+  if (normalizedPath.includes('/docs/stories/')) return 'harness-story';
+  if (normalizedPath.includes('/docs/validation/')) return 'harness-validation';
+  if (normalizedPath.includes('/docs/decisions/')) return 'harness-decision';
   if (relativeProjectPath === 'Tasks.md') return 'task';
   if (relativeProjectPath === 'Decisions.md') return 'decision';
   if (relativeProjectPath === 'Facts.md') return 'fact';
   if (relativeProjectPath === 'Open Questions.md') return 'question';
   if (relativeProjectPath === 'Handoff.md') return 'handoff';
   if (relativeProjectPath.startsWith('Plans/')) return 'plan';
+  if (relativeProjectPath.startsWith('ProductHarness/Stories/')) return 'harness-story';
+  if (relativeProjectPath.startsWith('ProductHarness/Validation/')) return 'harness-validation';
+  if (relativeProjectPath.startsWith('ProductHarness/Decisions/')) return 'harness-decision';
+  if (relativeProjectPath.startsWith('ProductHarness/')) return 'harness-product';
   if (relativeProjectPath.startsWith('Research/')) return 'research';
   if (relativeProjectPath.startsWith('Notes/')) return 'note';
   if (relativeProjectPath.startsWith('Sessions/')) return 'session';
@@ -252,6 +260,7 @@ function collectRecallFilePaths(config: RepoConfig, repoRoot?: string): string[]
     path.join(config.project_root, config.handoff_file || 'Handoff.md'),
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
     ...recentMarkdownFiles(path.join(config.project_root, 'Plans'), MAX_MARKDOWN_FILES_PER_DIR, true),
+    ...recentMarkdownFiles(path.join(config.project_root, 'ProductHarness'), MAX_MARKDOWN_FILES_PER_DIR, true),
     ...recentMarkdownFiles(path.join(config.project_root, config.research_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, config.notes_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, 'Sessions'), MAX_MARKDOWN_FILES_PER_DIR, true),
@@ -259,6 +268,10 @@ function collectRecallFilePaths(config: RepoConfig, repoRoot?: string): string[]
   ];
   if (repoRoot) {
     candidates.push(...recentMarkdownFiles(path.join(repoRoot, 'docs', 'superpowers', 'plans'), MAX_MARKDOWN_FILES_PER_DIR, true));
+    candidates.push(...recentMarkdownFiles(path.join(repoRoot, 'docs', 'product'), MAX_MARKDOWN_FILES_PER_DIR, true));
+    candidates.push(...recentMarkdownFiles(path.join(repoRoot, 'docs', 'stories'), MAX_MARKDOWN_FILES_PER_DIR, true));
+    candidates.push(...recentMarkdownFiles(path.join(repoRoot, 'docs', 'validation'), MAX_MARKDOWN_FILES_PER_DIR, true));
+    candidates.push(...recentMarkdownFiles(path.join(repoRoot, 'docs', 'decisions'), MAX_MARKDOWN_FILES_PER_DIR, true));
   }
 
   return [...new Set(candidates)].filter((filePath) => fs.existsSync(filePath));

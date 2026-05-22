@@ -200,8 +200,8 @@ It keeps the agent workspace under \`.codex\`, while GitHub automation stays und
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
 
-This package is documented around install/update, setup, init, project update, automatic context, semantic recall, active plan state, memory status, automatic session import, backup, and uninstall.
-\`agent-bootstrap context --compact\` is automatic agent startup; \`plan\`, \`recall\`, and \`memory\` commands are available for targeted execution state, inspection, and maintenance.
+This package is documented around install/update, setup, init, project update, automatic context, semantic recall, active plan state, Product Harness, memory status, automatic session import, backup, and uninstall.
+\`agent-bootstrap context --compact\` is automatic agent startup; \`plan\`, \`harness\`, \`recall\`, and \`memory\` commands are available for targeted execution state, product understanding, inspection, and maintenance.
 
 ## Structure
 
@@ -226,6 +226,7 @@ This package is documented around install/update, setup, init, project update, a
 - \`docs/\`: project documentation and reference notes
 - \`plans/\`: clean local planning templates and handoff report templates
 - \`docs/superpowers/plans/\`: active implementation plan state with \`CURRENT.md\`, \`INDEX.md\`, and dated plan folders
+- \`docs/product/\`, \`docs/stories/\`, \`docs/validation/\`, and \`docs/decisions/\`: Product Harness layer for product intent, feature stories, proof, and product decisions
 - \`scripts/\`: repo-local runtime helpers for durable memory write-back
 
 ## Ownership Boundaries
@@ -237,6 +238,7 @@ This package is documented around install/update, setup, init, project update, a
 - Custom agent files under \`.codex/agents/<custom-agent>.toml\` are preserved by \`agent-bootstrap update\` when they are registered in \`.codex/agents/INDEX.md\`.
 - \`docs/\` and clean \`plans/\` template assets are safely synced from the installed kit when they are still untouched.
 - Real Superpowers implementation plans should live under \`docs/superpowers/plans/\` when a workflow creates them, so local template files are not mistaken for current project history.
+- Product Harness files under \`docs/product/\`, \`docs/stories/\`, \`docs/validation/\`, and \`docs/decisions/\` are managed as lightweight product understanding; user-written stories and decisions are preserved.
 - Customized source files and an existing repo \`README.md\` are preserved.
 
 ## Suggested use
@@ -262,6 +264,7 @@ This package is documented around install/update, setup, init, project update, a
 - \`agent-bootstrap memory export\` writes a JSON export under \`Artifacts/Exports/\`.
 - \`agent-bootstrap memory backup\` writes a timestamped plain-file backup under \`Artifacts/Backups/\`.
 - \`agent-bootstrap plan status\` reports the active Superpowers plan dashboard; \`plan start/update/complete/interrupt\` keeps \`docs/superpowers/plans/\` and the vault \`Plans/\` mirror aligned.
+- \`agent-bootstrap harness status\` reports Product Harness readiness; \`harness intake/proof/decision\` keeps feature intent, risk, scope, proof, and product decisions aligned with the vault.
 
 ## Automatic Active Plan State
 
@@ -270,6 +273,15 @@ This package is documented around install/update, setup, init, project update, a
 - Vault \`Plans/\` mirrors the repo state for durable memory.
 - Agents run \`agent-bootstrap plan status\` after compact context and update plan state silently before the final response.
 - A plan is completed only when verification evidence is recorded; silence or shutdown never means completed.
+
+## Product Harness
+
+- Product Harness is not a skill and does not replace Superpowers.
+- Daily logs say what happened today; Active Plan State says what step is active; Product Harness says what the feature must achieve and what proof is required.
+- Medium and high-risk tasks such as auth, login, payment, permissions, migrations, uploads, backend APIs, frontend flows, and integrations should get \`agent-bootstrap harness intake "<feature title>"\` before coding.
+- Before the final response, agents record verification with \`agent-bootstrap harness proof "<verification summary>"\` when proof exists.
+- Important product decisions are recorded with \`agent-bootstrap harness decision "<decision summary>"\`.
+- Users normally do not run these commands manually; generated \`AGENTS.md\` tells AI agents when to run them silently.
 `;
 }
 function typeFocus(projectType) {
@@ -349,8 +361,9 @@ The compact context includes this read order:
 10. \`${projectRoot}/Open Questions.md\`
 11. \`${projectRoot}/Handoff.md\`
 12. \`docs/superpowers/plans/CURRENT.md\`, the active plan body, and \`${projectRoot}/Plans/\` through bounded Active Plan State
-13. \`${projectRoot}/Sessions/\` summaries, \`${projectRoot}/Sessions/Imported/\` Codex imports, \`${projectRoot}/Artifacts/session-import-state.json\`, and \`${projectRoot}/Artifacts/recall-index.json\` through bounded Auto Recall
-14. relevant docs under \`docs/\`, targeted agent assets under \`.codex/\`, and workflows under \`.github/workflows/\`
+13. \`docs/product/\`, \`docs/stories/\`, \`docs/validation/\`, \`docs/decisions/\`, and \`${projectRoot}/ProductHarness/\` through bounded Product Harness
+14. \`${projectRoot}/Sessions/\` summaries, \`${projectRoot}/Sessions/Imported/\` Codex imports, \`${projectRoot}/Artifacts/session-import-state.json\`, and \`${projectRoot}/Artifacts/recall-index.json\` through bounded Auto Recall
+15. relevant docs under \`docs/\`, targeted agent assets under \`.codex/\`, and workflows under \`.github/workflows/\`
 
 ## Context discipline
 
@@ -361,6 +374,7 @@ The compact context includes this read order:
 - Use Superpowers as the only bundled workflow skill. Bundled optional domain skills such as \`frontend-design\` and \`vibe-security-scan\` are lazy-loaded only when \`.codex/skills/INDEX.md\` routes the task there. Optional project skills must be registered in \`.codex/skills/INDEX.md\` before loading.
 - Superpowers is the workflow brain. The 3 bundled core subagents are quality gates: \`code-reviewer\`, \`security-auditor\`, and \`test-engineer\`.
 - Optional project agents must be registered in \`.codex/agents/INDEX.md\` before use.
+- Product Harness is not a skill, not a new core, and not a replacement for Superpowers. It is a lightweight product contract layer for feature intent, scope, risk, and proof.
 - Do not let subagents invoke other subagents; composition belongs to the parent agent, command, or user.
 - Do not recursively scan \`.codex/agents\`; use the index and load one routed TOML only when needed.
 - Do not recursively scan \`.codex/skills\`; load one narrow skill only when needed.
@@ -391,6 +405,10 @@ ${typeFocus(projectType).join('\n')}
 - \`agent-bootstrap plan update "<progress note>"\`
 - \`agent-bootstrap plan complete "<verification summary>"\`
 - \`agent-bootstrap plan interrupt "<last known state>"\`
+- \`agent-bootstrap harness status\`
+- \`agent-bootstrap harness intake "<feature title>"\`
+- \`agent-bootstrap harness proof "<verification summary>"\`
+- \`agent-bootstrap harness decision "<decision summary>"\`
 - \`agent-bootstrap memory import-sessions\`
 - \`agent-bootstrap context --why\`
 - \`agent-bootstrap context --full\`
@@ -398,6 +416,8 @@ ${typeFocus(projectType).join('\n')}
 Running \`agent-bootstrap context --compact\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, imports matched Codex sessions, refreshes the hybrid recall index, loads routed repo/vault memory, loads bounded Active Plan State, and includes bounded Auto Recall so the agent does not need to scan the vault manually.
 
 Immediately after compact context, run \`agent-bootstrap plan status\` silently for implementation, fix, security, frontend, backend, or verification work. Before editing, create or resume a plan with \`agent-bootstrap plan start "<task title>"\`. During work, run \`agent-bootstrap plan update "<what changed, what remains, verification state>"\`. Before the final response, run \`agent-bootstrap plan complete "<verification command/result summary>"\` only when verification passed; otherwise run \`agent-bootstrap plan interrupt "<last known state and next action>"\`. Do not infer completion from silence, shutdown, or lack of user response.
+
+For medium or high-risk work, run Product Harness silently after plan status. Use \`agent-bootstrap harness status\` to inspect the feature contract layer. Before coding auth, login, password, token, payment, billing, subscription, permission, admin, tenant, RLS, migration, upload, security, API, backend, frontend flow, form, dashboard, state, or integration work, run \`agent-bootstrap harness intake "<task title>"\`. Before the final response, if verification exists, run \`agent-bootstrap harness proof "<verification summary>"\`. If a product decision appears, run \`agent-bootstrap harness decision "<decision summary>"\`. Small docs/copy/polish tasks stay lightweight and do not need a heavy story unless they become broader product work.
 
 ## Write-back rules
 
@@ -409,6 +429,7 @@ After meaningful work, write back to the vault:
 - \`Open Questions.md\` for unresolved assumptions and blockers
 - \`Handoff.md\` for the latest concise next-session handoff
 - \`docs/superpowers/plans/CURRENT.md\` and the active dated plan through \`agent-bootstrap plan\` for execution state
+- \`docs/product/\`, \`docs/stories/\`, \`docs/validation/\`, and \`docs/decisions/\` through \`agent-bootstrap harness\` for product intent, feature scope, risk, proof, and product decisions
 - \`Research/\` for project-specific research
 - global \`Research\` or \`Notes\` for reusable insights
 
@@ -420,6 +441,7 @@ The repo runtime handles the low-friction automation:
 - it keeps a local QMD-inspired semantic recall index under \`Artifacts/recall-index.json\`
 - it imports matched Codex sessions into \`Sessions/Imported/\`, redacts obvious secrets, and tracks dedupe state under \`Artifacts/session-import-state.json\`
 - it mirrors active plan state from \`docs/superpowers/plans/\` into vault \`Plans/\`
+- it mirrors Product Harness state from repo docs into vault \`ProductHarness/\`
 - it writes clean session summaries under \`Sessions/\` through \`compact\` or \`memory sync-sessions\`
 - it still supports explicit \`--scope project\` or \`--scope global\` when needed
 
@@ -431,6 +453,7 @@ Before a final response after meaningful work, run \`node scripts/agent-memory.j
 - \`agent-bootstrap recall "<query>"\` or \`node scripts/agent-memory.js recall "<query>"\` for targeted memory search
 - \`agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup>\` or \`node scripts/agent-memory.js memory <status|import-sessions|sync-sessions|export|backup>\` for memory health, import inspection, and backup
 - \`agent-bootstrap plan <status|start|update|complete|interrupt>\` or \`node scripts/agent-memory.js plan <status|start|update|complete|interrupt>\` for active plan tracking
+- \`agent-bootstrap harness <status|intake|proof|decision>\` or \`node scripts/agent-memory.js harness <status|intake|proof|decision>\` for Product Harness tracking
 - \`node scripts/agent-memory.js <task|decision|research|note|fact|question|handoff|compact>\` for write-back and memory compaction
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 `;
@@ -621,6 +644,12 @@ function ensureDir(dirPath) {
 function writeFile(filePath, content) {
   ensureDir(path.dirname(filePath));
   fs.writeFileSync(filePath, content);
+}
+
+function writeFileIfMissing(filePath, content) {
+  if (!fs.existsSync(filePath)) {
+    writeFile(filePath, content);
+  }
 }
 
 function findRepoRoot(startPath) {
@@ -988,12 +1017,20 @@ function documentKindFromPath(config, filePath) {
   const relativeProjectPath = path.relative(config.project_root, filePath).replace(/\\\\/g, '/');
   const relativeVaultPath = path.relative(config.vault_root, filePath).replace(/\\\\/g, '/');
   if (normalizedPath.includes('/docs/superpowers/plans/')) return 'plan';
+  if (normalizedPath.includes('/docs/product/')) return 'harness-product';
+  if (normalizedPath.includes('/docs/stories/')) return 'harness-story';
+  if (normalizedPath.includes('/docs/validation/')) return 'harness-validation';
+  if (normalizedPath.includes('/docs/decisions/')) return 'harness-decision';
   if (relativeProjectPath === 'Tasks.md') return 'task';
   if (relativeProjectPath === 'Decisions.md') return 'decision';
   if (relativeProjectPath === 'Facts.md') return 'fact';
   if (relativeProjectPath === 'Open Questions.md') return 'question';
   if (relativeProjectPath === 'Handoff.md') return 'handoff';
   if (relativeProjectPath.startsWith('Plans/')) return 'plan';
+  if (relativeProjectPath.startsWith('ProductHarness/Stories/')) return 'harness-story';
+  if (relativeProjectPath.startsWith('ProductHarness/Validation/')) return 'harness-validation';
+  if (relativeProjectPath.startsWith('ProductHarness/Decisions/')) return 'harness-decision';
+  if (relativeProjectPath.startsWith('ProductHarness/')) return 'harness-product';
   if (relativeProjectPath.startsWith('Research/')) return 'research';
   if (relativeProjectPath.startsWith('Notes/')) return 'note';
   if (relativeProjectPath.startsWith('Sessions/')) return 'session';
@@ -1011,6 +1048,11 @@ function collectRecallFilePaths(config) {
     path.join(config.project_root, config.handoff_file || 'Handoff.md'),
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
     ...recentMarkdownFiles(path.join(config.project_root, 'Plans'), 40, true),
+    ...recentMarkdownFiles(path.join(config.project_root, 'ProductHarness'), 40, true),
+    ...recentMarkdownFiles(path.join(findRepoRoot(process.cwd()), 'docs', 'product'), 40, true),
+    ...recentMarkdownFiles(path.join(findRepoRoot(process.cwd()), 'docs', 'stories'), 40, true),
+    ...recentMarkdownFiles(path.join(findRepoRoot(process.cwd()), 'docs', 'validation'), 40, true),
+    ...recentMarkdownFiles(path.join(findRepoRoot(process.cwd()), 'docs', 'decisions'), 40, true),
     ...recentMarkdownFiles(path.join(config.project_root, config.research_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, config.notes_dir)),
     ...recentMarkdownFiles(path.join(config.project_root, 'Sessions'), 40, true),
@@ -1679,7 +1721,7 @@ function memoryRecordCount(config) {
   return Object.values(index.recent).reduce((total, records) => total + records.length, 0);
 }
 
-function getCriticalMemoryPaths(config) {
+function getCriticalMemoryPaths(config, repoRoot) {
   const files = [
     path.join(config.project_root, 'README.md'),
     path.join(config.project_root, config.tasks_file),
@@ -1691,7 +1733,7 @@ function getCriticalMemoryPaths(config) {
     getRecallIndexPath(config.project_root),
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
   ];
-  [config.research_dir, config.notes_dir, 'Sessions', 'Plans'].forEach((dirName) => {
+  [config.research_dir, config.notes_dir, 'Sessions', 'Plans', 'ProductHarness'].forEach((dirName) => {
     const root = path.join(config.project_root, dirName);
     if (!fs.existsSync(root)) return;
     const stack = [root];
@@ -1707,12 +1749,34 @@ function getCriticalMemoryPaths(config) {
       });
     }
   });
-  return [...new Set(files)].filter((filePath) => fs.existsSync(filePath));
+  [path.join(repoRoot, 'docs', 'superpowers', 'plans'), path.join(repoRoot, 'docs', 'product'), path.join(repoRoot, 'docs', 'stories'), path.join(repoRoot, 'docs', 'validation'), path.join(repoRoot, 'docs', 'decisions')].forEach((root) => {
+    if (!fs.existsSync(root)) return;
+    const stack = [root];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      fs.readdirSync(current, { withFileTypes: true }).forEach((entry) => {
+        const entryPath = path.join(current, entry.name);
+        if (entry.isDirectory()) {
+          stack.push(entryPath);
+        } else if (entry.isFile()) {
+          files.push(entryPath);
+        }
+      });
+    }
+  });
+  return [...new Set(files)].filter((filePath) => fs.existsSync(filePath)).map((sourcePath) => {
+    if (sourcePath.startsWith(config.project_root)) {
+      return { sourcePath, relativePath: path.relative(config.project_root, sourcePath).replace(/\\\\/g, '/') };
+    }
+    return { sourcePath, relativePath: 'Repo/' + path.relative(repoRoot, sourcePath).replace(/\\\\/g, '/') };
+  });
 }
 
 function memoryStatus(repoRoot, config) {
   ensurePlanState(repoRoot, config);
+  ensureProductHarness(repoRoot, config);
   const planState = getPlanStatus(repoRoot, config);
+  const productHarness = getProductHarnessStatus(repoRoot, config);
   const built = buildRecallIndex(config);
   const sessionsRoot = path.join(config.project_root, 'Sessions');
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
@@ -1736,6 +1800,7 @@ function memoryStatus(repoRoot, config) {
       sessionsDir: fs.existsSync(sessionsRoot),
       sessionImportState: fs.existsSync(getSessionImportStatePath(config.project_root)),
       planState: fs.existsSync(planState.currentPath) && fs.existsSync(planState.vaultCurrentPath),
+      productHarness: productHarness.ok,
     },
     counts: {
       memoryRecords: memoryRecordCount(config),
@@ -1747,8 +1812,10 @@ function memoryStatus(repoRoot, config) {
         ? fs.readdirSync(backupsRoot).filter((entry) => fs.statSync(path.join(backupsRoot, entry)).isDirectory()).length
         : 0,
       plans: planState.counts.total,
+      stories: productHarness.counts.stories,
     },
     planState,
+    productHarness,
     imports: {
       mode: 'automatic Codex session importer',
       statePath: getSessionImportStatePath(config.project_root),
@@ -1767,14 +1834,16 @@ function memoryStatus(repoRoot, config) {
 }
 
 function exportMemory(repoRoot, config) {
+  ensurePlanState(repoRoot, config);
+  ensureProductHarness(repoRoot, config);
   const built = buildRecallIndex(config);
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
   ensureDir(exportsRoot);
   const exportPath = path.join(exportsRoot, 'agent-bootstrap-memory-' + timestampForFile() + '.json');
-  const files = getCriticalMemoryPaths(config).map((filePath) => ({
-    relativePath: path.relative(config.project_root, filePath).replace(/\\\\/g, '/'),
-    path: filePath,
-    content: readFile(filePath) || '',
+  const files = getCriticalMemoryPaths(config, repoRoot).map((file) => ({
+    relativePath: file.relativePath,
+    path: file.sourcePath,
+    content: readFile(file.sourcePath) || '',
   }));
   writeFile(exportPath, JSON.stringify({
     exportedAt: getIsoTimestamp(),
@@ -1793,16 +1862,17 @@ function exportMemory(repoRoot, config) {
 }
 
 function backupMemory(repoRoot, config) {
+  ensurePlanState(repoRoot, config);
+  ensureProductHarness(repoRoot, config);
   buildRecallIndex(config);
   const backupPath = path.join(config.project_root, 'Artifacts', 'Backups', timestampForFile());
   ensureDir(backupPath);
   const copied = [];
-  getCriticalMemoryPaths(config).forEach((sourcePath) => {
-    const relative = path.relative(config.project_root, sourcePath);
-    const targetPath = path.join(backupPath, relative);
+  getCriticalMemoryPaths(config, repoRoot).forEach((file) => {
+    const targetPath = path.join(backupPath, file.relativePath);
     ensureDir(path.dirname(targetPath));
-    fs.copyFileSync(sourcePath, targetPath);
-    copied.push(relative.replace(/\\\\/g, '/'));
+    fs.copyFileSync(file.sourcePath, targetPath);
+    copied.push(file.relativePath);
   });
   const manifestPath = path.join(backupPath, 'manifest.json');
   writeFile(manifestPath, JSON.stringify({
@@ -2067,6 +2137,7 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
   }
   if (config) {
     ensurePlanState(repoRoot, config);
+    ensureProductHarness(repoRoot, config);
     ensureDailyNote(config.vault_root);
     appendDailyLog(
       config.vault_root,
@@ -2087,18 +2158,28 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
       { label: 'Project Open Questions', filePath: path.join(config.project_root, config.open_questions_file || 'Open Questions.md') },
       { label: 'Project Handoff', filePath: path.join(config.project_root, config.handoff_file || 'Handoff.md') },
       { label: 'Active Plan State', filePath: path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md') },
+      { label: 'Product Contract', filePath: path.join(repoRoot, 'docs', 'product', 'PRODUCT.md') },
+      { label: 'Product Harness Guide', filePath: path.join(repoRoot, 'docs', 'product', 'HARNESS.md') },
       { label: 'Today Daily Note', filePath: path.join(config.vault_root, 'Daily', \`\${getTodayString()}.md\`), fullOnly: true },
     );
     const activePlan = getPlanStatus(repoRoot, config).current;
     if (activePlan) {
       sections.push({ label: 'Active Plan', filePath: activePlan.repoPath });
     }
+    const activeStory = getProductHarnessStatus(repoRoot, config).currentStory;
+    if (activeStory) {
+      sections.push({ label: 'Product Harness Story', filePath: activeStory.repoPath });
+    }
     if (mode === 'full') {
       collectPlanFiles(getRepoPlansRoot(repoRoot)).slice(0, 4).forEach((filePath) => {
         sections.push({ label: 'Recent Plan', filePath, fullOnly: true });
       });
+      collectStoryFiles(getRepoStoriesRoot(repoRoot)).slice(0, 4).forEach((filePath) => {
+        sections.push({ label: 'Recent Story', filePath, fullOnly: true });
+      });
     }
     skipped.push('Plan history date folders (compact context loads CURRENT.md and the active plan only)');
+    skipped.push('Story history date folders (compact context loads Product Harness summary and current story only)');
   } else {
     skipped.push('vault.config.json missing; loaded repo-local source context only');
     skipped.push('Vault/project memory files unavailable until agent-bootstrap setup and agent-bootstrap init run');
@@ -2131,6 +2212,8 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
       output.push(\`===== Session Import =====\\n\${formatSessionImportReport(sessionImportReport).trimEnd()}\\n\`);
       loaded.push({ label: 'Session Import State', filePath: sessionImportReport.statePath });
     }
+    output.push(\`===== Product Harness =====\\n\${renderHarnessContext(getProductHarnessStatus(repoRoot, config)).trimEnd()}\\n\`);
+    loaded.push({ label: 'Product Harness State', filePath: path.join(repoRoot, 'docs', 'stories', 'INDEX.md') });
     output.push(\`===== Auto Recall =====\\n\${formatAutoRecallContext(config, mode === 'full' ? 8 : 5).trimEnd()}\\n\`);
     loaded.push({ label: 'Recall Index', filePath: getRecallIndexPath(config.project_root) });
   } else {
@@ -2687,6 +2770,266 @@ function runPlanCommand(repoRoot, config, subcommand, value) {
   throw new Error('Unknown plan command. Use: status, start, update, complete, interrupt.');
 }
 
+function getRepoProductRoot(repoRoot) {
+  return path.join(repoRoot, 'docs', 'product');
+}
+
+function getRepoStoriesRoot(repoRoot) {
+  return path.join(repoRoot, 'docs', 'stories');
+}
+
+function getRepoValidationRoot(repoRoot) {
+  return path.join(repoRoot, 'docs', 'validation');
+}
+
+function getRepoDecisionsRoot(repoRoot) {
+  return path.join(repoRoot, 'docs', 'decisions');
+}
+
+function getVaultProductHarnessRoot(config) {
+  return path.join(config.project_root, 'ProductHarness');
+}
+
+function getVaultStoriesRoot(config) {
+  return path.join(getVaultProductHarnessRoot(config), 'Stories');
+}
+
+function getVaultValidationRoot(config) {
+  return path.join(getVaultProductHarnessRoot(config), 'Validation');
+}
+
+function getVaultDecisionsRoot(config) {
+  return path.join(getVaultProductHarnessRoot(config), 'Decisions');
+}
+
+function classifyHarnessRisk(title) {
+  const value = String(title || '').toLowerCase();
+  const highRisk = [/\\bauth\\b/, /\\blogin\\b/, /\\bpassword\\b/, /\\btoken\\b/, /\\bpayment\\b/, /\\bbilling\\b/, /\\bsubscription\\b/, /\\bpermission\\b/, /\\badmin\\b/, /\\btenant\\b/, /\\brls\\b/, /\\bdatabase\\s+migration\\b/, /\\bmigration\\b/, /\\bupload\\b/, /\\bsecurity\\b/, /\\bsecret\\b/, /\\bdelete\\b/, /\\bdestroy\\b/, /\\bdestructive\\b/];
+  if (highRisk.some((pattern) => pattern.test(value))) return 'high';
+  const mediumRisk = [/\\bapi\\b/, /\\bbackend\\b/, /\\bfrontend\\s+flow\\b/, /\\bform\\b/, /\\bdashboard\\b/, /\\bstate\\b/, /\\bintegration\\b/, /\\bcheckout\\b/];
+  return mediumRisk.some((pattern) => pattern.test(value)) ? 'medium' : 'low';
+}
+
+function productHarnessTemplate(config) {
+  return ['# Product Contract', '', 'Project: ' + config.project_slug, 'Project type: ' + config.project_type, '', '## What This Product Is', '', '- Describe the product in plain language.', '', '## Users', '', '- Who this product is for.', '', '## Product Promises', '', '- What users should be able to trust.', '', '## Non-Goals', '', '- What this product should not become.', ''].join('\\n');
+}
+
+function harnessGuideTemplate() {
+  return ['# Product Harness', '', 'Product Harness is not a skill and does not replace Superpowers.', '', 'It keeps feature work tied to plain product intent, risk, scope, and proof.', '', 'Daily logs record what happened today. Active Plan State records what step is active. Product Harness records the feature contract and proof.', ''].join('\\n');
+}
+
+function storyIndexTemplate() {
+  return ['# Story Index', '', 'Feature stories created by Product Harness live in dated folders.', '', '- Small tasks may not need a story.', '- Medium and high-risk tasks should get a story before coding.', '- High-risk stories need proof before final completion claims.', ''].join('\\n');
+}
+
+function validationMatrixTemplate() {
+  return ['# Test Matrix', '', 'Use this file to keep feature proof visible.', '', '| Feature | Risk | Required proof | Latest evidence |', '| --- | --- | --- | --- |', '| none yet | - | - | - |', ''].join('\\n');
+}
+
+function harnessDecisionsTemplate() {
+  return ['# Product Decisions', '', 'Product Harness decisions are short product or feature decisions. Use vault Decisions.md for broader durable technical decisions when needed.', ''].join('\\n');
+}
+
+function ensureProductHarness(repoRoot, config) {
+  [getRepoProductRoot(repoRoot), getRepoStoriesRoot(repoRoot), getRepoValidationRoot(repoRoot), getRepoDecisionsRoot(repoRoot), getVaultProductHarnessRoot(config), getVaultStoriesRoot(config), getVaultValidationRoot(config), getVaultDecisionsRoot(config)].forEach(ensureDir);
+  writeFileIfMissing(path.join(getRepoProductRoot(repoRoot), 'PRODUCT.md'), productHarnessTemplate(config));
+  writeFileIfMissing(path.join(getRepoProductRoot(repoRoot), 'HARNESS.md'), harnessGuideTemplate());
+  writeFileIfMissing(path.join(getRepoStoriesRoot(repoRoot), 'INDEX.md'), storyIndexTemplate());
+  writeFileIfMissing(path.join(getRepoValidationRoot(repoRoot), 'TEST_MATRIX.md'), validationMatrixTemplate());
+  writeFileIfMissing(path.join(getRepoDecisionsRoot(repoRoot), 'INDEX.md'), harnessDecisionsTemplate());
+  writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'PRODUCT.md'), productHarnessTemplate(config));
+  writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'HARNESS.md'), harnessGuideTemplate());
+  writeFileIfMissing(path.join(getVaultStoriesRoot(config), 'INDEX.md'), storyIndexTemplate());
+  writeFileIfMissing(path.join(getVaultValidationRoot(config), 'TEST_MATRIX.md'), validationMatrixTemplate());
+  writeFileIfMissing(path.join(getVaultDecisionsRoot(config), 'INDEX.md'), harnessDecisionsTemplate());
+  fs.cpSync(getRepoProductRoot(repoRoot), getVaultProductHarnessRoot(config), { recursive: true });
+  fs.cpSync(getRepoStoriesRoot(repoRoot), getVaultStoriesRoot(config), { recursive: true });
+  fs.cpSync(getRepoValidationRoot(repoRoot), getVaultValidationRoot(config), { recursive: true });
+  fs.cpSync(getRepoDecisionsRoot(repoRoot), getVaultDecisionsRoot(config), { recursive: true });
+  return getProductHarnessStatus(repoRoot, config);
+}
+
+function parseHarnessFields(content) {
+  return parsePlanFields(content);
+}
+
+function collectStoryFiles(storiesRoot) {
+  if (!fs.existsSync(storiesRoot)) return [];
+  const files = [];
+  const stack = [storiesRoot];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    fs.readdirSync(current, { withFileTypes: true }).forEach((entry) => {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+      } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'INDEX.md') {
+        files.push(entryPath);
+      }
+    });
+  }
+  return files.sort();
+}
+
+function storyTitleFromContent(filePath, content) {
+  const fields = parseHarnessFields(content);
+  if (fields.title) return fields.title;
+  const heading = content.match(/^#\\s+(.+)$/m);
+  return heading ? heading[1].trim() : path.basename(filePath, '.md');
+}
+
+function countStoryProofs(content) {
+  const match = content.match(/## Proof Log\\r?\\n\\r?\\n([\\s\\S]*?)(?:\\r?\\n## |\\s*$)/);
+  if (!match) return 0;
+  return match[1].split(/\\r?\\n/).filter((line) => /^-\\s+\\d{4}-\\d{2}-\\d{2}T/.test(line.trim())).length;
+}
+
+function readStoryRecord(repoRoot, config, filePath) {
+  const content = readFile(filePath);
+  if (!content) return null;
+  const fields = parseHarnessFields(content);
+  const title = storyTitleFromContent(filePath, content);
+  const relativeStoryPath = path.relative(getRepoStoriesRoot(repoRoot), filePath).replace(/\\\\/g, '/');
+  return {
+    title,
+    slug: fields.slug || planSlug(title),
+    risk: fields.risk || 'medium',
+    status: fields.status === 'proof_added' ? 'proof_added' : 'intake',
+    created: fields.created || path.basename(path.dirname(filePath)),
+    updated: fields.updated || fs.statSync(filePath).mtime.toISOString(),
+    proofCount: countStoryProofs(content),
+    repoPath: filePath,
+    vaultPath: path.join(getVaultStoriesRoot(config), relativeStoryPath),
+    relativeRepoPath: path.relative(repoRoot, filePath).replace(/\\\\/g, '/'),
+  };
+}
+
+function readStoryRecords(repoRoot, config) {
+  return collectStoryFiles(getRepoStoriesRoot(repoRoot)).map((filePath) => readStoryRecord(repoRoot, config, filePath)).filter(Boolean).sort((left, right) => String(right.updated).localeCompare(String(left.updated)));
+}
+
+function proofGapsForStory(story) {
+  if (!story || story.proofCount > 0) return [];
+  if (story.risk === 'high') return ['High-risk story "' + story.title + '" has no proof recorded yet.', 'Auth/security or data-safety proof is required before completion claims when relevant.'];
+  if (story.risk === 'medium') return ['Medium-risk story "' + story.title + '" needs at least one verification proof before final response.'];
+  return [];
+}
+
+function getProductHarnessStatus(repoRoot, config) {
+  const stories = readStoryRecords(repoRoot, config);
+  const currentStory = stories[0] || null;
+  const decisions = readFile(path.join(getRepoDecisionsRoot(repoRoot), 'INDEX.md')) || '';
+  return {
+    ok: fs.existsSync(path.join(getRepoProductRoot(repoRoot), 'HARNESS.md')) && fs.existsSync(path.join(getVaultStoriesRoot(config), 'INDEX.md')),
+    repoHarnessRoot: path.join(repoRoot, 'docs'),
+    vaultHarnessRoot: getVaultProductHarnessRoot(config),
+    currentStory,
+    proofGaps: proofGapsForStory(currentStory),
+    counts: {
+      stories: stories.length,
+      highRiskStories: stories.filter((story) => story.risk === 'high').length,
+      storiesMissingProof: stories.filter((story) => story.risk !== 'low' && story.proofCount === 0).length,
+      decisions: (decisions.match(/^##\\s+/gm) || []).length,
+    },
+    stories,
+  };
+}
+
+function renderHarnessContext(status) {
+  const lines = ['# Product Harness', '', 'Product Harness is not a skill and does not replace Superpowers.', 'It records feature intent, risk, scope, and proof while daily logs record what happened today.', '', '- Stories: ' + status.counts.stories, '- High-risk stories: ' + status.counts.highRiskStories, '- Stories missing proof: ' + status.counts.storiesMissingProof, '', '## Current Story'];
+  if (status.currentStory) {
+    lines.push('- Title: ' + status.currentStory.title, '- Risk: ' + status.currentStory.risk, '- Status: ' + status.currentStory.status, '- Source: ' + status.currentStory.relativeRepoPath);
+  } else {
+    lines.push('- none');
+  }
+  lines.push('', '## Proof gaps');
+  lines.push(...(status.proofGaps.length ? status.proofGaps.map((gap) => '- ' + gap) : ['- none']));
+  lines.push('');
+  return lines.join('\\n');
+}
+
+function storyProofChecklist(risk) {
+  if (risk === 'high') {
+    return ['- [ ] happy path proof: expected user flow works.', '- [ ] failure path proof: wrong password, unauthorized request, invalid input, or equivalent bad path is rejected.', '- [ ] auth/security proof: verify auth, permission, token, secret, rate-limit, and data exposure behavior when relevant.', '- [ ] regression proof: smallest useful automated test, build, or smoke check ran.'];
+  }
+  if (risk === 'medium') {
+    return ['- [ ] primary flow proof: expected behavior works.', '- [ ] boundary proof: at least one error, empty, or edge path is checked when relevant.', '- [ ] regression proof: smallest useful automated test, build, or smoke check ran.'];
+  }
+  return ['- [ ] lightweight proof: quick check, doc review, or smallest useful smoke test.'];
+}
+
+function renderStoryFile(config, data) {
+  return ['---', 'type: agent-bootstrap-story', 'project: ' + config.project_slug, 'title: ' + data.title, 'slug: ' + planSlug(data.title), 'risk: ' + data.risk, 'status: ' + data.status, 'created: ' + data.created, 'updated: ' + data.updated, 'linked_plan: docs/superpowers/plans/CURRENT.md', '---', '', '# ' + data.created + ' - ' + data.title, '', '## Goal', '', data.title, '', '## Scope', '', '- Track product behavior tied to this feature only.', '- Keep implementation work in Active Plan State and daily execution details in Daily logs.', '', '## Out Of Scope', '', '- Unrelated refactors.', '- Unrequested product behavior.', '- New workflow skills or new core subagents.', '', '## Risk', '', '- Level: ' + data.risk, '- Product Harness uses risk only to decide proof depth; Superpowers still owns the workflow.', '', '## Proof Checklist', '', ...storyProofChecklist(data.risk), '', '## Progress Log', '', ...(data.progressLines.length ? data.progressLines : ['- none yet']), '', '## Proof Log', '', ...(data.proofLines.length ? data.proofLines : ['- none yet']), '', '## Product Decisions', '', '- none yet', ''].join('\\n');
+}
+
+function readStoryParts(filePath) {
+  const content = readFile(filePath) || '';
+  const fields = parseHarnessFields(content);
+  const clean = (section) => {
+    const match = content.match(new RegExp('## ' + section + '\\\\r?\\\\n\\\\r?\\\\n([\\\\s\\\\S]*?)(?:\\\\r?\\\\n## |\\\\s*$)'));
+    return (match && match[1] ? match[1] : '').split(/\\r?\\n/).map((line) => line.trimEnd()).filter((line) => line && line !== '- none yet');
+  };
+  return {
+    title: fields.title || storyTitleFromContent(filePath, content),
+    risk: fields.risk || 'medium',
+    created: fields.created || path.basename(path.dirname(filePath)),
+    progressLines: clean('Progress Log'),
+    proofLines: clean('Proof Log'),
+  };
+}
+
+function writeStoryUpdate(repoRoot, config, storyPath, status, progressLine, proofLine) {
+  const parts = readStoryParts(storyPath);
+  const updated = getIsoTimestamp();
+  writeFile(storyPath, renderStoryFile(config, { title: parts.title, risk: parts.risk, status, created: parts.created, updated, progressLines: progressLine ? [...parts.progressLines, '- ' + updated + ' - ' + progressLine] : parts.progressLines, proofLines: proofLine ? [...parts.proofLines, '- ' + updated + ' - ' + proofLine] : parts.proofLines }));
+  ensureProductHarness(repoRoot, config);
+  return readStoryRecord(repoRoot, config, storyPath);
+}
+
+function runHarnessCommand(repoRoot, config, subcommand, value) {
+  ensureProductHarness(repoRoot, config);
+  if (subcommand === 'status') return getProductHarnessStatus(repoRoot, config);
+  if (subcommand === 'intake') {
+    const title = (value || '').trim();
+    if (!title) throw new Error('Harness intake requires a feature title.');
+    const slug = planSlug(title);
+    const existing = readStoryRecords(repoRoot, config).find((story) => story.slug === slug);
+    if (existing) {
+      const resumed = writeStoryUpdate(repoRoot, config, existing.repoPath, existing.status, 'Product Harness story resumed.');
+      return { action: 'resumed', risk: resumed.risk, status: resumed.status, storyPath: resumed.repoPath, vaultStoryPath: resumed.vaultPath };
+    }
+    const today = getTodayString();
+    const updated = getIsoTimestamp();
+    const risk = classifyHarnessRisk(title);
+    const storyPath = path.join(getRepoStoriesRoot(repoRoot), today, today + '-' + slug + '.md');
+    writeFile(storyPath, renderStoryFile(config, { title, risk, status: 'intake', created: today, updated, progressLines: ['- ' + updated + ' - Product Harness intake created.'], proofLines: [] }));
+    ensureProductHarness(repoRoot, config);
+    const record = readStoryRecord(repoRoot, config, storyPath);
+    return { action: 'started', risk: record.risk, status: record.status, storyPath: record.repoPath, vaultStoryPath: record.vaultPath };
+  }
+  if (subcommand === 'proof') {
+    const summary = (value || '').trim();
+    if (!summary) throw new Error('Harness proof requires a verification summary.');
+    const active = getProductHarnessStatus(repoRoot, config).currentStory;
+    if (!active) throw new Error('No Product Harness story. Run harness intake first.');
+    const record = writeStoryUpdate(repoRoot, config, active.repoPath, 'proof_added', undefined, summary);
+    return { action: 'proof-recorded', status: record.status, storyPath: record.repoPath, vaultStoryPath: record.vaultPath };
+  }
+  if (subcommand === 'decision') {
+    const summary = (value || '').trim();
+    if (!summary) throw new Error('Harness decision requires a decision summary.');
+    const timestamp = getIsoTimestamp();
+    const entry = '\\n## ' + timestamp + '\\n- Decision: ' + summary + '\\n- Source: Product Harness\\n';
+    const repoDecisionPath = path.join(getRepoDecisionsRoot(repoRoot), 'INDEX.md');
+    const vaultDecisionPath = path.join(getVaultDecisionsRoot(config), 'INDEX.md');
+    writeFile(repoDecisionPath, (readFile(repoDecisionPath) || harnessDecisionsTemplate()).trimEnd() + '\\n' + entry);
+    writeFile(vaultDecisionPath, (readFile(vaultDecisionPath) || harnessDecisionsTemplate()).trimEnd() + '\\n' + entry);
+    ensureProductHarness(repoRoot, config);
+    return { action: 'decision-recorded', repoDecisionPath, vaultDecisionPath };
+  }
+  throw new Error('Unknown harness command. Use: status, intake, proof, decision.');
+}
+
 function parseFlags(argv) {
   const args = [...argv];
   const options = {};
@@ -2809,6 +3152,14 @@ function main(argv) {
       throw new Error('Plan requires a subcommand: status, start, update, complete, interrupt.');
     }
     process.stdout.write(\`\${JSON.stringify(runPlanCommand(repoRoot, config, maybeContent, rest[2]), null, 2)}\\n\`);
+    return;
+  }
+
+  if (command === 'harness') {
+    if (!maybeContent) {
+      throw new Error('Harness requires a subcommand: status, intake, proof, decision.');
+    }
+    process.stdout.write(\`\${JSON.stringify(runHarnessCommand(repoRoot, config, maybeContent, rest[2]), null, 2)}\\n\`);
     return;
   }
 

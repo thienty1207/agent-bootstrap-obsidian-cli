@@ -5,10 +5,11 @@ import { getContext, readRepoConfig, resolveRepoRoot, type ContextMode } from '.
 import { ensureVaultScaffold } from './vault';
 import { runMemoryCommand, runRecall } from './memory-ops';
 import { runPlanCommand } from './plan-state';
+import { runHarnessCommand } from './product-harness';
 
 const INSTALL_COMMAND = 'npm i -g --force @kakasitink/agent-bootstrap';
 const UNINSTALL_COMMAND = 'npm uninstall -g @kakasitink/agent-bootstrap';
-const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, memory, plan. Use --help for quickstart.';
+const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, memory, plan, harness. Use --help for quickstart.';
 
 interface ParsedArgs {
   rest: string[];
@@ -130,6 +131,12 @@ function writeHelp(): void {
         '  agent-bootstrap plan complete "<verification summary>" [project-path]',
         '  agent-bootstrap plan interrupt "<last known state>" [project-path]',
         '',
+        'Automatic product harness:',
+        '  agent-bootstrap harness status [project-path]',
+        '  agent-bootstrap harness intake "<feature title>" [project-path]',
+        '  agent-bootstrap harness proof "<verification summary>" [project-path]',
+        '  agent-bootstrap harness decision "<decision summary>" [project-path]',
+        '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
       ].join('\n'),
@@ -220,6 +227,24 @@ export async function main(argv: string[]): Promise<void> {
       repoRoot: foundRepoRoot,
       config: readRepoConfig(foundRepoRoot),
       titleOrNote: payload,
+    }));
+    return;
+  }
+
+  if (command === 'harness') {
+    const { rest } = parseFlags(tail);
+    const subcommand = rest[0];
+    if (!subcommand) {
+      throw new Error('Harness requires a subcommand: status, intake, proof, decision.');
+    }
+
+    const payload = subcommand === 'status' ? undefined : rest[1];
+    const repoRoot = subcommand === 'status' ? rest[1] : rest[2];
+    const foundRepoRoot = resolveRepoRoot(repoRoot ? path.resolve(repoRoot) : process.cwd());
+    writeJson(runHarnessCommand(subcommand, {
+      repoRoot: foundRepoRoot,
+      config: readRepoConfig(foundRepoRoot),
+      value: payload,
     }));
     return;
   }

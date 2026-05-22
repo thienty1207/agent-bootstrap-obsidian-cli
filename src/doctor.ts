@@ -48,6 +48,8 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     [config.notes_dir, path.join(config.project_root, config.notes_dir)],
     ['Plans/CURRENT.md', path.join(config.project_root, 'Plans', 'CURRENT.md')],
     ['Plans/INDEX.md', path.join(config.project_root, 'Plans', 'INDEX.md')],
+    ['ProductHarness/HARNESS.md', path.join(config.project_root, 'ProductHarness', 'HARNESS.md')],
+    ['ProductHarness/Stories/INDEX.md', path.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')],
   ]
     .filter(([, absolutePath]) => !fs.existsSync(absolutePath))
     .map(([relativePath]) => relativePath);
@@ -65,6 +67,10 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     plans: fs.existsSync(path.join(resolvedRepoRoot, 'plans')),
     planState: fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md'))
       && fs.existsSync(path.join(config.project_root, 'Plans', 'CURRENT.md')),
+    productHarness: fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'stories', 'INDEX.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'HARNESS.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')),
     gitAvailable: hasGit(),
     registered,
     vaultProject: fs.existsSync(config.project_root),
