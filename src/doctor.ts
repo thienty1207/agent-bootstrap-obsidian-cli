@@ -49,6 +49,8 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     ['Plans/CURRENT.md', path.join(config.project_root, 'Plans', 'CURRENT.md')],
     ['Plans/INDEX.md', path.join(config.project_root, 'Plans', 'INDEX.md')],
     ['ProductHarness/HARNESS.md', path.join(config.project_root, 'ProductHarness', 'HARNESS.md')],
+    ['ProductHarness/HARNESS_BACKLOG.md', path.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md')],
+    ['ProductHarness/Traces', path.join(config.project_root, 'ProductHarness', 'Traces')],
     ['ProductHarness/Stories/INDEX.md', path.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')],
   ]
     .filter(([, absolutePath]) => !fs.existsSync(absolutePath))
@@ -68,8 +70,12 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     planState: fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md'))
       && fs.existsSync(path.join(config.project_root, 'Plans', 'CURRENT.md')),
     productHarness: fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'traces'))
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'stories', 'INDEX.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'HARNESS.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'Traces'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')),
     gitAvailable: hasGit(),
     registered,

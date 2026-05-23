@@ -214,6 +214,14 @@ function getMemoryStatus(options = {}) {
         });
         diagnostics.nextActions.push('agent-bootstrap harness status');
     }
+    if (productHarness.openFriction.length > 0) {
+        diagnostics.diagnostics.push({
+            level: 'warn',
+            code: 'product-harness-friction',
+            message: `${productHarness.openFriction.length} Product Harness friction item${productHarness.openFriction.length === 1 ? '' : 's'} need review.`,
+        });
+        diagnostics.nextActions.push('agent-bootstrap harness friction "<pain or missing workflow>"');
+    }
     return {
         ok: node_fs_1.default.existsSync(config.vault_root) && node_fs_1.default.existsSync(config.project_root),
         recallMode: recall.index.mode,
@@ -243,6 +251,8 @@ function getMemoryStatus(options = {}) {
                 : 0,
             plans: planState.counts.total,
             stories: productHarness.counts.stories,
+            harnessTraces: productHarness.counts.traces,
+            harnessFriction: productHarness.counts.openFriction,
         },
         planState,
         productHarness,
@@ -273,6 +283,8 @@ function getMemoryStatus(options = {}) {
             'agent-bootstrap memory export',
             'agent-bootstrap memory backup',
             'agent-bootstrap harness status',
+            'agent-bootstrap harness trace "<summary>"',
+            'agent-bootstrap harness friction "<pain or missing workflow>"',
         ],
     };
 }

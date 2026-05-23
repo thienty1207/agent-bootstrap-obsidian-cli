@@ -170,11 +170,15 @@ function assertActivePlanWorkspace(repoRoot, vaultProjectRoot) {
 function assertProductHarnessWorkspace(repoRoot, vaultProjectRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'PRODUCT.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'HARNESS.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'traces')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'stories', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'validation', 'TEST_MATRIX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'decisions', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'PRODUCT.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'HARNESS.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'Traces')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'Stories', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'Validation', 'TEST_MATRIX.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'Decisions', 'INDEX.md')), true);
@@ -335,6 +339,8 @@ test('--help prints the quickstart flow', () => {
   assert.match(result.stdout, /agent-bootstrap plan start/);
   assert.match(result.stdout, /agent-bootstrap harness status/);
   assert.match(result.stdout, /agent-bootstrap harness intake/);
+  assert.match(result.stdout, /agent-bootstrap harness trace/);
+  assert.match(result.stdout, /agent-bootstrap harness friction/);
   assert.match(result.stdout, /npm uninstall -g @kakasitink\/agent-bootstrap/);
 });
 
@@ -357,7 +363,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '0.6.0');
+  assert.equal(packageJson.version, '0.7.0');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -377,6 +383,10 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.match(readme, /agent-bootstrap memory backup/);
   assert.match(readme, /agent-bootstrap plan status/);
   assert.match(readme, /agent-bootstrap harness status/);
+  assert.match(readme, /agent-bootstrap harness trace/);
+  assert.match(readme, /agent-bootstrap harness friction/);
+  assert.match(readme, /Trace = task này đã đi qua đường nào|Trace/i);
+  assert.match(readme, /Friction = điểm nghẽn|Friction/i);
   assert.match(readme, /docs\/superpowers\/plans/);
   assert.match(readme, /semantic recall/i);
   assert.match(readme, /automatic Codex session/i);
@@ -478,6 +488,8 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(rootAgent, /agent-bootstrap plan start/);
   assert.match(rootAgent, /agent-bootstrap harness status/);
   assert.match(rootAgent, /agent-bootstrap harness intake/);
+  assert.match(rootAgent, /agent-bootstrap harness trace/);
+  assert.match(rootAgent, /agent-bootstrap harness friction/);
   assert.match(rootAgent, /Product Harness is not a skill/i);
   assert.match(rootAgent, /Do not infer completion from silence/i);
   assert.match(rootAgent, /Do not ask the user whether to run it/);
@@ -690,6 +702,8 @@ test('update command refreshes Codex assets while preserving project and vault m
   writeFile(path.join(repoRoot, 'plans', 'my-feature-plan.md'), '# User feature plan\n');
   writeFile(path.join(repoRoot, 'docs', 'stories', getTodayString(), `${getTodayString()}-custom-user-story.md`), '# Custom User Story\n\nKeep this story.\n');
   writeFile(path.join(repoRoot, 'docs', 'decisions', 'INDEX.md'), '# Product Decisions\n\n## Custom decision\nKeep this decision.\n');
+  writeFile(path.join(repoRoot, 'docs', 'product', 'traces', getTodayString(), `${getTodayString()}-custom-trace.md`), '# Custom Trace\n\nKeep this trace.\n');
+  writeFile(path.join(repoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md'), '# Harness Backlog\n\n## Open Friction\n\n- Keep this backlog item.\n');
   const existingPlanPath = path.join(repoRoot, 'docs', 'superpowers', 'plans', getTodayString(), `${getTodayString()}-keep-user-plan.md`);
   writeFile(existingPlanPath, [
     '---',
@@ -743,7 +757,9 @@ test('update command refreshes Codex assets while preserving project and vault m
   assertProductHarnessWorkspace(repoRoot, projectConfigAfter.project_root);
   assert.equal(fs.existsSync(existingPlanPath), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'stories', getTodayString(), `${getTodayString()}-custom-user-story.md`)), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'traces', getTodayString(), `${getTodayString()}-custom-trace.md`)), true);
   assert.match(readFile(path.join(repoRoot, 'docs', 'decisions', 'INDEX.md')), /Custom decision/);
+  assert.match(readFile(path.join(repoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md')), /Keep this backlog item/);
   assert.match(readFile(path.join(repoRoot, 'docs', 'product', 'HARNESS.md')), /Product Harness/);
   assert.match(readFile(path.join(repoRoot, 'docs', 'validation', 'TEST_MATRIX.md')), /TEST_MATRIX|Test Matrix/i);
   assert.match(readFile(path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md')), /Current Plan State/);
@@ -772,6 +788,10 @@ test('context modes keep compact context narrow and explain context choices', ()
   assert.equal(result.status, 0, result.stderr);
   result = runCli(['harness', 'intake', 'frontend HomePage'], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
+  result = runCli(['harness', 'trace', 'implemented frontend HomePage shell'], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['harness', 'friction', 'responsive proof was unclear'], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
 
   const compact = runCli(['context', '--compact'], { configHome, cwd: nested });
   assert.equal(compact.status, 0, compact.stderr);
@@ -782,6 +802,9 @@ test('context modes keep compact context narrow and explain context choices', ()
   assert.match(compact.stdout, /Product Harness/);
   assert.match(compact.stdout, /frontend HomePage/i);
   assert.match(compact.stdout, /frontend HomePage/i);
+  assert.match(compact.stdout, /Latest Trace/i);
+  assert.match(compact.stdout, /implemented frontend HomePage shell/);
+  assert.match(compact.stdout, /Open friction/i);
   assert.match(compact.stdout, /Project Facts/);
   assert.doesNotMatch(compact.stdout, /Today Daily Note/);
   assert.doesNotMatch(compact.stdout, /# Test-Driven Development \(TDD\)/);
@@ -803,12 +826,14 @@ test('context modes keep compact context narrow and explain context choices', ()
   assert.match(why.stdout, /Daily\/\*\*/);
   assert.match(why.stdout, /Plan history date folders/);
   assert.match(why.stdout, /Story history date folders/);
+  assert.match(why.stdout, /Trace and friction history/);
 
   const full = runCli(['context', '--full'], { configHome, cwd: nested });
   assert.equal(full.status, 0, full.stderr);
   assert.match(full.stdout, /Today Daily Note/);
   assert.match(full.stdout, /Recent Plan/);
   assert.match(full.stdout, /Recent Story/);
+  assert.match(full.stdout, /Recent Harness Trace/);
   assert.ok(full.stdout.length > compact.stdout.length);
 });
 
@@ -1498,27 +1523,39 @@ test('harness commands classify feature risk, track proof, and mirror stories to
   const intake = parseJson(result.stdout);
   assert.equal(intake.action, 'started');
   assert.equal(intake.risk, 'high');
-  assert.match(intake.storyPath, new RegExp(`docs[\\\\/]stories[\\\\/]${today}[\\\\/]${today}-backend-login-with-gin\\.md$`));
+  assert.equal(intake.inputType, 'change_request');
+  assert.deepEqual(intake.riskFlags, ['auth']);
+  assert.match(intake.storyPath, new RegExp(`docs[\\\\/]stories[\\\\/]${today}[\\\\/]${today}-backend-login-with-gin[\\\\/]overview\\.md$`));
+  assert.match(intake.storyRoot, new RegExp(`docs[\\\\/]stories[\\\\/]${today}[\\\\/]${today}-backend-login-with-gin$`));
   assert.equal(fs.existsSync(intake.storyPath), true);
+  assert.equal(fs.existsSync(path.join(intake.storyRoot, 'design.md')), true);
+  assert.equal(fs.existsSync(path.join(intake.storyRoot, 'validation.md')), true);
+  assert.equal(fs.existsSync(path.join(intake.storyRoot, 'execplan.md')), true);
   assert.equal(fs.existsSync(intake.vaultStoryPath), true);
 
   const storyBody = readFile(intake.storyPath);
-  assert.match(storyBody, /type: agent-bootstrap-story/);
+  assert.match(storyBody, /type: agent-bootstrap-story-packet/);
   assert.match(storyBody, /risk: high/);
+  assert.match(storyBody, /input_type: change_request/);
+  assert.match(storyBody, /risk_flags: auth/);
   assert.match(storyBody, /Backend Login With Gin|backend login with Gin/i);
-  assert.match(storyBody, /## Scope/);
-  assert.match(storyBody, /## Out Of Scope/);
+  assert.match(storyBody, /## Current Behavior/);
+  assert.match(readFile(path.join(intake.storyRoot, 'execplan.md')), /## Stop Conditions/);
+  assert.match(readFile(path.join(intake.storyRoot, 'validation.md')), /auth\/security proof/i);
   assert.match(storyBody, /auth\/security proof/i);
   assert.match(storyBody, /wrong password/i);
-  assert.match(readFile(path.join(vaultRoot, 'Projects', 'repo', 'ProductHarness', 'Stories', today, `${today}-backend-login-with-gin.md`)), /risk: high/);
+  assert.match(readFile(path.join(vaultRoot, 'Projects', 'repo', 'ProductHarness', 'Stories', today, `${today}-backend-login-with-gin`, 'overview.md')), /risk: high/);
+  let matrixBody = readFile(path.join(repoRoot, 'docs', 'validation', 'TEST_MATRIX.md'));
+  assert.match(matrixBody, /backend login with Gin/);
+  assert.match(matrixBody, /\| backend login with Gin \| high \| no \| no \| no \| no \| planned \| none \|/);
 
   result = runCli(['harness', 'intake', 'backend login with Gin', repoRoot], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
   const resumed = parseJson(result.stdout);
   assert.equal(resumed.action, 'resumed');
   assert.equal(resumed.storyPath, intake.storyPath);
-  const dailyStories = fs.readdirSync(path.join(repoRoot, 'docs', 'stories', today)).filter((file) => file.endsWith('.md'));
-  assert.deepEqual(dailyStories, [`${today}-backend-login-with-gin.md`]);
+  const dailyEntries = fs.readdirSync(path.join(repoRoot, 'docs', 'stories', today));
+  assert.deepEqual(dailyEntries, [`${today}-backend-login-with-gin`]);
 
   result = runCli(['harness', 'proof', 'go test ./... passed for auth handlers', repoRoot], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
@@ -1526,12 +1563,35 @@ test('harness commands classify feature risk, track proof, and mirror stories to
   assert.equal(proof.action, 'proof-recorded');
   assert.equal(proof.status, 'proof_added');
   assert.match(readFile(intake.storyPath), /go test \.\/\.\.\. passed for auth handlers/);
-  assert.match(readFile(path.join(vaultRoot, 'Projects', 'repo', 'ProductHarness', 'Stories', today, `${today}-backend-login-with-gin.md`)), /proof_added/);
+  assert.match(readFile(path.join(intake.storyRoot, 'validation.md')), /go test \.\/\.\.\. passed for auth handlers/);
+  assert.match(readFile(path.join(vaultRoot, 'Projects', 'repo', 'ProductHarness', 'Stories', today, `${today}-backend-login-with-gin`, 'overview.md')), /proof_added/);
+  matrixBody = readFile(path.join(repoRoot, 'docs', 'validation', 'TEST_MATRIX.md'));
+  assert.match(matrixBody, /\| backend login with Gin \| high \| yes \| no \| no \| no \| implemented \| go test \.\/\.\.\. passed for auth handlers \|/);
+
+  result = runCli(['harness', 'trace', 'implemented backend login with proof', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const trace = parseJson(result.stdout);
+  assert.equal(trace.action, 'trace-recorded');
+  assert.equal(trace.outcome, 'completed');
+  assert.match(trace.tracePath, new RegExp(`docs[\\\\/]product[\\\\/]traces[\\\\/]${today}[\\\\/]`));
+  assert.equal(fs.existsSync(trace.tracePath), true);
+  assert.equal(fs.existsSync(trace.vaultTracePath), true);
+  assert.match(readFile(trace.tracePath), /implemented backend login with proof/);
+  assert.match(readFile(trace.tracePath), /backend login with Gin/);
+
+  result = runCli(['harness', 'friction', 'validation command was unclear', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const friction = parseJson(result.stdout);
+  assert.equal(friction.action, 'friction-recorded');
+  assert.equal(friction.status, 'proposed');
+  assert.match(readFile(friction.backlogPath), /validation command was unclear/);
+  assert.match(readFile(friction.vaultBacklogPath), /validation command was unclear/);
 
   result = runCli(['recall', 'Gin login proof', repoRoot], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /backend login with Gin/i);
   assert.match(result.stdout, /\[harness-story\]/);
+  assert.match(result.stdout, /implemented backend login with proof/);
 
   result = runCli(['harness', 'decision', 'Use bcrypt password verification and short-lived JWT.', repoRoot], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
@@ -1544,7 +1604,17 @@ test('harness commands classify feature risk, track proof, and mirror stories to
   assert.equal(result.status, 0, result.stderr);
   const lowRisk = parseJson(result.stdout);
   assert.equal(lowRisk.risk, 'low');
+  assert.equal(lowRisk.inputType, 'change_request');
+  assert.deepEqual(lowRisk.riskFlags, []);
+  assert.match(lowRisk.storyPath, new RegExp(`docs[\\\\/]stories[\\\\/]${today}[\\\\/]${today}-docs-copy-polish\\.md$`));
   assert.doesNotMatch(readFile(lowRisk.storyPath), /auth\/security proof/i);
+  assert.equal(fs.existsSync(path.join(path.dirname(lowRisk.storyPath), `${today}-docs-copy-polish`, 'overview.md')), false);
+
+  result = runCli(['harness', 'intake', 'database migration deletes old invoices', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const migrationRisk = parseJson(result.stdout);
+  assert.equal(migrationRisk.risk, 'high');
+  assert.ok(migrationRisk.riskFlags.includes('data_model'));
 });
 
 test('compact context auto-refreshes recall index and includes bounded auto recall', () => {
@@ -1565,6 +1635,10 @@ test('compact context auto-refreshes recall index and includes bounded auto reca
   assert.equal(result.status, 0, result.stderr);
 
   result = runCli(['harness', 'intake', 'backend login with Gin', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['harness', 'trace', 'partial backend login implementation', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['harness', 'friction', 'auth integration proof is unclear', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
 
   result = runCli(['context', '--compact'], { configHome, cwd: repoRoot });
@@ -1715,6 +1789,10 @@ test('memory commands report status sync sessions export and backup project memo
 
   result = runCli(['harness', 'intake', 'backend login with Gin', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
+  result = runCli(['harness', 'trace', 'partial backend login implementation', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['harness', 'friction', 'auth integration proof is unclear', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
 
   result = runCli(['memory', 'status', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -1727,11 +1805,16 @@ test('memory commands report status sync sessions export and backup project memo
   assert.equal(status.productHarness.currentStory.title, 'backend login with Gin');
   assert.equal(status.productHarness.currentStory.risk, 'high');
   assert.ok(status.productHarness.proofGaps.length > 0);
+  assert.equal(status.productHarness.latestTrace.summary, 'partial backend login implementation');
+  assert.equal(status.productHarness.openFriction.length, 1);
   assert.equal(status.checks.productHarness, true);
   assert.ok(status.checks.planState);
   assert.equal(status.checks.projectRoot, true);
   assert.ok(status.counts.memoryRecords >= 1);
+  assert.ok(status.counts.harnessTraces >= 1);
+  assert.ok(status.counts.harnessFriction >= 1);
   assert.ok(status.diagnostics.some((item) => item.code === 'session-import-not-run'));
+  assert.ok(status.diagnostics.some((item) => item.code === 'product-harness-friction'));
   assert.ok(status.nextActions.includes('agent-bootstrap context --compact'));
 
   const emptySessionsRoot = path.join(root, 'empty-codex-sessions');
@@ -1763,7 +1846,10 @@ test('memory commands report status sync sessions export and backup project memo
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Plans/CURRENT.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Repo/docs/superpowers/plans/CURRENT.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'ProductHarness/HARNESS.md'));
+  assert.ok(exportBody.files.some((file) => file.relativePath === 'ProductHarness/HARNESS_BACKLOG.md'));
+  assert.ok(exportBody.files.some((file) => file.relativePath.startsWith('ProductHarness/Traces/')));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Repo/docs/stories/INDEX.md'));
+  assert.ok(exportBody.files.some((file) => file.relativePath.startsWith('Repo/docs/product/traces/')));
 
   result = runCli(['memory', 'backup', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -1774,7 +1860,10 @@ test('memory commands report status sync sessions export and backup project memo
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Plans', 'CURRENT.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Repo', 'docs', 'superpowers', 'plans', 'CURRENT.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'HARNESS.md')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'Traces')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Repo', 'docs', 'stories', 'INDEX.md')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'Repo', 'docs', 'product', 'traces')), true);
 
   result = runCli(['memory', 'status', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
@@ -1920,7 +2009,9 @@ test('repo-local runtime mirrors recall and memory status commands from nested p
   assert.equal(result.status, 0, result.stderr);
   const harnessIntake = parseJson(result.stdout);
   assert.equal(harnessIntake.risk, 'high');
+  assert.deepEqual(harnessIntake.riskFlags, ['auth']);
   assert.equal(fs.existsSync(harnessIntake.storyPath), true);
+  assert.equal(fs.existsSync(path.join(harnessIntake.storyRoot, 'execplan.md')), true);
 
   result = runRuntime(repoRoot, ['harness', 'status'], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);
@@ -1928,9 +2019,23 @@ test('repo-local runtime mirrors recall and memory status commands from nested p
   assert.equal(harnessStatus.currentStory.title, 'auth login');
   assert.ok(harnessStatus.proofGaps.length > 0);
 
+  result = runRuntime(repoRoot, ['harness', 'trace', 'completed auth login packet'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const runtimeTrace = parseJson(result.stdout);
+  assert.equal(runtimeTrace.action, 'trace-recorded');
+  assert.equal(fs.existsSync(runtimeTrace.tracePath), true);
+
+  result = runRuntime(repoRoot, ['harness', 'friction', 'auth smoke proof was unclear'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const runtimeFriction = parseJson(result.stdout);
+  assert.equal(runtimeFriction.action, 'friction-recorded');
+  assert.equal(fs.existsSync(runtimeFriction.backlogPath), true);
+
   result = runRuntime(repoRoot, ['context'], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /Product Harness/);
+  assert.match(result.stdout, /completed auth login packet/);
+  assert.match(result.stdout, /Open friction/i);
 });
 
 test('repo-local runtime imports Codex sessions and recall finds imported memory', () => {
@@ -1976,6 +2081,8 @@ test('Codex indexes enforce workflow priority and compact-context guardrails', (
   assert.match(agentIndex, /Run `agent-bootstrap context --compact`/);
   assert.match(agentIndex, /agent-bootstrap plan status/);
   assert.match(agentIndex, /agent-bootstrap harness status/);
+  assert.match(agentIndex, /harness trace/);
+  assert.match(agentIndex, /harness friction/);
   assert.match(agentIndex, /Product Harness/);
   assert.match(agentIndex, /Active Plan State/);
   assert.match(agentIndex, /There is no `\.codex\/rules\/` folder/);

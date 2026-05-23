@@ -156,6 +156,10 @@ function documentKindFromPath(config, filePath) {
     const relativeVaultPath = node_path_1.default.relative(config.vault_root, filePath).replace(/\\/g, '/');
     if (normalizedPath.includes('/docs/superpowers/plans/'))
         return 'plan';
+    if (normalizedPath.includes('/docs/product/traces/'))
+        return 'harness-trace';
+    if (normalizedPath.endsWith('/docs/product/HARNESS_BACKLOG.md'))
+        return 'harness-friction';
     if (normalizedPath.includes('/docs/product/'))
         return 'harness-product';
     if (normalizedPath.includes('/docs/stories/'))
@@ -176,6 +180,10 @@ function documentKindFromPath(config, filePath) {
         return 'handoff';
     if (relativeProjectPath.startsWith('Plans/'))
         return 'plan';
+    if (relativeProjectPath.startsWith('ProductHarness/Traces/'))
+        return 'harness-trace';
+    if (relativeProjectPath === 'ProductHarness/HARNESS_BACKLOG.md')
+        return 'harness-friction';
     if (relativeProjectPath.startsWith('ProductHarness/Stories/'))
         return 'harness-story';
     if (relativeProjectPath.startsWith('ProductHarness/Validation/'))

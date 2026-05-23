@@ -107,9 +107,13 @@ function getContext({ repoRoot, mode = 'compact', includeWhy = false, }) {
             for (const filePath of (0, product_harness_1.getRecentStoryFiles)(resolvedRepoRoot, 4)) {
                 sections.push({ label: 'Recent Story', filePath, fullOnly: true });
             }
+            for (const filePath of (0, product_harness_1.getRecentHarnessTraceFiles)(resolvedRepoRoot, 4)) {
+                sections.push({ label: 'Recent Harness Trace', filePath, fullOnly: true });
+            }
         }
         skipped.push('Plan history date folders (compact context loads CURRENT.md and the active plan only)');
         skipped.push('Story history date folders (compact context loads Product Harness summary and current story only)');
+        skipped.push('Trace and friction history (compact context loads only latest trace and open friction count)');
     }
     else {
         skipped.push('vault.config.json missing; loaded repo-local source context only');

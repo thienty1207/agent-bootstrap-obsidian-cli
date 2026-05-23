@@ -115,6 +115,8 @@ function writeHelp() {
         '  agent-bootstrap harness intake "<feature title>" [project-path]',
         '  agent-bootstrap harness proof "<verification summary>" [project-path]',
         '  agent-bootstrap harness decision "<decision summary>" [project-path]',
+        '  agent-bootstrap harness trace "<summary>" [project-path]',
+        '  agent-bootstrap harness friction "<pain or missing workflow>" [project-path]',
         '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
@@ -199,7 +201,7 @@ async function main(argv) {
         const { rest } = parseFlags(tail);
         const subcommand = rest[0];
         if (!subcommand) {
-            throw new Error('Harness requires a subcommand: status, intake, proof, decision.');
+            throw new Error('Harness requires a subcommand: status, intake, proof, decision, trace, friction.');
         }
         const payload = subcommand === 'status' ? undefined : rest[1];
         const repoRoot = subcommand === 'status' ? rest[1] : rest[2];

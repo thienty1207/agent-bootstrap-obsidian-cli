@@ -246,6 +246,14 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
     });
     diagnostics.nextActions.push('agent-bootstrap harness status');
   }
+  if (productHarness.openFriction.length > 0) {
+    diagnostics.diagnostics.push({
+      level: 'warn',
+      code: 'product-harness-friction',
+      message: `${productHarness.openFriction.length} Product Harness friction item${productHarness.openFriction.length === 1 ? '' : 's'} need review.`,
+    });
+    diagnostics.nextActions.push('agent-bootstrap harness friction "<pain or missing workflow>"');
+  }
 
   return {
     ok: fs.existsSync(config.vault_root) && fs.existsSync(config.project_root),
@@ -276,6 +284,8 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
         : 0,
       plans: planState.counts.total,
       stories: productHarness.counts.stories,
+      harnessTraces: productHarness.counts.traces,
+      harnessFriction: productHarness.counts.openFriction,
     },
     planState,
     productHarness,
@@ -306,6 +316,8 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
       'agent-bootstrap memory export',
       'agent-bootstrap memory backup',
       'agent-bootstrap harness status',
+      'agent-bootstrap harness trace "<summary>"',
+      'agent-bootstrap harness friction "<pain or missing workflow>"',
     ],
   };
 }

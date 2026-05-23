@@ -143,7 +143,8 @@ Think of the four layers like this:
 - Daily log: what happened today.
 - Active Plan State: which step is active and whether verification ran.
 - Product Harness: what the feature must achieve, what is in scope, how risky it
-  is, and what proof is required.
+  is, what proof is required, what trace was left, and what friction should be
+  fixed next.
 - Vault memory: durable long-term memory and recall.
 
 Generated projects keep Product Harness files under:
@@ -168,6 +169,8 @@ agent-bootstrap harness status
 agent-bootstrap harness intake "<feature title>"
 agent-bootstrap harness proof "<verification summary>"
 agent-bootstrap harness decision "<decision summary>"
+agent-bootstrap harness trace "<task summary/outcome>"
+agent-bootstrap harness friction "<pain or missing workflow>"
 ```
 
 Small docs, copy, and tiny polish tasks stay lightweight. Auth, login, payment,
@@ -175,6 +178,12 @@ permissions, tenant/RLS, migrations, uploads, security, backend APIs, frontend
 flows, forms, dashboards, state, and integrations should get harness intake and
 proof tracking. `harness proof` records evidence, but only `agent-bootstrap plan
 complete` completes the active plan.
+
+For high-risk tasks, Product Harness creates a small story packet instead of one
+flat file: `overview.md`, `design.md`, `validation.md`, and `execplan.md`.
+`harness trace` records the short path taken after meaningful work. `harness
+friction` records unclear workflow moments so the kit can improve instead of
+letting the same confusion repeat.
 
 ## Optional: AI Context
 
@@ -258,6 +267,10 @@ node scripts/agent-memory.js plan status
 node scripts/agent-memory.js plan start "<task title>"
 node scripts/agent-memory.js harness status
 node scripts/agent-memory.js harness intake "<feature title>"
+node scripts/agent-memory.js harness proof "<verification summary>"
+node scripts/agent-memory.js harness decision "<decision summary>"
+node scripts/agent-memory.js harness trace "<task summary/outcome>"
+node scripts/agent-memory.js harness friction "<pain or missing workflow>"
 node scripts/agent-memory.js memory status
 node scripts/agent-memory.js memory import-sessions
 node scripts/agent-memory.js memory sync-sessions
@@ -445,7 +458,7 @@ The vault bridge is stable across `init` and `update`:
 - `vault.config.json` links repo, vault, project slug, project type, and kit version
 - `agent-bootstrap context --compact` loads repo context, vault context, project memory index, automatic Codex session import, and bounded semantic Auto Recall
 - `agent-bootstrap plan <status|start|update|complete|interrupt>` tracks active implementation state in the repo and mirrors it into the vault
-- `agent-bootstrap harness <status|intake|proof|decision>` tracks feature intent, risk, scope, proof, and product decisions in the repo and mirrors it into the vault
+- `agent-bootstrap harness <status|intake|proof|decision|trace|friction>` tracks feature intent, risk, scope, proof, trace, friction, and product decisions in the repo and mirrors it into the vault
 - `agent-bootstrap recall "<query>"` searches durable project memory Markdown with hybrid lexical + concept recall
 - `agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup>` handles health, import inspection, session replay, export, and backup
 - `scripts/agent-memory.js` writes tasks, decisions, facts, questions, handoffs, research, notes, recall output, memory maintenance, and compact summaries
@@ -453,7 +466,7 @@ The vault bridge is stable across `init` and `update`:
 - `Open Questions.md` is for unresolved assumptions
 - `Handoff.md` keeps the next-session state short
 - `Plans/CURRENT.md` keeps the active implementation state durable
-- `ProductHarness/` keeps feature intent and proof durable
+- `ProductHarness/` keeps feature intent, proof, trace, and friction durable
 
 ## Contributor Verification
 

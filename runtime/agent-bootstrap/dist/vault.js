@@ -109,7 +109,7 @@ Minimum structure:
 - \`Decisions.md\` for decision log
 - \`Sessions/\` for clean agent session summaries and replay
 - \`Plans/\` for active implementation plan state mirrored from the repo
-- \`ProductHarness/\` for feature intent, risk, scope, and proof mirrored from the repo
+- \`ProductHarness/\` for feature intent, risk, scope, proof, trace, and friction mirrored from the repo
 - \`Research/\` for project-only research
 - \`Notes/\` for working notes
 - \`Artifacts/\` for generated outputs when needed
@@ -142,7 +142,7 @@ After meaningful work, the agent should update the vault, not just the code.
 Write back at least one of these when appropriate:
 - \`Tasks.md\` after planning, execution, or status changes
 - \`Plans/CURRENT.md\` after active implementation plan state changes
-- \`ProductHarness/\` after feature intake, proof, or product decision changes
+- \`ProductHarness/\` after feature intake, proof, trace, friction, or product decision changes
 - \`Decisions.md\` after architecture or implementation choices
 - \`Research/\` after source-based investigation
 - \`Notes/\` for implementation notes that may help later
@@ -538,6 +538,7 @@ function ensureVaultScaffold(vaultRoot) {
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'Stories'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'Validation'));
     (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'Decisions'));
+    (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'Traces'));
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'AGENTS.md'), vaultAgentTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Init.md'), vaultInitTemplate());
     for (const folder of DEFAULT_FOLDERS) {
@@ -557,10 +558,12 @@ function ensureVaultScaffold(vaultRoot) {
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Sessions', 'README.md'), '# Sessions\n\nClean agent session summaries for recall and replay.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Artifacts', 'README.md'), '# Artifacts\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'Plans', 'README.md'), '# Plans\n\nDurable mirror of repo active implementation plan state.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
-    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'README.md'), '# Product Harness\n\nDurable mirror of feature intent, risk, scope, and proof.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'README.md'), '# Product Harness\n\nDurable mirror of feature intent, risk, scope, proof, trace, and friction.\n\n- Vault: [[Init]]\n- Project: [[README]]\n');
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'HARNESS_BACKLOG.md'), '# Harness Backlog\n\n## Open Friction\n\n- none yet\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'Stories', 'INDEX.md'), '# Story Index\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'Validation', 'TEST_MATRIX.md'), '# Test Matrix\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'Decisions', 'INDEX.md'), '# Product Decisions\n');
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, 'Projects', '_template', 'ProductHarness', 'Traces', 'README.md'), '# Harness Traces\n');
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, '.obsidian', 'core-plugins.json'), corePluginsConfig());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, '.obsidian', 'daily-notes.json'), dailyNotesConfig());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultRoot, '.obsidian', 'app.json'), appConfig());

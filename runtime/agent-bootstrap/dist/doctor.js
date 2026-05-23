@@ -33,6 +33,8 @@ function runDoctor({ repoRoot } = {}) {
         ['Plans/CURRENT.md', node_path_1.default.join(config.project_root, 'Plans', 'CURRENT.md')],
         ['Plans/INDEX.md', node_path_1.default.join(config.project_root, 'Plans', 'INDEX.md')],
         ['ProductHarness/HARNESS.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS.md')],
+        ['ProductHarness/HARNESS_BACKLOG.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md')],
+        ['ProductHarness/Traces', node_path_1.default.join(config.project_root, 'ProductHarness', 'Traces')],
         ['ProductHarness/Stories/INDEX.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')],
     ]
         .filter(([, absolutePath]) => !node_fs_1.default.existsSync(absolutePath))
@@ -51,8 +53,12 @@ function runDoctor({ repoRoot } = {}) {
         planState: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'Plans', 'CURRENT.md')),
         productHarness: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'traces'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'stories', 'INDEX.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'Traces'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')),
         gitAvailable: hasGit(),
         registered,

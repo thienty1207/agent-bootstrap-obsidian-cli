@@ -44,6 +44,8 @@ exports.MANAGED_REPO_PATHS = [
     'docs/superpowers/plans/INDEX.md',
     'docs/product/PRODUCT.md',
     'docs/product/HARNESS.md',
+    'docs/product/HARNESS_BACKLOG.md',
+    'docs/product/traces/README.md',
     'docs/stories/INDEX.md',
     'docs/validation/TEST_MATRIX.md',
     'docs/decisions/INDEX.md',

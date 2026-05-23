@@ -1,3 +1,4 @@
+import cp from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getIsoTimestamp, getTodayString } from './date';
@@ -6,18 +7,61 @@ import type { RepoConfig } from './context';
 
 export type HarnessRisk = 'low' | 'medium' | 'high';
 export type HarnessStoryStatus = 'intake' | 'proof_added';
+export type HarnessInputType =
+  | 'new_spec'
+  | 'spec_slice'
+  | 'change_request'
+  | 'new_initiative'
+  | 'maintenance'
+  | 'harness_improvement';
+export type HarnessRiskFlag =
+  | 'auth'
+  | 'authorization'
+  | 'data_model'
+  | 'audit_security'
+  | 'external_systems'
+  | 'public_contract'
+  | 'cross_platform'
+  | 'existing_behavior'
+  | 'weak_proof'
+  | 'multi_domain';
+export type HarnessOutcome = 'completed' | 'partial' | 'blocked' | 'failed';
 
 export interface HarnessStoryRecord {
   title: string;
   slug: string;
   risk: HarnessRisk;
+  inputType: HarnessInputType;
+  riskFlags: HarnessRiskFlag[];
   status: HarnessStoryStatus;
   created: string;
   updated: string;
   proofCount: number;
+  latestProof: string | null;
+  repoPath: string;
+  storyRoot: string;
+  vaultPath: string;
+  vaultStoryRoot: string;
+  relativeRepoPath: string;
+  isPacket: boolean;
+}
+
+export interface HarnessTraceRecord {
+  summary: string;
+  outcome: HarnessOutcome;
+  created: string;
   repoPath: string;
   vaultPath: string;
   relativeRepoPath: string;
+  currentStory: string | null;
+}
+
+export interface HarnessFrictionRecord {
+  pain: string;
+  status: 'proposed' | 'resolved';
+  created: string;
+  repoPath: string;
+  vaultPath: string;
 }
 
 export interface ProductHarnessStatus {
@@ -25,12 +69,16 @@ export interface ProductHarnessStatus {
   repoHarnessRoot: string;
   vaultHarnessRoot: string;
   currentStory: HarnessStoryRecord | null;
+  latestTrace: HarnessTraceRecord | null;
+  openFriction: HarnessFrictionRecord[];
   proofGaps: string[];
   counts: {
     stories: number;
     highRiskStories: number;
     storiesMissingProof: number;
     decisions: number;
+    traces: number;
+    openFriction: number;
   };
   stories: HarnessStoryRecord[];
 }
@@ -41,8 +89,33 @@ interface HarnessCommandOptions {
   value?: string;
 }
 
+interface HarnessClassification {
+  inputType: HarnessInputType;
+  riskFlags: HarnessRiskFlag[];
+  risk: HarnessRisk;
+}
+
+interface StoryParts {
+  title: string;
+  slug: string;
+  risk: HarnessRisk;
+  inputType: HarnessInputType;
+  riskFlags: HarnessRiskFlag[];
+  created: string;
+  progressLines: string[];
+  proofLines: string[];
+}
+
 function repoProductRoot(repoRoot: string): string {
   return path.join(repoRoot, 'docs', 'product');
+}
+
+function repoTracesRoot(repoRoot: string): string {
+  return path.join(repoProductRoot(repoRoot), 'traces');
+}
+
+function repoBacklogPath(repoRoot: string): string {
+  return path.join(repoProductRoot(repoRoot), 'HARNESS_BACKLOG.md');
 }
 
 function repoStoriesRoot(repoRoot: string): string {
@@ -62,12 +135,14 @@ export function getRepoProductHarnessRoots(repoRoot: string): {
   storiesRoot: string;
   validationRoot: string;
   decisionsRoot: string;
+  tracesRoot: string;
 } {
   return {
     productRoot: repoProductRoot(repoRoot),
     storiesRoot: repoStoriesRoot(repoRoot),
     validationRoot: repoValidationRoot(repoRoot),
     decisionsRoot: repoDecisionsRoot(repoRoot),
+    tracesRoot: repoTracesRoot(repoRoot),
   };
 }
 
@@ -85,6 +160,18 @@ function vaultValidationRoot(config: RepoConfig): string {
 
 function vaultDecisionsRoot(config: RepoConfig): string {
   return path.join(getVaultProductHarnessRoot(config), 'Decisions');
+}
+
+function vaultTracesRoot(config: RepoConfig): string {
+  return path.join(getVaultProductHarnessRoot(config), 'Traces');
+}
+
+function vaultBacklogPath(config: RepoConfig): string {
+  return path.join(getVaultProductHarnessRoot(config), 'HARNESS_BACKLOG.md');
+}
+
+function toPosix(relativePath: string): string {
+  return relativePath.replace(/\\/g, '/');
 }
 
 function parseFrontmatter(content: string): Record<string, string> {
@@ -120,64 +207,158 @@ function normalizeRisk(value?: string): HarnessRisk {
   return 'medium';
 }
 
+function normalizeInputType(value?: string): HarnessInputType {
+  const allowed: HarnessInputType[] = [
+    'new_spec',
+    'spec_slice',
+    'change_request',
+    'new_initiative',
+    'maintenance',
+    'harness_improvement',
+  ];
+  return allowed.includes(value as HarnessInputType) ? value as HarnessInputType : 'change_request';
+}
+
 function normalizeStatus(value?: string): HarnessStoryStatus {
   return value === 'proof_added' ? 'proof_added' : 'intake';
 }
 
-function countProofEntries(content: string): number {
-  const match = content.match(/## Proof Log\r?\n\r?\n([\s\S]*?)(?:\r?\n## |\s*$)/);
-  if (!match) {
-    return 0;
+function parseRiskFlags(value?: string): HarnessRiskFlag[] {
+  if (!value || value === 'none') {
+    return [];
   }
-  return match[1]
+  const allowed = new Set<HarnessRiskFlag>([
+    'auth',
+    'authorization',
+    'data_model',
+    'audit_security',
+    'external_systems',
+    'public_contract',
+    'cross_platform',
+    'existing_behavior',
+    'weak_proof',
+    'multi_domain',
+  ]);
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item): item is HarnessRiskFlag => allowed.has(item as HarnessRiskFlag));
+}
+
+function extractSectionLines(content: string, sectionName: string): string[] {
+  const match = content.match(new RegExp(`## ${sectionName}\\r?\\n\\r?\\n([\\s\\S]*?)(?:\\r?\\n## |\\s*$)`));
+  return (match?.[1] || '')
     .split(/\r?\n/)
+    .map((line) => line.trimEnd())
+    .filter((line) => line && line !== '- none yet');
+}
+
+function countProofEntries(content: string): number {
+  return extractSectionLines(content, 'Proof Log')
     .filter((line) => /^-\s+\d{4}-\d{2}-\d{2}T/.test(line.trim()))
     .length;
 }
 
+function latestProofEntry(content: string): string | null {
+  const proofLines = extractSectionLines(content, 'Proof Log')
+    .filter((line) => /^-\s+\d{4}-\d{2}-\d{2}T/.test(line.trim()));
+  const latest = proofLines[proofLines.length - 1];
+  if (!latest) {
+    return null;
+  }
+  return latest.replace(/^-\s+\d{4}-\d{2}-\d{2}T[^\s]+\s+-\s+/, '').trim();
+}
+
+function timestampForFile(): string {
+  return getIsoTimestamp().replace(/[:.]/g, '-');
+}
+
+function includesAny(value: string, patterns: RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(value));
+}
+
 export function classifyHarnessRisk(title: string): HarnessRisk {
+  return classifyHarnessIntake(title).risk;
+}
+
+export function classifyHarnessIntake(title: string): HarnessClassification {
   const value = title.toLowerCase();
-  const highRisk = [
-    /\bauth\b/,
-    /\blogin\b/,
-    /\bpassword\b/,
-    /\btoken\b/,
-    /\bpayment\b/,
-    /\bbilling\b/,
-    /\bsubscription\b/,
-    /\bpermission\b/,
-    /\badmin\b/,
-    /\btenant\b/,
-    /\brls\b/,
-    /\bdatabase\s+migration\b/,
-    /\bmigration\b/,
-    /\bupload\b/,
-    /\bsecurity\b/,
-    /\bsecret\b/,
-    /\bsecrets\b/,
-    /\bdelete\b/,
-    /\bdestroy\b/,
-    /\bdestructive\b/,
-  ];
-  if (highRisk.some((pattern) => pattern.test(value))) {
-    return 'high';
+  const riskFlags: HarnessRiskFlag[] = [];
+
+  if (includesAny(value, [/\bauth\b/, /\blogin\b/, /\bsignin\b/, /\bpassword\b/, /\btoken\b/, /\bjwt\b/, /\bsession\b/, /\boauth\b/])) {
+    riskFlags.push('auth');
+  }
+  if (includesAny(value, [/\bpermission\b/, /\bpermissions\b/, /\bauthorization\b/, /\bauthorize\b/, /\badmin\b/, /\brole\b/, /\brls\b/, /\btenant\b/, /\baccess\s+control\b/])) {
+    riskFlags.push('authorization');
+  }
+  if (includesAny(value, [/\bdatabase\b/, /\bdb\b/, /\bschema\b/, /\bmodel\b/, /\bmigration\b/, /\bdata\s+loss\b/, /\bdelete\b/, /\bdeletes\b/, /\bdestroy\b/, /\binvoice\b/, /\btable\b/, /\bsupabase\b/, /\bpostgres\b/, /\bsql\b/])) {
+    riskFlags.push('data_model');
+  }
+  if (includesAny(value, [/\bsecurity\b/, /\baudit\b/, /\bsecret\b/, /\bsecrets\b/, /\.env\b/, /\bupload\b/, /\bcors\b/, /\brate\s*limit\b/, /\bvulnerability\b/])) {
+    riskFlags.push('audit_security');
+  }
+  if (includesAny(value, [/\bprovider\b/, /\bexternal\b/, /\bstripe\b/, /\bpayment\b/, /\bbilling\b/, /\bsubscription\b/, /\bwebhook\b/, /\bemail\b/])) {
+    riskFlags.push('external_systems');
+  }
+  if (includesAny(value, [/\bapi\b/, /\bendpoint\b/, /\bpublic\s+contract\b/, /\bsdk\b/, /\bexport\b/, /\bimport\b/])) {
+    riskFlags.push('public_contract');
+  }
+  if (includesAny(value, [/\bmobile\b/, /\bdesktop\b/, /\bios\b/, /\bandroid\b/, /\bweb\b/, /\bbrowser\b/, /\bcross-platform\b/])) {
+    riskFlags.push('cross_platform');
+  }
+  if (includesAny(value, [/\bfix\b/, /\bbug\b/, /\bregression\b/, /\bexisting\b/, /\blegacy\b/, /\brefactor\b/, /\bmigrate\b/, /\bmigration\b/, /\bdelete\b/, /\bdeletes\b/])) {
+    riskFlags.push('existing_behavior');
+  }
+  if (includesAny(value, [/\bmaybe\b/, /\btemporary\b/, /\bquick\s+hack\b/, /\bunclear\b/, /\bunknown\b/])) {
+    riskFlags.push('weak_proof');
   }
 
-  const mediumRisk = [
-    /\bapi\b/,
-    /\bbackend\b/,
-    /\bfrontend\s+flow\b/,
-    /\bform\b/,
-    /\bdashboard\b/,
-    /\bstate\b/,
-    /\bintegration\b/,
-    /\bcheckout\b/,
-  ];
-  if (mediumRisk.some((pattern) => pattern.test(value))) {
-    return 'medium';
+  const domainHits = [
+    /\bfrontend\b/.test(value),
+    /\bbackend\b/.test(value),
+    /\bapi\b/.test(value),
+    /\bdatabase\b|\bdb\b|\bschema\b|\bmigration\b/.test(value),
+    /\bauth\b|\blogin\b|\bpermission\b/.test(value),
+    /\bpayment\b|\bbilling\b|\bprovider\b|\bintegration\b/.test(value),
+  ].filter(Boolean).length;
+  if (domainHits >= 3) {
+    riskFlags.push('multi_domain');
   }
 
-  return 'low';
+  const uniqueFlags = [...new Set(riskFlags)];
+  let inputType: HarnessInputType = 'change_request';
+  if (/\bharness\b/.test(value)) {
+    inputType = 'harness_improvement';
+  } else if (/\bmaintenance\b|\bdependency\b|\bupgrade\b|\bchore\b|\bcleanup\b/.test(value)) {
+    inputType = 'maintenance';
+  } else if (/\bslice\b|\bphase\b|\bpart\b/.test(value)) {
+    inputType = 'spec_slice';
+  } else if (/\binitiative\b|\bnew\s+product\b|\blaunch\b/.test(value)) {
+    inputType = 'new_initiative';
+  } else if (/\bspec\b|\brequirement\b/.test(value)) {
+    inputType = 'new_spec';
+  }
+
+  const hardGateFlags = new Set<HarnessRiskFlag>([
+    'auth',
+    'authorization',
+    'data_model',
+    'audit_security',
+    'external_systems',
+  ]);
+  let risk: HarnessRisk = uniqueFlags.some((flag) => hardGateFlags.has(flag)) ? 'high' : 'low';
+  if (risk !== 'high' && includesAny(value, [/\bapi\b/, /\bbackend\b/, /\bfrontend\s+flow\b/, /\bform\b/, /\bdashboard\b/, /\bstate\b/, /\bintegration\b/, /\bcheckout\b/])) {
+    risk = 'medium';
+  }
+  if (risk !== 'high' && uniqueFlags.some((flag) => flag === 'public_contract' || flag === 'cross_platform' || flag === 'existing_behavior' || flag === 'multi_domain')) {
+    risk = 'medium';
+  }
+
+  return {
+    inputType,
+    riskFlags: uniqueFlags,
+    risk,
+  };
 }
 
 function productTemplate(config: RepoConfig): string {
@@ -218,8 +399,10 @@ function harnessTemplate(): string {
     '- what is in scope and out of scope',
     '- whether the task is low, medium, or high risk',
     '- what proof is required before anyone can call the feature done',
+    '- what trace was left after meaningful work',
+    '- what workflow friction should improve next time',
     '',
-    'Daily logs still record what happened today. Active Plan State still records what step is active. Product Harness records the feature contract and proof.',
+    'Daily logs still record what happened today. Active Plan State still records what step is active. Product Harness records the feature contract, proof, trace, and friction.',
     '',
   ].join('\n');
 }
@@ -230,8 +413,8 @@ function storiesIndexTemplate(): string {
     '',
     'Feature stories created by Product Harness live in dated folders.',
     '',
-    '- Small tasks may not need a story.',
-    '- Medium and high-risk tasks should get a story before coding.',
+    '- Low and medium-risk tasks use one compact story file.',
+    '- High-risk tasks use a packet folder with overview, design, validation, and execplan files.',
     '- High-risk stories need proof before final completion claims.',
     '',
   ].join('\n');
@@ -241,11 +424,10 @@ function validationTemplate(): string {
   return [
     '# Test Matrix',
     '',
-    'Use this file to keep feature proof visible.',
+    'Product Harness keeps story proof visible here.',
     '',
-    '| Feature | Risk | Required proof | Latest evidence |',
-    '| --- | --- | --- | --- |',
-    '| none yet | - | - | - |',
+    '| Story | Risk | Unit | Integration | E2E | Platform | Status | Evidence |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
     '',
   ].join('\n');
 }
@@ -259,13 +441,37 @@ function decisionsTemplate(): string {
   ].join('\n');
 }
 
+function backlogTemplate(): string {
+  return [
+    '# Harness Backlog',
+    '',
+    'Open workflow friction that should make future harness behavior sharper.',
+    '',
+    '## Open Friction',
+    '',
+    '- none yet',
+    '',
+  ].join('\n');
+}
+
+function tracesReadmeTemplate(): string {
+  return [
+    '# Harness Traces',
+    '',
+    'Short execution traces written after meaningful work. Compact context loads only the latest trace.',
+    '',
+  ].join('\n');
+}
+
 function ensureHarnessDirectories(repoRoot: string, config: RepoConfig): void {
   for (const dirPath of [
     repoProductRoot(repoRoot),
+    repoTracesRoot(repoRoot),
     repoStoriesRoot(repoRoot),
     repoValidationRoot(repoRoot),
     repoDecisionsRoot(repoRoot),
     getVaultProductHarnessRoot(config),
+    vaultTracesRoot(config),
     vaultStoriesRoot(config),
     vaultValidationRoot(config),
     vaultDecisionsRoot(config),
@@ -274,9 +480,20 @@ function ensureHarnessDirectories(repoRoot: string, config: RepoConfig): void {
   }
 }
 
+function copyIfExists(sourcePath: string, targetPath: string): void {
+  if (!fs.existsSync(sourcePath)) {
+    return;
+  }
+  ensureDir(path.dirname(targetPath));
+  fs.copyFileSync(sourcePath, targetPath);
+}
+
 function mirrorHarnessToVault(repoRoot: string, config: RepoConfig): void {
   ensureHarnessDirectories(repoRoot, config);
-  fs.cpSync(repoProductRoot(repoRoot), getVaultProductHarnessRoot(config), { recursive: true });
+  copyIfExists(path.join(repoProductRoot(repoRoot), 'PRODUCT.md'), path.join(getVaultProductHarnessRoot(config), 'PRODUCT.md'));
+  copyIfExists(path.join(repoProductRoot(repoRoot), 'HARNESS.md'), path.join(getVaultProductHarnessRoot(config), 'HARNESS.md'));
+  copyIfExists(repoBacklogPath(repoRoot), vaultBacklogPath(config));
+  fs.cpSync(repoTracesRoot(repoRoot), vaultTracesRoot(config), { recursive: true });
   fs.cpSync(repoStoriesRoot(repoRoot), vaultStoriesRoot(config), { recursive: true });
   fs.cpSync(repoValidationRoot(repoRoot), vaultValidationRoot(config), { recursive: true });
   fs.cpSync(repoDecisionsRoot(repoRoot), vaultDecisionsRoot(config), { recursive: true });
@@ -285,23 +502,48 @@ function mirrorHarnessToVault(repoRoot: string, config: RepoConfig): void {
 function writeHarnessDefaults(repoRoot: string, config: RepoConfig): void {
   writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'PRODUCT.md'), productTemplate(config));
   writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'HARNESS.md'), harnessTemplate());
+  writeFileIfMissing(repoBacklogPath(repoRoot), backlogTemplate());
+  writeFileIfMissing(path.join(repoTracesRoot(repoRoot), 'README.md'), tracesReadmeTemplate());
   writeFileIfMissing(path.join(repoStoriesRoot(repoRoot), 'INDEX.md'), storiesIndexTemplate());
   writeFileIfMissing(path.join(repoValidationRoot(repoRoot), 'TEST_MATRIX.md'), validationTemplate());
   writeFileIfMissing(path.join(repoDecisionsRoot(repoRoot), 'INDEX.md'), decisionsTemplate());
   writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'PRODUCT.md'), productTemplate(config));
   writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'HARNESS.md'), harnessTemplate());
+  writeFileIfMissing(vaultBacklogPath(config), backlogTemplate());
+  writeFileIfMissing(path.join(vaultTracesRoot(config), 'README.md'), tracesReadmeTemplate());
   writeFileIfMissing(path.join(vaultStoriesRoot(config), 'INDEX.md'), storiesIndexTemplate());
   writeFileIfMissing(path.join(vaultValidationRoot(config), 'TEST_MATRIX.md'), validationTemplate());
   writeFileIfMissing(path.join(vaultDecisionsRoot(config), 'INDEX.md'), decisionsTemplate());
 }
 
-function toPosix(relativePath: string): string {
-  return relativePath.replace(/\\/g, '/');
-}
-
 function storyVaultPath(repoRoot: string, config: RepoConfig, storyPath: string): string {
   const relative = toPosix(path.relative(repoStoriesRoot(repoRoot), storyPath));
   return path.join(vaultStoriesRoot(config), relative);
+}
+
+function storyVaultRoot(repoRoot: string, config: RepoConfig, storyRoot: string): string {
+  const relative = toPosix(path.relative(repoStoriesRoot(repoRoot), storyRoot));
+  return path.join(vaultStoriesRoot(config), relative);
+}
+
+function storyPathFor(repoRoot: string, title: string, risk: HarnessRisk, date = getTodayString()): { storyPath: string; storyRoot: string } {
+  const slug = slugify(title);
+  if (risk === 'high') {
+    const storyRoot = path.join(repoStoriesRoot(repoRoot), date, `${date}-${slug}`);
+    return {
+      storyRoot,
+      storyPath: path.join(storyRoot, 'overview.md'),
+    };
+  }
+  const storyPath = path.join(repoStoriesRoot(repoRoot), date, `${date}-${slug}.md`);
+  return {
+    storyRoot: storyPath,
+    storyPath,
+  };
+}
+
+function isPacketPart(fileName: string): boolean {
+  return fileName === 'design.md' || fileName === 'validation.md' || fileName === 'execplan.md';
 }
 
 function collectStoryFiles(storiesRoot: string): string[] {
@@ -318,7 +560,7 @@ function collectStoryFiles(storiesRoot: string): string[] {
       const entryPath = path.join(current, entry.name);
       if (entry.isDirectory()) {
         stack.push(entryPath);
-      } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'INDEX.md') {
+      } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'INDEX.md' && !isPacketPart(entry.name)) {
         files.push(entryPath);
       }
     }
@@ -333,17 +575,25 @@ function storyRecordFromFile(repoRoot: string, config: RepoConfig, filePath: str
   }
   const fields = parseFrontmatter(content);
   const title = storyTitleFromContent(filePath, content);
+  const isPacket = path.basename(filePath) === 'overview.md' || fields.type === 'agent-bootstrap-story-packet';
+  const storyRoot = isPacket ? path.dirname(filePath) : filePath;
   return {
     title,
     slug: fields.slug || slugify(title),
     risk: normalizeRisk(fields.risk),
+    inputType: normalizeInputType(fields.input_type),
+    riskFlags: parseRiskFlags(fields.risk_flags),
     status: normalizeStatus(fields.status),
     created: fields.created || path.basename(path.dirname(filePath)),
     updated: fields.updated || fs.statSync(filePath).mtime.toISOString(),
     proofCount: countProofEntries(content),
+    latestProof: latestProofEntry(content),
     repoPath: filePath,
+    storyRoot,
     vaultPath: storyVaultPath(repoRoot, config, filePath),
+    vaultStoryRoot: storyVaultRoot(repoRoot, config, storyRoot),
     relativeRepoPath: toPosix(path.relative(repoRoot, filePath)),
+    isPacket,
   };
 }
 
@@ -395,14 +645,50 @@ function proofChecklist(risk: HarnessRisk): string[] {
   ];
 }
 
-function storyPathFor(repoRoot: string, title: string, date = getTodayString()): string {
-  return path.join(repoStoriesRoot(repoRoot), date, `${date}-${slugify(title)}.md`);
+function storyFrontmatter({
+  config,
+  title,
+  risk,
+  inputType,
+  riskFlags,
+  status,
+  created,
+  updated,
+  packet,
+}: {
+  config: RepoConfig;
+  title: string;
+  risk: HarnessRisk;
+  inputType: HarnessInputType;
+  riskFlags: HarnessRiskFlag[];
+  status: HarnessStoryStatus;
+  created: string;
+  updated: string;
+  packet: boolean;
+}): string[] {
+  return [
+    '---',
+    `type: ${packet ? 'agent-bootstrap-story-packet' : 'agent-bootstrap-story'}`,
+    `project: ${config.project_slug}`,
+    `title: ${title}`,
+    `slug: ${slugify(title)}`,
+    `risk: ${risk}`,
+    `input_type: ${inputType}`,
+    `risk_flags: ${riskFlags.length > 0 ? riskFlags.join(',') : 'none'}`,
+    `status: ${status}`,
+    `created: ${created}`,
+    `updated: ${updated}`,
+    'linked_plan: docs/superpowers/plans/CURRENT.md',
+    '---',
+  ];
 }
 
 function renderStory({
   config,
   title,
   risk,
+  inputType,
+  riskFlags,
   status,
   created,
   updated,
@@ -412,6 +698,8 @@ function renderStory({
   config: RepoConfig;
   title: string;
   risk: HarnessRisk;
+  inputType: HarnessInputType;
+  riskFlags: HarnessRiskFlag[];
   status: HarnessStoryStatus;
   created: string;
   updated: string;
@@ -419,17 +707,7 @@ function renderStory({
   proofLines: string[];
 }): string {
   return [
-    '---',
-    'type: agent-bootstrap-story',
-    `project: ${config.project_slug}`,
-    `title: ${title}`,
-    `slug: ${slugify(title)}`,
-    `risk: ${risk}`,
-    `status: ${status}`,
-    `created: ${created}`,
-    `updated: ${updated}`,
-    'linked_plan: docs/superpowers/plans/CURRENT.md',
-    '---',
+    ...storyFrontmatter({ config, title, risk, inputType, riskFlags, status, created, updated, packet: false }),
     '',
     `# ${created} - ${title}`,
     '',
@@ -439,7 +717,7 @@ function renderStory({
     '',
     '## Scope',
     '',
-    '- Track product behavior tied to this feature only.',
+    '- Track product behavior tied to this task only.',
     '- Keep implementation work in Active Plan State and daily execution details in Daily logs.',
     '',
     '## Out Of Scope',
@@ -451,6 +729,8 @@ function renderStory({
     '## Risk',
     '',
     `- Level: ${risk}`,
+    `- Input type: ${inputType}`,
+    `- Risk flags: ${riskFlags.length > 0 ? riskFlags.join(', ') : 'none'}`,
     '- Product Harness uses risk only to decide proof depth; Superpowers still owns the workflow.',
     '',
     '## Proof Checklist',
@@ -472,30 +752,203 @@ function renderStory({
   ].join('\n');
 }
 
-function readStoryParts(filePath: string): {
+function renderPacketOverview({
+  config,
+  title,
+  risk,
+  inputType,
+  riskFlags,
+  status,
+  created,
+  updated,
+  progressLines,
+  proofLines,
+}: {
+  config: RepoConfig;
   title: string;
   risk: HarnessRisk;
+  inputType: HarnessInputType;
+  riskFlags: HarnessRiskFlag[];
+  status: HarnessStoryStatus;
   created: string;
+  updated: string;
   progressLines: string[];
   proofLines: string[];
-} {
+}): string {
+  return [
+    ...storyFrontmatter({ config, title, risk, inputType, riskFlags, status, created, updated, packet: true }),
+    '',
+    `# ${created} - ${title}`,
+    '',
+    '## Goal',
+    '',
+    title,
+    '',
+    '## Current Behavior',
+    '',
+    '- Unknown until confirmed from repo context, user request, tests, or source-backed memory.',
+    '- Do not guess current behavior when evidence is missing.',
+    '',
+    '## Scope',
+    '',
+    '- Track product behavior tied to this high-risk task only.',
+    '- Keep implementation work in Active Plan State and daily execution details in Daily logs.',
+    '',
+    '## Out Of Scope',
+    '',
+    '- Unrelated refactors.',
+    '- Unrequested product behavior.',
+    '- New workflow skills or new core subagents.',
+    '',
+    '## Risk',
+    '',
+    `- Level: ${risk}`,
+    `- Input type: ${inputType}`,
+    `- Risk flags: ${riskFlags.length > 0 ? riskFlags.join(', ') : 'none'}`,
+    '- Hard gates such as auth, permission, migration, data loss, security, and external providers require proof before completion claims.',
+    '',
+    '## Proof Checklist',
+    '',
+    ...proofChecklist(risk),
+    '',
+    '## Story Packet',
+    '',
+    '- Design: design.md',
+    '- Validation: validation.md',
+    '- Execution plan: execplan.md',
+    '',
+    '## Progress Log',
+    '',
+    ...(progressLines.length > 0 ? progressLines : ['- none yet']),
+    '',
+    '## Proof Log',
+    '',
+    ...(proofLines.length > 0 ? proofLines : ['- none yet']),
+    '',
+    '## Product Decisions',
+    '',
+    '- none yet',
+    '',
+  ].join('\n');
+}
+
+function renderPacketDesign(title: string, classification: HarnessClassification): string {
+  return [
+    '# Design',
+    '',
+    `Story: ${title}`,
+    `Risk: ${classification.risk}`,
+    `Risk flags: ${classification.riskFlags.length > 0 ? classification.riskFlags.join(', ') : 'none'}`,
+    '',
+    '## Existing Behavior To Confirm',
+    '',
+    '- Read the current code path before changing behavior.',
+    '- Mark unknowns as unknown instead of filling gaps from memory.',
+    '',
+    '## Proposed Shape',
+    '',
+    '- Keep the smallest useful change that satisfies the story.',
+    '- Preserve public contracts unless the story explicitly changes them.',
+    '',
+    '## Data And Security Notes',
+    '',
+    '- Verify auth, authorization, data access, secrets, uploads, providers, and migrations when relevant.',
+    '- No sensitive secrets should be copied into this packet.',
+    '',
+  ].join('\n');
+}
+
+function renderPacketValidation(title: string, classification: HarnessClassification, proofLines: string[] = []): string {
+  return [
+    '# Validation',
+    '',
+    `Story: ${title}`,
+    '',
+    '## Required Proof',
+    '',
+    ...proofChecklist(classification.risk),
+    '',
+    '## Auth/Security Proof',
+    '',
+    '- auth/security proof: wrong password, unauthorized request, invalid token, missing permission, or equivalent bad path must be rejected when relevant.',
+    '',
+    '## Regression Proof',
+    '',
+    '- Run the smallest useful automated test, build, or smoke check.',
+    '',
+    '## Proof Log',
+    '',
+    ...(proofLines.length > 0 ? proofLines : ['- none yet']),
+    '',
+  ].join('\n');
+}
+
+function renderPacketExecPlan(title: string): string {
+  return [
+    '# Execution Plan',
+    '',
+    `Story: ${title}`,
+    '',
+    '## Steps',
+    '',
+    '- [ ] Confirm existing behavior and scope.',
+    '- [ ] Implement the smallest useful change.',
+    '- [ ] Run required proof.',
+    '- [ ] Record Product Harness proof and trace.',
+    '',
+    '## Stop Conditions',
+    '',
+    '- Stop and ask if scope changes materially.',
+    '- Stop if required proof cannot be run or interpreted.',
+    '- Stop if auth, data, or external-provider behavior is unknown.',
+    '',
+  ].join('\n');
+}
+
+function readStoryParts(filePath: string): StoryParts {
   const content = readIfExists(filePath) || '';
   const fields = parseFrontmatter(content);
-  const clean = (sectionName: string): string[] => {
-    const match = content.match(new RegExp(`## ${sectionName}\\r?\\n\\r?\\n([\\s\\S]*?)(?:\\r?\\n## |\\s*$)`));
-    return (match?.[1] || '')
-      .split(/\r?\n/)
-      .map((line) => line.trimEnd())
-      .filter((line) => line && line !== '- none yet');
-  };
-
+  const title = fields.title || storyTitleFromContent(filePath, content);
   return {
-    title: fields.title || storyTitleFromContent(filePath, content),
+    title,
+    slug: fields.slug || slugify(title),
     risk: normalizeRisk(fields.risk),
+    inputType: normalizeInputType(fields.input_type),
+    riskFlags: parseRiskFlags(fields.risk_flags),
     created: fields.created || path.basename(path.dirname(filePath)),
-    progressLines: clean('Progress Log'),
-    proofLines: clean('Proof Log'),
+    progressLines: extractSectionLines(content, 'Progress Log'),
+    proofLines: extractSectionLines(content, 'Proof Log'),
   };
+}
+
+function updateValidationMatrix(repoRoot: string, config: RepoConfig): void {
+  const stories = readStories(repoRoot, config);
+  const lines = [
+    '# Test Matrix',
+    '',
+    'Product Harness keeps story proof visible here.',
+    '',
+    '| Story | Risk | Unit | Integration | E2E | Platform | Status | Evidence |',
+    '| --- | --- | --- | --- | --- | --- | --- | --- |',
+  ];
+
+  for (const story of stories.slice().reverse()) {
+    const hasProof = story.proofCount > 0;
+    const row = [
+      story.title.replace(/\|/g, '/'),
+      story.risk,
+      hasProof ? 'yes' : 'no',
+      'no',
+      'no',
+      'no',
+      hasProof ? 'implemented' : 'planned',
+      (story.latestProof || 'none').replace(/\|/g, '/'),
+    ];
+    lines.push(`| ${row.join(' | ')} |`);
+  }
+  lines.push('');
+  writeFile(path.join(repoValidationRoot(repoRoot), 'TEST_MATRIX.md'), lines.join('\n'));
+  writeFile(path.join(vaultValidationRoot(config), 'TEST_MATRIX.md'), lines.join('\n'));
 }
 
 function writeStoryUpdate({
@@ -515,16 +968,45 @@ function writeStoryUpdate({
 }): HarnessStoryRecord {
   const parts = readStoryParts(storyPath);
   const updated = getIsoTimestamp();
-  writeFile(storyPath, renderStory({
-    config,
-    title: parts.title,
-    risk: parts.risk,
-    status,
-    created: parts.created,
-    updated,
-    progressLines: progressLine ? [...parts.progressLines, `- ${updated} - ${progressLine}`] : parts.progressLines,
-    proofLines: proofLine ? [...parts.proofLines, `- ${updated} - ${proofLine}`] : parts.proofLines,
-  }));
+  const progressLines = progressLine ? [...parts.progressLines, `- ${updated} - ${progressLine}`] : parts.progressLines;
+  const proofLines = proofLine ? [...parts.proofLines, `- ${updated} - ${proofLine}`] : parts.proofLines;
+  const isPacket = path.basename(storyPath) === 'overview.md';
+
+  if (isPacket) {
+    writeFile(storyPath, renderPacketOverview({
+      config,
+      title: parts.title,
+      risk: parts.risk,
+      inputType: parts.inputType,
+      riskFlags: parts.riskFlags,
+      status,
+      created: parts.created,
+      updated,
+      progressLines,
+      proofLines,
+    }));
+    const validationPath = path.join(path.dirname(storyPath), 'validation.md');
+    writeFile(validationPath, renderPacketValidation(parts.title, {
+      risk: parts.risk,
+      inputType: parts.inputType,
+      riskFlags: parts.riskFlags,
+    }, proofLines));
+  } else {
+    writeFile(storyPath, renderStory({
+      config,
+      title: parts.title,
+      risk: parts.risk,
+      inputType: parts.inputType,
+      riskFlags: parts.riskFlags,
+      status,
+      created: parts.created,
+      updated,
+      progressLines,
+      proofLines,
+    }));
+  }
+
+  updateValidationMatrix(repoRoot, config);
   mirrorHarnessToVault(repoRoot, config);
   const record = storyRecordFromFile(repoRoot, config, storyPath);
   if (!record) {
@@ -533,9 +1015,143 @@ function writeStoryUpdate({
   return record;
 }
 
+function traceFiles(root: string): string[] {
+  if (!fs.existsSync(root)) {
+    return [];
+  }
+  const files: string[] = [];
+  const stack = [root];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const entryPath = path.join(current, entry.name);
+      if (entry.isDirectory()) {
+        stack.push(entryPath);
+      } else if (entry.isFile() && entry.name.endsWith('.md') && entry.name !== 'README.md') {
+        files.push(entryPath);
+      }
+    }
+  }
+  return files.sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs);
+}
+
+function inferTraceOutcome(summary: string): HarnessOutcome {
+  const value = summary.toLowerCase();
+  if (/\bblocked\b|\bstuck\b|\bwaiting\b/.test(value)) {
+    return 'blocked';
+  }
+  if (/\bfailed\b|\bfail\b|\berror\b|\bbroken\b/.test(value)) {
+    return 'failed';
+  }
+  if (/\bpartial\b|\bunfinished\b|\bincomplete\b|\bremaining\b|\bwip\b/.test(value)) {
+    return 'partial';
+  }
+  return 'completed';
+}
+
+function readTraceRecord(repoRoot: string, config: RepoConfig, filePath: string): HarnessTraceRecord | null {
+  const content = readIfExists(filePath);
+  if (!content) {
+    return null;
+  }
+  const summary = content.match(/^- Summary:\s+(.+)$/m)?.[1]?.trim()
+    || content.match(/^#\s+(.+)$/m)?.[1]?.trim()
+    || path.basename(filePath, '.md');
+  const outcome = normalizeOutcome(content.match(/^- Outcome:\s+(.+)$/m)?.[1]?.trim());
+  const created = content.match(/^- Created:\s+(.+)$/m)?.[1]?.trim() || fs.statSync(filePath).mtime.toISOString();
+  const currentStory = content.match(/^- Current story:\s+(.+)$/m)?.[1]?.trim() || null;
+  const relative = toPosix(path.relative(repoTracesRoot(repoRoot), filePath));
+  return {
+    summary,
+    outcome,
+    created,
+    repoPath: filePath,
+    vaultPath: path.join(vaultTracesRoot(config), relative),
+    relativeRepoPath: toPosix(path.relative(repoRoot, filePath)),
+    currentStory: currentStory === 'none' ? null : currentStory,
+  };
+}
+
+function normalizeOutcome(value?: string): HarnessOutcome {
+  if (value === 'blocked' || value === 'failed' || value === 'partial' || value === 'completed') {
+    return value;
+  }
+  return 'completed';
+}
+
+function latestTrace(repoRoot: string, config: RepoConfig): HarnessTraceRecord | null {
+  const latest = traceFiles(repoTracesRoot(repoRoot))[0];
+  return latest ? readTraceRecord(repoRoot, config, latest) : null;
+}
+
+function readOpenFriction(repoRoot: string, config: RepoConfig): HarnessFrictionRecord[] {
+  const content = readIfExists(repoBacklogPath(repoRoot)) || '';
+  const records: HarnessFrictionRecord[] = [];
+  const blocks = content.split(/\r?\n##\s+/).slice(1);
+  for (const block of blocks) {
+    const [heading, ...lines] = block.split(/\r?\n/);
+    if (!heading || heading === 'Open Friction') {
+      continue;
+    }
+    const status = /\bresolved\b/i.test(heading) ? 'resolved' : 'proposed';
+    if (status !== 'proposed') {
+      continue;
+    }
+    const pain = lines.find((line) => /^-\s+Pain:\s+/.test(line))?.replace(/^-\s+Pain:\s+/, '').trim()
+      || lines.find((line) => /^-\s+/.test(line))?.replace(/^-\s+/, '').trim()
+      || heading.trim();
+    records.push({
+      pain,
+      status,
+      created: heading.split(' - ')[0].trim(),
+      repoPath: repoBacklogPath(repoRoot),
+      vaultPath: vaultBacklogPath(config),
+    });
+  }
+
+  if (records.length === 0) {
+    const looseItems = content
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^-\s+/.test(line) && line !== '- none yet');
+    for (const item of looseItems) {
+      records.push({
+        pain: item.replace(/^-\s+/, ''),
+        status: 'proposed',
+        created: 'unknown',
+        repoPath: repoBacklogPath(repoRoot),
+        vaultPath: vaultBacklogPath(config),
+      });
+    }
+  }
+  return records;
+}
+
+function getGitStatus(repoRoot: string): string[] {
+  try {
+    return cp.execFileSync('git', ['status', '--short'], { cwd: repoRoot, encoding: 'utf8' })
+      .split(/\r?\n/)
+      .map((line) => line.trimEnd())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function currentPlanPointer(repoRoot: string): string {
+  const currentPath = path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md');
+  const body = readIfExists(currentPath);
+  if (!body) {
+    return 'none';
+  }
+  return body.match(/- Plan:\s+(.+)$/m)?.[1]?.trim() || toPosix(path.relative(repoRoot, currentPath));
+}
+
 export function ensureProductHarness(repoRoot: string, config: RepoConfig): ProductHarnessStatus {
   ensureHarnessDirectories(repoRoot, config);
   writeHarnessDefaults(repoRoot, config);
+  updateValidationMatrix(repoRoot, config);
   mirrorHarnessToVault(repoRoot, config);
   return getProductHarnessStatus({ repoRoot, config });
 }
@@ -546,18 +1162,28 @@ export function getProductHarnessStatus({ repoRoot, config }: { repoRoot: string
   const currentStory = currentStoryFromStories(stories);
   const decisionsBody = readIfExists(path.join(repoDecisionsRoot(repoRoot), 'INDEX.md')) || '';
   const decisionCount = (decisionsBody.match(/^##\s+/gm) || []).length;
+  const openFriction = readOpenFriction(repoRoot, config);
+  const traceCount = traceFiles(repoTracesRoot(repoRoot)).length;
   return {
     ok: fs.existsSync(path.join(repoProductRoot(repoRoot), 'HARNESS.md'))
-      && fs.existsSync(path.join(vaultStoriesRoot(config), 'INDEX.md')),
+      && fs.existsSync(repoBacklogPath(repoRoot))
+      && fs.existsSync(repoTracesRoot(repoRoot))
+      && fs.existsSync(path.join(vaultStoriesRoot(config), 'INDEX.md'))
+      && fs.existsSync(vaultBacklogPath(config))
+      && fs.existsSync(vaultTracesRoot(config)),
     repoHarnessRoot: path.join(repoRoot, 'docs'),
     vaultHarnessRoot: getVaultProductHarnessRoot(config),
     currentStory,
+    latestTrace: latestTrace(repoRoot, config),
+    openFriction,
     proofGaps: proofGapsForStory(currentStory),
     counts: {
       stories: stories.length,
       highRiskStories: stories.filter((story) => story.risk === 'high').length,
       storiesMissingProof: stories.filter((story) => story.risk !== 'low' && story.proofCount === 0).length,
       decisions: decisionCount,
+      traces: traceCount,
+      openFriction: openFriction.length,
     },
     stories,
   };
@@ -582,26 +1208,52 @@ export function startHarnessIntake({ repoRoot, config, value }: HarnessCommandOp
     return {
       action: 'resumed',
       risk: resumed.risk,
+      inputType: resumed.inputType,
+      riskFlags: resumed.riskFlags,
       status: resumed.status,
       storyPath: resumed.repoPath,
+      storyRoot: resumed.storyRoot,
       vaultStoryPath: resumed.vaultPath,
+      vaultStoryRoot: resumed.vaultStoryRoot,
     };
   }
 
   const created = getTodayString();
   const updated = getIsoTimestamp();
-  const risk = classifyHarnessRisk(title);
-  const storyPath = storyPathFor(repoRoot, title, created);
-  writeFile(storyPath, renderStory({
-    config,
-    title,
-    risk,
-    status: 'intake',
-    created,
-    updated,
-    progressLines: [`- ${updated} - Product Harness intake created.`],
-    proofLines: [],
-  }));
+  const classification = classifyHarnessIntake(title);
+  const { storyPath, storyRoot } = storyPathFor(repoRoot, title, classification.risk, created);
+  if (classification.risk === 'high') {
+    writeFile(storyPath, renderPacketOverview({
+      config,
+      title,
+      risk: classification.risk,
+      inputType: classification.inputType,
+      riskFlags: classification.riskFlags,
+      status: 'intake',
+      created,
+      updated,
+      progressLines: [`- ${updated} - Product Harness intake created.`],
+      proofLines: [],
+    }));
+    writeFile(path.join(storyRoot, 'design.md'), renderPacketDesign(title, classification));
+    writeFile(path.join(storyRoot, 'validation.md'), renderPacketValidation(title, classification));
+    writeFile(path.join(storyRoot, 'execplan.md'), renderPacketExecPlan(title));
+  } else {
+    writeFile(storyPath, renderStory({
+      config,
+      title,
+      risk: classification.risk,
+      inputType: classification.inputType,
+      riskFlags: classification.riskFlags,
+      status: 'intake',
+      created,
+      updated,
+      progressLines: [`- ${updated} - Product Harness intake created.`],
+      proofLines: [],
+    }));
+  }
+
+  updateValidationMatrix(repoRoot, config);
   mirrorHarnessToVault(repoRoot, config);
   const record = storyRecordFromFile(repoRoot, config, storyPath);
   if (!record) {
@@ -610,9 +1262,13 @@ export function startHarnessIntake({ repoRoot, config, value }: HarnessCommandOp
   return {
     action: 'started',
     risk: record.risk,
+    inputType: record.inputType,
+    riskFlags: record.riskFlags,
     status: record.status,
     storyPath: record.repoPath,
+    storyRoot: record.storyRoot,
     vaultStoryPath: record.vaultPath,
+    vaultStoryRoot: record.vaultStoryRoot,
   };
 }
 
@@ -642,7 +1298,9 @@ export function recordHarnessProof({ repoRoot, config, value }: HarnessCommandOp
     action: 'proof-recorded',
     status: record.status,
     storyPath: record.repoPath,
+    storyRoot: record.storyRoot,
     vaultStoryPath: record.vaultPath,
+    vaultStoryRoot: record.vaultStoryRoot,
   };
 }
 
@@ -675,16 +1333,92 @@ export function recordHarnessDecision({ repoRoot, config, value }: HarnessComman
   };
 }
 
+export function recordHarnessTrace({ repoRoot, config, value }: HarnessCommandOptions): Record<string, unknown> {
+  const summary = value?.trim();
+  if (!summary) {
+    throw new Error('Harness trace requires a short task summary.');
+  }
+  ensureProductHarness(repoRoot, config);
+  const status = getProductHarnessStatus({ repoRoot, config });
+  const timestamp = getIsoTimestamp();
+  const today = getTodayString();
+  const outcome = inferTraceOutcome(summary);
+  const tracePath = path.join(repoTracesRoot(repoRoot), today, `${timestampForFile()}-${slugify(summary).slice(0, 80)}.md`);
+  const relativeTrace = toPosix(path.relative(repoTracesRoot(repoRoot), tracePath));
+  const vaultTracePath = path.join(vaultTracesRoot(config), relativeTrace);
+  const changedFiles = getGitStatus(repoRoot);
+  const body = [
+    '# Harness Trace',
+    '',
+    `- Created: ${timestamp}`,
+    `- Summary: ${summary}`,
+    `- Outcome: ${outcome}`,
+    `- Current story: ${status.currentStory ? status.currentStory.title : 'none'}`,
+    `- Current story path: ${status.currentStory ? status.currentStory.relativeRepoPath : 'none'}`,
+    `- Current plan: ${currentPlanPointer(repoRoot)}`,
+    `- Proof summary: ${status.currentStory?.latestProof || 'none'}`,
+    '',
+    '## Files Changed Or Read',
+    '',
+    ...(changedFiles.length > 0 ? changedFiles.map((line) => `- ${line}`) : ['- clean or unavailable']),
+    '',
+    '## Notes',
+    '',
+    '- This trace is a short Product Harness breadcrumb, not a replacement for tests, daily logs, or Active Plan State.',
+    '',
+  ].join('\n');
+  writeFile(tracePath, body);
+  writeFile(vaultTracePath, body);
+  mirrorHarnessToVault(repoRoot, config);
+  return {
+    action: 'trace-recorded',
+    outcome,
+    tracePath,
+    vaultTracePath,
+  };
+}
+
+export function recordHarnessFriction({ repoRoot, config, value }: HarnessCommandOptions): Record<string, unknown> {
+  const pain = value?.trim();
+  if (!pain) {
+    throw new Error('Harness friction requires a pain point or missing workflow.');
+  }
+  ensureProductHarness(repoRoot, config);
+  const status = getProductHarnessStatus({ repoRoot, config });
+  const timestamp = getIsoTimestamp();
+  const existing = (readIfExists(repoBacklogPath(repoRoot)) || backlogTemplate()).replace(/\n-\s+none yet\s*\n?/, '\n');
+  const entry = [
+    '',
+    `## ${timestamp} - proposed`,
+    `- Pain: ${pain}`,
+    `- Current story: ${status.currentStory ? status.currentStory.title : 'none'}`,
+    `- Current plan: ${currentPlanPointer(repoRoot)}`,
+    '- Next harness improvement: clarify this friction before it repeats.',
+    '',
+  ].join('\n');
+  writeFile(repoBacklogPath(repoRoot), `${existing.trimEnd()}\n${entry}`);
+  writeFile(vaultBacklogPath(config), `${existing.trimEnd()}\n${entry}`);
+  mirrorHarnessToVault(repoRoot, config);
+  return {
+    action: 'friction-recorded',
+    status: 'proposed',
+    backlogPath: repoBacklogPath(repoRoot),
+    vaultBacklogPath: vaultBacklogPath(config),
+  };
+}
+
 export function formatProductHarnessContext(status: ProductHarnessStatus): string {
   const lines = [
     '# Product Harness',
     '',
     'Product Harness is not a skill and does not replace Superpowers.',
-    'It records feature intent, risk, scope, and proof while daily logs record what happened today.',
+    'It records feature intent, risk, scope, proof, trace, and friction while daily logs record what happened today.',
     '',
     `- Stories: ${status.counts.stories}`,
     `- High-risk stories: ${status.counts.highRiskStories}`,
     `- Stories missing proof: ${status.counts.storiesMissingProof}`,
+    `- Traces: ${status.counts.traces}`,
+    `- Open friction: ${status.counts.openFriction}`,
     '',
     '## Current Story',
   ];
@@ -692,6 +1426,8 @@ export function formatProductHarnessContext(status: ProductHarnessStatus): strin
     lines.push(
       `- Title: ${status.currentStory.title}`,
       `- Risk: ${status.currentStory.risk}`,
+      `- Input type: ${status.currentStory.inputType}`,
+      `- Risk flags: ${status.currentStory.riskFlags.length > 0 ? status.currentStory.riskFlags.join(', ') : 'none'}`,
       `- Status: ${status.currentStory.status}`,
       `- Source: ${status.currentStory.relativeRepoPath}`,
     );
@@ -704,6 +1440,24 @@ export function formatProductHarnessContext(status: ProductHarnessStatus): strin
     lines.push('- none');
   } else {
     lines.push(...status.proofGaps.map((gap) => `- ${gap}`));
+  }
+
+  lines.push('', '## Latest Trace');
+  if (status.latestTrace) {
+    lines.push(
+      `- Summary: ${status.latestTrace.summary}`,
+      `- Outcome: ${status.latestTrace.outcome}`,
+      `- Source: ${status.latestTrace.relativeRepoPath}`,
+    );
+  } else {
+    lines.push('- none');
+  }
+
+  lines.push('', '## Open Friction');
+  if (status.openFriction.length === 0) {
+    lines.push('- none');
+  } else {
+    lines.push(...status.openFriction.slice(0, 3).map((item) => `- ${item.pain}`));
   }
   lines.push('');
   return lines.join('\n');
@@ -720,6 +1474,10 @@ export function getRecentStoryFiles(repoRoot: string, limit = 4): string[] {
     .slice(0, limit);
 }
 
+export function getRecentHarnessTraceFiles(repoRoot: string, limit = 4): string[] {
+  return traceFiles(repoTracesRoot(repoRoot)).slice(0, limit);
+}
+
 export function runHarnessCommand(subcommand: string, options: HarnessCommandOptions): unknown {
   switch (subcommand) {
     case 'status':
@@ -731,7 +1489,11 @@ export function runHarnessCommand(subcommand: string, options: HarnessCommandOpt
       return recordHarnessProof(options);
     case 'decision':
       return recordHarnessDecision(options);
+    case 'trace':
+      return recordHarnessTrace(options);
+    case 'friction':
+      return recordHarnessFriction(options);
     default:
-      throw new Error('Unknown harness command. Use: status, intake, proof, decision.');
+      throw new Error('Unknown harness command. Use: status, intake, proof, decision, trace, friction.');
   }
 }

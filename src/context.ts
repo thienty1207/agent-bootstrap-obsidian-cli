@@ -16,6 +16,7 @@ import {
   formatProductHarnessContext,
   getCurrentStoryFile,
   getProductHarnessStatus,
+  getRecentHarnessTraceFiles,
   getRecentStoryFiles,
 } from './product-harness';
 
@@ -188,9 +189,13 @@ export function getContext({
       for (const filePath of getRecentStoryFiles(resolvedRepoRoot, 4)) {
         sections.push({ label: 'Recent Story', filePath, fullOnly: true });
       }
+      for (const filePath of getRecentHarnessTraceFiles(resolvedRepoRoot, 4)) {
+        sections.push({ label: 'Recent Harness Trace', filePath, fullOnly: true });
+      }
     }
     skipped.push('Plan history date folders (compact context loads CURRENT.md and the active plan only)');
     skipped.push('Story history date folders (compact context loads Product Harness summary and current story only)');
+    skipped.push('Trace and friction history (compact context loads only latest trace and open friction count)');
   } else {
     skipped.push('vault.config.json missing; loaded repo-local source context only');
     skipped.push('Vault/project memory files unavailable until `agent-bootstrap setup` and `agent-bootstrap init` run');

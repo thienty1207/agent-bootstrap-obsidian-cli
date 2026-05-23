@@ -10,7 +10,9 @@ folder recursively.
 - Run `agent-bootstrap plan status` after compact context for implementation, fix, security, frontend, backend, or verification work.
 - Use `agent-bootstrap plan start|update|complete|interrupt` to keep `docs/superpowers/plans/` and vault `Plans/` aligned; never infer completion from silence.
 - Run `agent-bootstrap harness status` after plan status for medium/high-risk feature work.
-- Use `agent-bootstrap harness intake|proof|decision` to keep feature intent, risk, scope, proof, and product decisions aligned with vault `ProductHarness/`.
+- Use `agent-bootstrap harness intake|proof|decision|trace|friction` to keep feature intent, risk, scope, proof, trace, friction, and product decisions aligned with vault `ProductHarness/`.
+- Use `agent-bootstrap harness trace "<summary>"` before final response after meaningful work.
+- Use `agent-bootstrap harness friction "<pain>"` when the workflow itself is unclear.
 - Use `agent-bootstrap recall "<query>"` when compact context is not enough for prior decisions, facts, handoffs, or session summaries.
 - Use `agent-bootstrap memory status` when memory health, import state, diagnostics, next actions, export, backup, or session sync needs inspection.
 - Use `agent-bootstrap memory import-sessions` only for explicit maintenance; normal startup already runs it through compact context.
@@ -45,9 +47,9 @@ context output, or a cited source, mark it unknown instead of guessing.
 ## Product Harness
 
 Product Harness is not a skill and does not replace Superpowers. It is the bounded
-product contract layer for feature intent, scope, risk, proof, and product
-decisions. Use it for medium/high-risk work; keep small docs/copy/polish tasks
-lightweight.
+product contract layer for feature intent, scope, risk, proof, trace, friction,
+and product decisions. Use it for medium/high-risk work; keep small docs/copy/polish
+tasks lightweight.
 
 ## Subagent Routing
 

@@ -1,7 +1,6 @@
 # Test Matrix
 
-Use this file to keep feature proof visible.
+Product Harness keeps story proof visible here.
 
-| Feature | Risk | Required proof | Latest evidence |
-| --- | --- | --- | --- |
-| none yet | - | - | - |
+| Story | Risk | Unit | Integration | E2E | Platform | Status | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
