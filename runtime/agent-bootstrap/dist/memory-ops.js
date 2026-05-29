@@ -22,6 +22,7 @@ const recall_1 = require("./recall");
 const session_importer_1 = require("./session-importer");
 const plan_state_1 = require("./plan-state");
 const product_harness_1 = require("./product-harness");
+const memory_engine_1 = require("./memory-engine");
 function timestampForFile() {
     return (0, date_1.getIsoTimestamp)().replace(/[:.]/g, '-');
 }
@@ -59,6 +60,10 @@ function getCriticalMemoryFiles(config, repoRoot) {
         (0, vault_1.getProjectMemoryIndexPath)(config.project_root),
         (0, recall_1.getRecallIndexPath)(config.project_root),
         node_path_1.default.join(config.project_root, 'Artifacts', 'session-summary.md'),
+        (0, memory_engine_1.getMemoryEnginePaths)(config.vault_root).indexPath,
+        (0, memory_engine_1.getMemoryEnginePaths)(config.vault_root).statePath,
+        (0, memory_engine_1.getMemoryEnginePaths)(config.vault_root).approvedGlobalPath,
+        (0, memory_engine_1.getMemoryEnginePaths)(config.vault_root).globalCandidatesPath,
     ];
     for (const dirName of [config.research_dir, config.notes_dir, 'Sessions']) {
         const dirPath = node_path_1.default.join(config.project_root, dirName);
@@ -116,6 +121,12 @@ function getCriticalMemoryFiles(config, repoRoot) {
             return {
                 sourcePath,
                 relativePath: node_path_1.default.relative(config.project_root, sourcePath).replace(/\\/g, '/'),
+            };
+        }
+        if (sourcePath.startsWith(config.vault_root)) {
+            return {
+                sourcePath,
+                relativePath: node_path_1.default.relative(config.vault_root, sourcePath).replace(/\\/g, '/'),
             };
         }
         return {
@@ -188,6 +199,8 @@ function getMemoryStatus(options = {}) {
     (0, product_harness_1.ensureProductHarness)(repoRoot, config);
     const planState = (0, plan_state_1.getPlanStatus)({ repoRoot, config });
     const productHarness = (0, product_harness_1.getProductHarnessStatus)({ repoRoot, config });
+    (0, memory_engine_1.ensureMemoryEngineArtifacts)(config.vault_root);
+    const memoryEngine = (0, memory_engine_1.getMemoryEngineStatus)(config, repoRoot);
     const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
     const sessionsRoot = node_path_1.default.join(config.project_root, 'Sessions');
     const exportsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Exports');
@@ -237,6 +250,7 @@ function getMemoryStatus(options = {}) {
             recallIndex: node_fs_1.default.existsSync((0, recall_1.getRecallIndexPath)(config.project_root)),
             sessionsDir: node_fs_1.default.existsSync(sessionsRoot),
             sessionImportState: node_fs_1.default.existsSync((0, session_importer_1.getSessionImportStatePath)(config.project_root)),
+            memoryEngine: Boolean(memoryEngine && memoryEngine.ok),
             planState: node_fs_1.default.existsSync(planState.currentPath) && node_fs_1.default.existsSync(planState.vaultCurrentPath),
             productHarness: productHarness.ok,
         },
@@ -249,6 +263,7 @@ function getMemoryStatus(options = {}) {
             backups: node_fs_1.default.existsSync(backupsRoot)
                 ? node_fs_1.default.readdirSync(backupsRoot).filter((entry) => node_fs_1.default.statSync(node_path_1.default.join(backupsRoot, entry)).isDirectory()).length
                 : 0,
+            memoryEngineDocuments: memoryEngine.counts?.documents || 0,
             plans: planState.counts.total,
             stories: productHarness.counts.stories,
             harnessTraces: productHarness.counts.traces,
@@ -256,6 +271,7 @@ function getMemoryStatus(options = {}) {
         },
         planState,
         productHarness,
+        memoryEngine,
         imports: {
             mode: 'automatic Codex session importer',
             statePath: (0, session_importer_1.getSessionImportStatePath)(config.project_root),
@@ -279,6 +295,8 @@ function getMemoryStatus(options = {}) {
             'agent-bootstrap context --compact',
             'agent-bootstrap recall "<query>"',
             'agent-bootstrap memory import-sessions',
+            'agent-bootstrap memory index',
+            'agent-bootstrap memory compact',
             'agent-bootstrap memory sync-sessions',
             'agent-bootstrap memory export',
             'agent-bootstrap memory backup',
@@ -295,6 +313,7 @@ function importProjectSessions(options = {}) {
         maxImports: 32,
     });
     const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
+    const engine = (0, memory_engine_1.buildMemoryEngineIndex)(config, repoRoot);
     const guidance = (0, session_importer_1.describeSessionImportReport)(report);
     return {
         summary: guidance.summary,
@@ -310,6 +329,8 @@ function importProjectSessions(options = {}) {
         importedNotes: report.importedNotes,
         recallMode: recall.index.mode,
         recallDocuments: recall.index.documents.length,
+        memoryEngineProvider: engine.provider,
+        memoryEngineDocuments: engine.documents.length,
     };
 }
 function syncProjectSessions(options = {}) {
@@ -360,6 +381,7 @@ function syncProjectSessions(options = {}) {
         scope: 'project',
     }));
     const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
+    const engine = (0, memory_engine_1.buildMemoryEngineIndex)(config, repoRoot);
     return {
         sessionPath,
         sessionSummaryPath,
@@ -372,6 +394,7 @@ function exportProjectMemory(options = {}) {
     (0, plan_state_1.ensurePlanState)(repoRoot, config);
     (0, product_harness_1.ensureProductHarness)(repoRoot, config);
     const recall = (0, recall_1.buildRecallIndex)(config, repoRoot);
+    const engine = (0, memory_engine_1.buildMemoryEngineIndex)(config, repoRoot);
     const exportsRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Exports');
     (0, fs_utils_1.ensureDir)(exportsRoot);
     const exportPath = node_path_1.default.join(exportsRoot, `agent-bootstrap-memory-${timestampForFile()}.json`);
@@ -392,6 +415,7 @@ function exportProjectMemory(options = {}) {
         },
         memoryIndex,
         recallIndex: recall.index,
+        memoryEngineIndex: engine,
         files,
     };
     (0, fs_utils_1.writeFile)(exportPath, JSON.stringify(payload, null, 2));
@@ -406,6 +430,7 @@ function backupProjectMemory(options = {}) {
     (0, plan_state_1.ensurePlanState)(repoRoot, config);
     (0, product_harness_1.ensureProductHarness)(repoRoot, config);
     (0, recall_1.buildRecallIndex)(config, repoRoot);
+    (0, memory_engine_1.buildMemoryEngineIndex)(config, repoRoot);
     const backupRoot = node_path_1.default.join(config.project_root, 'Artifacts', 'Backups');
     const backupPath = node_path_1.default.join(backupRoot, timestampForFile());
     (0, fs_utils_1.ensureDir)(backupPath);
@@ -442,6 +467,33 @@ function runMemoryCommand(subcommand, options = {}) {
     switch (subcommand) {
         case 'status':
             return getMemoryStatus(options);
+        case 'index': {
+            const { repoRoot, config } = resolveConfig(options);
+            const index = (0, memory_engine_1.buildMemoryEngineIndex)(config, repoRoot);
+            return {
+                action: 'memory-indexed',
+                provider: index.provider,
+                indexPath: (0, memory_engine_1.getMemoryEnginePaths)(config.vault_root).indexPath,
+                counts: {
+                    documents: index.documents.length,
+                    currentProject: index.documents.filter((document) => document.scope === 'current-project').length,
+                    globalApproved: index.documents.filter((document) => document.scope === 'global-approved').length,
+                    globalCandidates: index.documents.filter((document) => document.scope === 'global-candidate').length,
+                    crossProject: index.documents.filter((document) => document.scope === 'cross-project').length,
+                },
+                diagnostics: index.diagnostics,
+            };
+        }
+        case 'compact': {
+            const { repoRoot, config } = resolveConfig(options);
+            return (0, memory_engine_1.compactMemoryEngine)(config, repoRoot);
+        }
+        case 'promote-global': {
+            const { repoRoot, config } = resolveConfig(options);
+            const result = (0, memory_engine_1.promoteGlobalMemory)(config, options.value || '');
+            (0, memory_engine_1.buildMemoryEngineIndex)(config, repoRoot);
+            return result;
+        }
         case 'import-sessions':
             return importProjectSessions(options);
         case 'sync-sessions':
@@ -451,7 +503,7 @@ function runMemoryCommand(subcommand, options = {}) {
         case 'backup':
             return backupProjectMemory(options);
         default:
-            throw new Error('Unknown memory command. Use: status, import-sessions, sync-sessions, export, backup.');
+            throw new Error('Unknown memory command. Use: status, index, compact, promote-global, import-sessions, sync-sessions, export, backup.');
     }
 }
 function syncSessionsFromConfig(repoRoot, config) {

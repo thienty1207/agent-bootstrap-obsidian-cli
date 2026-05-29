@@ -27,9 +27,18 @@ import {
 } from './session-importer';
 import { ensurePlanState, getPlanStatus } from './plan-state';
 import { ensureProductHarness, getProductHarnessStatus } from './product-harness';
+import {
+  buildMemoryEngineIndex,
+  compactMemoryEngine,
+  ensureMemoryEngineArtifacts,
+  getMemoryEnginePaths,
+  getMemoryEngineStatus,
+  promoteGlobalMemory,
+} from './memory-engine';
 
 interface MemoryCommandOptions {
   repoRoot?: string;
+  value?: string;
 }
 
 function timestampForFile(): string {
@@ -76,6 +85,10 @@ function getCriticalMemoryFiles(config: RepoConfig, repoRoot: string): Array<{ s
     getProjectMemoryIndexPath(config.project_root),
     getRecallIndexPath(config.project_root),
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
+    getMemoryEnginePaths(config.vault_root).indexPath,
+    getMemoryEnginePaths(config.vault_root).statePath,
+    getMemoryEnginePaths(config.vault_root).approvedGlobalPath,
+    getMemoryEnginePaths(config.vault_root).globalCandidatesPath,
   ];
 
   for (const dirName of [config.research_dir, config.notes_dir, 'Sessions']) {
@@ -133,6 +146,12 @@ function getCriticalMemoryFiles(config: RepoConfig, repoRoot: string): Array<{ s
         return {
           sourcePath,
           relativePath: path.relative(config.project_root, sourcePath).replace(/\\/g, '/'),
+        };
+      }
+      if (sourcePath.startsWith(config.vault_root)) {
+        return {
+          sourcePath,
+          relativePath: path.relative(config.vault_root, sourcePath).replace(/\\/g, '/'),
         };
       }
       return {
@@ -220,6 +239,8 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
   ensureProductHarness(repoRoot, config);
   const planState = getPlanStatus({ repoRoot, config });
   const productHarness = getProductHarnessStatus({ repoRoot, config });
+  ensureMemoryEngineArtifacts(config.vault_root);
+  const memoryEngine = getMemoryEngineStatus(config, repoRoot);
   const recall = buildRecallIndex(config, repoRoot);
   const sessionsRoot = path.join(config.project_root, 'Sessions');
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
@@ -270,6 +291,7 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
       recallIndex: fs.existsSync(getRecallIndexPath(config.project_root)),
       sessionsDir: fs.existsSync(sessionsRoot),
       sessionImportState: fs.existsSync(getSessionImportStatePath(config.project_root)),
+      memoryEngine: Boolean(memoryEngine && (memoryEngine as { ok?: boolean }).ok),
       planState: fs.existsSync(planState.currentPath) && fs.existsSync(planState.vaultCurrentPath),
       productHarness: productHarness.ok,
     },
@@ -282,6 +304,7 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
       backups: fs.existsSync(backupsRoot)
         ? fs.readdirSync(backupsRoot).filter((entry) => fs.statSync(path.join(backupsRoot, entry)).isDirectory()).length
         : 0,
+      memoryEngineDocuments: (memoryEngine as { counts?: { documents?: number } }).counts?.documents || 0,
       plans: planState.counts.total,
       stories: productHarness.counts.stories,
       harnessTraces: productHarness.counts.traces,
@@ -289,6 +312,7 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
     },
     planState,
     productHarness,
+    memoryEngine,
     imports: {
       mode: 'automatic Codex session importer',
       statePath: getSessionImportStatePath(config.project_root),
@@ -312,6 +336,8 @@ export function getMemoryStatus(options: MemoryCommandOptions = {}): Record<stri
       'agent-bootstrap context --compact',
       'agent-bootstrap recall "<query>"',
       'agent-bootstrap memory import-sessions',
+      'agent-bootstrap memory index',
+      'agent-bootstrap memory compact',
       'agent-bootstrap memory sync-sessions',
       'agent-bootstrap memory export',
       'agent-bootstrap memory backup',
@@ -329,6 +355,7 @@ export function importProjectSessions(options: MemoryCommandOptions = {}): Recor
     maxImports: 32,
   });
   const recall = buildRecallIndex(config, repoRoot);
+  const engine = buildMemoryEngineIndex(config, repoRoot);
   const guidance = describeSessionImportReport(report);
 
   return {
@@ -345,6 +372,8 @@ export function importProjectSessions(options: MemoryCommandOptions = {}): Recor
     importedNotes: report.importedNotes,
     recallMode: recall.index.mode,
     recallDocuments: recall.index.documents.length,
+    memoryEngineProvider: engine.provider,
+    memoryEngineDocuments: engine.documents.length,
   };
 }
 
@@ -403,6 +432,7 @@ export function syncProjectSessions(options: MemoryCommandOptions = {}): Record<
   );
 
   const recall = buildRecallIndex(config, repoRoot);
+  const engine = buildMemoryEngineIndex(config, repoRoot);
   return {
     sessionPath,
     sessionSummaryPath,
@@ -416,6 +446,7 @@ export function exportProjectMemory(options: MemoryCommandOptions = {}): Record<
   ensurePlanState(repoRoot, config);
   ensureProductHarness(repoRoot, config);
   const recall = buildRecallIndex(config, repoRoot);
+  const engine = buildMemoryEngineIndex(config, repoRoot);
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
   ensureDir(exportsRoot);
   const exportPath = path.join(exportsRoot, `agent-bootstrap-memory-${timestampForFile()}.json`);
@@ -436,6 +467,7 @@ export function exportProjectMemory(options: MemoryCommandOptions = {}): Record<
     },
     memoryIndex,
     recallIndex: recall.index,
+    memoryEngineIndex: engine,
     files,
   };
 
@@ -452,6 +484,7 @@ export function backupProjectMemory(options: MemoryCommandOptions = {}): Record<
   ensurePlanState(repoRoot, config);
   ensureProductHarness(repoRoot, config);
   buildRecallIndex(config, repoRoot);
+  buildMemoryEngineIndex(config, repoRoot);
   const backupRoot = path.join(config.project_root, 'Artifacts', 'Backups');
   const backupPath = path.join(backupRoot, timestampForFile());
   ensureDir(backupPath);
@@ -493,6 +526,33 @@ export function runMemoryCommand(subcommand: string, options: MemoryCommandOptio
   switch (subcommand) {
     case 'status':
       return getMemoryStatus(options);
+    case 'index': {
+      const { repoRoot, config } = resolveConfig(options);
+      const index = buildMemoryEngineIndex(config, repoRoot);
+      return {
+        action: 'memory-indexed',
+        provider: index.provider,
+        indexPath: getMemoryEnginePaths(config.vault_root).indexPath,
+        counts: {
+          documents: index.documents.length,
+          currentProject: index.documents.filter((document) => document.scope === 'current-project').length,
+          globalApproved: index.documents.filter((document) => document.scope === 'global-approved').length,
+          globalCandidates: index.documents.filter((document) => document.scope === 'global-candidate').length,
+          crossProject: index.documents.filter((document) => document.scope === 'cross-project').length,
+        },
+        diagnostics: index.diagnostics,
+      };
+    }
+    case 'compact': {
+      const { repoRoot, config } = resolveConfig(options);
+      return compactMemoryEngine(config, repoRoot);
+    }
+    case 'promote-global': {
+      const { repoRoot, config } = resolveConfig(options);
+      const result = promoteGlobalMemory(config, options.value || '');
+      buildMemoryEngineIndex(config, repoRoot);
+      return result;
+    }
     case 'import-sessions':
       return importProjectSessions(options);
     case 'sync-sessions':
@@ -502,7 +562,7 @@ export function runMemoryCommand(subcommand: string, options: MemoryCommandOptio
     case 'backup':
       return backupProjectMemory(options);
     default:
-      throw new Error('Unknown memory command. Use: status, import-sessions, sync-sessions, export, backup.');
+      throw new Error('Unknown memory command. Use: status, index, compact, promote-global, import-sessions, sync-sessions, export, backup.');
   }
 }
 

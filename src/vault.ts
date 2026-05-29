@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getIsoTimestamp, getTodayString } from './date';
 import { ensureDir, writeFileIfMissing, readIfExists } from './fs-utils';
+import { ensureMemoryEngineArtifacts } from './memory-engine';
 
 export type MemoryScope = 'auto' | 'project' | 'global';
 
@@ -572,6 +573,7 @@ function appConfig(): string {
 
 export function ensureVaultScaffold(vaultRoot: string): void {
   ensureDir(vaultRoot);
+  ensureMemoryEngineArtifacts(vaultRoot);
 
   for (const folder of DEFAULT_FOLDERS) {
     ensureDir(path.join(vaultRoot, folder));

@@ -98,6 +98,9 @@ function writeHelp() {
         'Automatic memory recall and maintenance:',
         '  agent-bootstrap recall "<query>" [project-path]',
         '  agent-bootstrap memory status [project-path]',
+        '  agent-bootstrap memory index [project-path]',
+        '  agent-bootstrap memory compact [project-path]',
+        '  agent-bootstrap memory promote-global "<summary>" [project-path]',
         '  agent-bootstrap memory import-sessions [project-path]',
         '  agent-bootstrap memory sync-sessions [project-path]',
         '  agent-bootstrap memory export [project-path]',
@@ -112,6 +115,7 @@ function writeHelp() {
         '',
         'Automatic product harness:',
         '  agent-bootstrap harness status [project-path]',
+        '  agent-bootstrap harness check [project-path]',
         '  agent-bootstrap harness intake "<feature title>" [project-path]',
         '  agent-bootstrap harness proof "<verification summary>" [project-path]',
         '  agent-bootstrap harness decision "<decision summary>" [project-path]',
@@ -176,9 +180,11 @@ async function main(argv) {
         const { rest } = parseFlags(tail);
         const subcommand = rest[0];
         if (!subcommand) {
-            throw new Error('Memory requires a subcommand: status, import-sessions, sync-sessions, export, backup.');
+            throw new Error('Memory requires a subcommand: status, index, compact, promote-global, import-sessions, sync-sessions, export, backup.');
         }
-        writeJson((0, memory_ops_1.runMemoryCommand)(subcommand, { repoRoot: rest[1] }));
+        const value = subcommand === 'promote-global' ? rest[1] : undefined;
+        const repoRoot = subcommand === 'promote-global' ? rest[2] : rest[1];
+        writeJson((0, memory_ops_1.runMemoryCommand)(subcommand, { repoRoot, value }));
         return;
     }
     if (command === 'plan') {
@@ -201,10 +207,10 @@ async function main(argv) {
         const { rest } = parseFlags(tail);
         const subcommand = rest[0];
         if (!subcommand) {
-            throw new Error('Harness requires a subcommand: status, intake, proof, decision, trace, friction.');
+            throw new Error('Harness requires a subcommand: status, check, intake, proof, decision, trace, friction.');
         }
-        const payload = subcommand === 'status' ? undefined : rest[1];
-        const repoRoot = subcommand === 'status' ? rest[1] : rest[2];
+        const payload = subcommand === 'status' || subcommand === 'check' ? undefined : rest[1];
+        const repoRoot = subcommand === 'status' || subcommand === 'check' ? rest[1] : rest[2];
         const foundRepoRoot = (0, context_1.resolveRepoRoot)(repoRoot ? node_path_1.default.resolve(repoRoot) : process.cwd());
         writeJson((0, product_harness_1.runHarnessCommand)(subcommand, {
             repoRoot: foundRepoRoot,

@@ -7,6 +7,7 @@ exports.getRepoProductHarnessRoots = getRepoProductHarnessRoots;
 exports.getVaultProductHarnessRoot = getVaultProductHarnessRoot;
 exports.classifyHarnessRisk = classifyHarnessRisk;
 exports.classifyHarnessIntake = classifyHarnessIntake;
+exports.checkProductHarnessDocs = checkProductHarnessDocs;
 exports.ensureProductHarness = ensureProductHarness;
 exports.getProductHarnessStatus = getProductHarnessStatus;
 exports.startHarnessIntake = startHarnessIntake;
@@ -331,6 +332,101 @@ function backlogTemplate() {
         '',
     ].join('\n');
 }
+function systemMapTemplate(config) {
+    return [
+        '# System Map',
+        '',
+        `Project: \`${config.project_slug}\``,
+        '',
+        'This map helps AI understand product boundaries before changing code.',
+        '',
+        '## Main Surfaces',
+        '',
+        '- Product surface: unknown until confirmed from repo context.',
+        '- Backend/API surface: unknown until confirmed from repo context.',
+        '- Data/storage surface: unknown until confirmed from repo context.',
+        '',
+        '## External Systems',
+        '',
+        '- Unknown until confirmed from source, config, or user-provided context.',
+        '',
+        '## Safety Boundaries',
+        '',
+        '- Do not infer product behavior from old memory when repo evidence disagrees.',
+        '- Use Product Harness stories and proof before claiming a risky feature is done.',
+        '',
+    ].join('\n');
+}
+function contextRulesTemplate() {
+    return [
+        '# Context Rules',
+        '',
+        'AI agents should load the smallest reliable context slice first.',
+        '',
+        '## Startup Order',
+        '',
+        '1. `agent-bootstrap context --compact`',
+        '2. `agent-bootstrap plan status` when implementation state matters',
+        '3. `agent-bootstrap harness status` and `agent-bootstrap harness check` for medium/high-risk work',
+        '4. `agent-bootstrap recall "<query>"` only when compact context is insufficient',
+        '',
+        '## Loading Rules',
+        '',
+        '- Prefer current project memory.',
+        '- Use approved global memory only when it matches the task.',
+        '- Treat cross-project memory as reference, not truth, unless the query explicitly matches it.',
+        '- Do not load full story, trace, session, or daily history unless full context is requested.',
+        '',
+    ].join('\n');
+}
+function glossaryTemplate() {
+    return [
+        '# Glossary',
+        '',
+        '- Daily log: what happened today.',
+        '- Active Plan State: the current implementation step and verification state.',
+        '- Product Harness: feature goal, scope, risk, proof, trace, and friction.',
+        '- Trace: a short breadcrumb of meaningful work after it happened.',
+        '- Friction: a workflow pain that should improve the kit next time.',
+        '- Memory Engine: the AI-facing index that filters Vault memory without replacing Markdown.',
+        '- Memory Firewall: rules that prevent unrelated project memory from leaking into current context.',
+        '',
+    ].join('\n');
+}
+function maturityTemplate() {
+    return [
+        '# Harness Maturity',
+        '',
+        'Use this as a lightweight health signal, not a scorecard.',
+        '',
+        '## Stages',
+        '',
+        '- Stage 0 - Ad hoc: notes exist but feature proof is inconsistent.',
+        '- Stage 1 - Basic harness: stories, risk, and proof exist for important work.',
+        '- Stage 2 - Traceable delivery: proof, traces, and decisions connect to plans.',
+        '- Stage 3 - Adaptive harness: recurring friction becomes kit improvement.',
+        '',
+        'Current default: Stage 1 until the project has repeated proof, trace, and friction review.',
+        '',
+    ].join('\n');
+}
+function componentsTemplate() {
+    return [
+        '# Harness Components',
+        '',
+        '- `PRODUCT.md`: what the product is and what users can trust.',
+        '- `HARNESS.md`: how feature intent, risk, proof, trace, and friction fit together.',
+        '- `SYSTEM_MAP.md`: product and system boundaries.',
+        '- `CONTEXT_RULES.md`: what AI should load first and what to skip.',
+        '- `GLOSSARY.md`: shared meaning for recurring workflow terms.',
+        '- `MATURITY.md`: lightweight adoption stages.',
+        '- `HARNESS_BACKLOG.md`: open workflow friction.',
+        '- `docs/stories/`: feature stories and high-risk story packets.',
+        '- `docs/validation/TEST_MATRIX.md`: proof visibility.',
+        '- `docs/product/traces/`: short execution traces.',
+        '',
+    ].join('\n');
+}
 function tracesReadmeTemplate() {
     return [
         '# Harness Traces',
@@ -366,6 +462,11 @@ function mirrorHarnessToVault(repoRoot, config) {
     ensureHarnessDirectories(repoRoot, config);
     copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'PRODUCT.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'PRODUCT.md'));
     copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'HARNESS.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'HARNESS.md'));
+    copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'SYSTEM_MAP.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'SYSTEM_MAP.md'));
+    copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'CONTEXT_RULES.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'CONTEXT_RULES.md'));
+    copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'GLOSSARY.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'GLOSSARY.md'));
+    copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'MATURITY.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'MATURITY.md'));
+    copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'COMPONENTS.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'COMPONENTS.md'));
     copyIfExists(repoBacklogPath(repoRoot), vaultBacklogPath(config));
     node_fs_1.default.cpSync(repoTracesRoot(repoRoot), vaultTracesRoot(config), { recursive: true });
     node_fs_1.default.cpSync(repoStoriesRoot(repoRoot), vaultStoriesRoot(config), { recursive: true });
@@ -375,6 +476,11 @@ function mirrorHarnessToVault(repoRoot, config) {
 function writeHarnessDefaults(repoRoot, config) {
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'PRODUCT.md'), productTemplate(config));
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'HARNESS.md'), harnessTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'SYSTEM_MAP.md'), systemMapTemplate(config));
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'CONTEXT_RULES.md'), contextRulesTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'GLOSSARY.md'), glossaryTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'MATURITY.md'), maturityTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'COMPONENTS.md'), componentsTemplate());
     (0, fs_utils_1.writeFileIfMissing)(repoBacklogPath(repoRoot), backlogTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoTracesRoot(repoRoot), 'README.md'), tracesReadmeTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoStoriesRoot(repoRoot), 'INDEX.md'), storiesIndexTemplate());
@@ -382,6 +488,11 @@ function writeHarnessDefaults(repoRoot, config) {
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoDecisionsRoot(repoRoot), 'INDEX.md'), decisionsTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'PRODUCT.md'), productTemplate(config));
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'HARNESS.md'), harnessTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'SYSTEM_MAP.md'), systemMapTemplate(config));
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'CONTEXT_RULES.md'), contextRulesTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'GLOSSARY.md'), glossaryTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'MATURITY.md'), maturityTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'COMPONENTS.md'), componentsTemplate());
     (0, fs_utils_1.writeFileIfMissing)(vaultBacklogPath(config), backlogTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultTracesRoot(config), 'README.md'), tracesReadmeTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultStoriesRoot(config), 'INDEX.md'), storiesIndexTemplate());
@@ -916,6 +1027,50 @@ function currentPlanPointer(repoRoot) {
     }
     return body.match(/- Plan:\s+(.+)$/m)?.[1]?.trim() || toPosix(node_path_1.default.relative(repoRoot, currentPath));
 }
+function requiredHarnessDocs(repoRoot, config) {
+    return [
+        ['PRODUCT.md', 'PRODUCT.md'],
+        ['HARNESS.md', 'HARNESS.md'],
+        ['SYSTEM_MAP.md', 'SYSTEM_MAP.md'],
+        ['CONTEXT_RULES.md', 'CONTEXT_RULES.md'],
+        ['GLOSSARY.md', 'GLOSSARY.md'],
+        ['MATURITY.md', 'MATURITY.md'],
+        ['COMPONENTS.md', 'COMPONENTS.md'],
+        ['HARNESS_BACKLOG.md', 'HARNESS_BACKLOG.md'],
+    ].map(([label, fileName]) => ({
+        label,
+        repoPath: node_path_1.default.join(repoProductRoot(repoRoot), fileName),
+        vaultPath: node_path_1.default.join(getVaultProductHarnessRoot(config), fileName),
+    }));
+}
+function checkProductHarnessDocs({ repoRoot, config }) {
+    const required = requiredHarnessDocs(repoRoot, config);
+    const missing = required.flatMap((item) => {
+        const misses = [];
+        if (!node_fs_1.default.existsSync(item.repoPath))
+            misses.push(toPosix(node_path_1.default.relative(repoRoot, item.repoPath)));
+        if (!node_fs_1.default.existsSync(item.vaultPath))
+            misses.push(toPosix(node_path_1.default.relative(config.project_root, item.vaultPath)));
+        return misses;
+    });
+    const traces = traceFiles(repoTracesRoot(repoRoot)).length;
+    const stories = readStories(repoRoot, config);
+    const friction = readOpenFriction(repoRoot, config);
+    const hasProof = stories.some((story) => story.proofCount > 0);
+    const maturityStage = traces > 0 && hasProof && friction.length > 0
+        ? 'Stage 3 - Adaptive harness'
+        : traces > 0 && hasProof
+            ? 'Stage 2 - Traceable delivery'
+            : stories.length > 0
+                ? 'Stage 1 - Basic harness'
+                : 'Stage 1 - Basic harness';
+    return {
+        ok: missing.length === 0,
+        missing,
+        maturityStage,
+        required: required.map((item) => toPosix(node_path_1.default.relative(repoRoot, item.repoPath))),
+    };
+}
 function ensureProductHarness(repoRoot, config) {
     ensureHarnessDirectories(repoRoot, config);
     writeHarnessDefaults(repoRoot, config);
@@ -931,8 +1086,10 @@ function getProductHarnessStatus({ repoRoot, config }) {
     const decisionCount = (decisionsBody.match(/^##\s+/gm) || []).length;
     const openFriction = readOpenFriction(repoRoot, config);
     const traceCount = traceFiles(repoTracesRoot(repoRoot)).length;
+    const docsHealth = checkProductHarnessDocs({ repoRoot, config });
     return {
-        ok: node_fs_1.default.existsSync(node_path_1.default.join(repoProductRoot(repoRoot), 'HARNESS.md'))
+        ok: docsHealth.ok
+            && node_fs_1.default.existsSync(node_path_1.default.join(repoProductRoot(repoRoot), 'HARNESS.md'))
             && node_fs_1.default.existsSync(repoBacklogPath(repoRoot))
             && node_fs_1.default.existsSync(repoTracesRoot(repoRoot))
             && node_fs_1.default.existsSync(node_path_1.default.join(vaultStoriesRoot(config), 'INDEX.md'))
@@ -940,6 +1097,7 @@ function getProductHarnessStatus({ repoRoot, config }) {
             && node_fs_1.default.existsSync(vaultTracesRoot(config)),
         repoHarnessRoot: node_path_1.default.join(repoRoot, 'docs'),
         vaultHarnessRoot: getVaultProductHarnessRoot(config),
+        docsHealth,
         currentStory,
         latestTrace: latestTrace(repoRoot, config),
         openFriction,
@@ -1178,6 +1336,8 @@ function formatProductHarnessContext(status) {
         `- Stories missing proof: ${status.counts.storiesMissingProof}`,
         `- Traces: ${status.counts.traces}`,
         `- Open friction: ${status.counts.openFriction}`,
+        `- Docs health: ${status.docsHealth.ok ? 'ok' : 'missing docs'}`,
+        `- Maturity: ${status.docsHealth.maturityStage}`,
         '',
         '## Current Story',
     ];
@@ -1228,6 +1388,12 @@ function runHarnessCommand(subcommand, options) {
         case 'status':
             ensureProductHarness(options.repoRoot, options.config);
             return getProductHarnessStatus({ repoRoot: options.repoRoot, config: options.config });
+        case 'check':
+            ensureHarnessDirectories(options.repoRoot, options.config);
+            return {
+                action: 'harness-check',
+                ...checkProductHarnessDocs({ repoRoot: options.repoRoot, config: options.config }),
+            };
         case 'intake':
             return startHarnessIntake(options);
         case 'proof':
@@ -1239,6 +1405,6 @@ function runHarnessCommand(subcommand, options) {
         case 'friction':
             return recordHarnessFriction(options);
         default:
-            throw new Error('Unknown harness command. Use: status, intake, proof, decision, trace, friction.');
+            throw new Error('Unknown harness command. Use: status, check, intake, proof, decision, trace, friction.');
     }
 }

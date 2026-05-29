@@ -6,15 +6,15 @@ folder recursively.
 
 ## Automatic Startup
 
-- Run `agent-bootstrap context --compact` before meaningful repo work. It also imports matched Codex sessions, redacts obvious secrets, dedupes imports, refreshes hybrid recall, and loads bounded Active Plan State plus Product Harness.
+- Run `agent-bootstrap context --compact` before meaningful repo work. It also imports matched Codex sessions, redacts obvious secrets, dedupes imports, refreshes hybrid recall and AI Memory Engine, and loads bounded Active Plan State plus Product Harness.
 - Run `agent-bootstrap plan status` after compact context for implementation, fix, security, frontend, backend, or verification work.
 - Use `agent-bootstrap plan start|update|complete|interrupt` to keep `docs/superpowers/plans/` and vault `Plans/` aligned; never infer completion from silence.
-- Run `agent-bootstrap harness status` after plan status for medium/high-risk feature work.
+- Run `agent-bootstrap harness status` and `agent-bootstrap harness check` after plan status for medium/high-risk feature work.
 - Use `agent-bootstrap harness intake|proof|decision|trace|friction` to keep feature intent, risk, scope, proof, trace, friction, and product decisions aligned with vault `ProductHarness/`.
 - Use `agent-bootstrap harness trace "<summary>"` before final response after meaningful work.
 - Use `agent-bootstrap harness friction "<pain>"` when the workflow itself is unclear.
 - Use `agent-bootstrap recall "<query>"` when compact context is not enough for prior decisions, facts, handoffs, or session summaries.
-- Use `agent-bootstrap memory status` when memory health, import state, diagnostics, next actions, export, backup, or session sync needs inspection.
+- Use `agent-bootstrap memory status|index|compact|promote-global` when Memory Engine health, shared Vault indexing, diagnostics, next actions, export, backup, or session sync needs inspection.
 - Use `agent-bootstrap memory import-sessions` only for explicit maintenance; normal startup already runs it through compact context.
 - Use `agent-bootstrap context --why` before expanding context.
 - Use `agent-bootstrap context --full` only when daily/session history is needed.
@@ -27,9 +27,10 @@ folder recursively.
 - `.codex/agents/`: 3 core subagents plus optional custom agents registered in the agent index.
 - `.codex/commands/`: agent-bootstrap managed prompt templates, not native Codex slash commands.
 - `.codex/skills/`: one bundled Superpowers workflow skill, bundled optional domain skills, and optional custom skills registered in the skills index.
-- Vault `Artifacts/recall-index.json`, `Artifacts/session-import-state.json`, and `Sessions/`: generated semantic recall and imported session assets maintained by `context`, `recall`, and `memory` commands.
+- Vault `Artifacts/recall-index.json`, `Artifacts/session-import-state.json`, `Artifacts/AgentBootstrap/`, and `Sessions/`: generated semantic recall, AI Memory Engine, approved global memory, and imported session assets maintained by `context`, `recall`, and `memory` commands.
 - `docs/superpowers/plans/` and vault `Plans/`: Active Plan State maintained by `agent-bootstrap plan`.
 - `docs/product/`, `docs/stories/`, `docs/validation/`, `docs/decisions/`, and vault `ProductHarness/`: Product Harness maintained by `agent-bootstrap harness`.
+- Product Harness docs health includes `SYSTEM_MAP.md`, `CONTEXT_RULES.md`, `GLOSSARY.md`, `MATURITY.md`, and `COMPONENTS.md`.
 
 There is no `.codex/rules/` folder. Mandatory guardrails live in `AGENTS.md`,
 this index, and `.codex/skills/INDEX.md`. Security rule references live inside
@@ -50,6 +51,13 @@ Product Harness is not a skill and does not replace Superpowers. It is the bound
 product contract layer for feature intent, scope, risk, proof, trace, friction,
 and product decisions. Use it for medium/high-risk work; keep small docs/copy/polish
 tasks lightweight.
+
+## AI Memory Engine
+
+AI Memory Engine is not a skill and not a database source of truth. It is the
+shared-Vault memory firewall: current project memory wins, approved global
+memory is used only when relevant, and weak cross-project memory is blocked
+unless targeted recall has a clear match.
 
 ## Subagent Routing
 

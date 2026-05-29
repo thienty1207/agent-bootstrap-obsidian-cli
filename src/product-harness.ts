@@ -68,6 +68,7 @@ export interface ProductHarnessStatus {
   ok: boolean;
   repoHarnessRoot: string;
   vaultHarnessRoot: string;
+  docsHealth: HarnessDocsHealth;
   currentStory: HarnessStoryRecord | null;
   latestTrace: HarnessTraceRecord | null;
   openFriction: HarnessFrictionRecord[];
@@ -81,6 +82,13 @@ export interface ProductHarnessStatus {
     openFriction: number;
   };
   stories: HarnessStoryRecord[];
+}
+
+export interface HarnessDocsHealth {
+  ok: boolean;
+  missing: string[];
+  maturityStage: string;
+  required: string[];
 }
 
 interface HarnessCommandOptions {
@@ -454,6 +462,106 @@ function backlogTemplate(): string {
   ].join('\n');
 }
 
+function systemMapTemplate(config: RepoConfig): string {
+  return [
+    '# System Map',
+    '',
+    `Project: \`${config.project_slug}\``,
+    '',
+    'This map helps AI understand product boundaries before changing code.',
+    '',
+    '## Main Surfaces',
+    '',
+    '- Product surface: unknown until confirmed from repo context.',
+    '- Backend/API surface: unknown until confirmed from repo context.',
+    '- Data/storage surface: unknown until confirmed from repo context.',
+    '',
+    '## External Systems',
+    '',
+    '- Unknown until confirmed from source, config, or user-provided context.',
+    '',
+    '## Safety Boundaries',
+    '',
+    '- Do not infer product behavior from old memory when repo evidence disagrees.',
+    '- Use Product Harness stories and proof before claiming a risky feature is done.',
+    '',
+  ].join('\n');
+}
+
+function contextRulesTemplate(): string {
+  return [
+    '# Context Rules',
+    '',
+    'AI agents should load the smallest reliable context slice first.',
+    '',
+    '## Startup Order',
+    '',
+    '1. `agent-bootstrap context --compact`',
+    '2. `agent-bootstrap plan status` when implementation state matters',
+    '3. `agent-bootstrap harness status` and `agent-bootstrap harness check` for medium/high-risk work',
+    '4. `agent-bootstrap recall "<query>"` only when compact context is insufficient',
+    '',
+    '## Loading Rules',
+    '',
+    '- Prefer current project memory.',
+    '- Use approved global memory only when it matches the task.',
+    '- Treat cross-project memory as reference, not truth, unless the query explicitly matches it.',
+    '- Do not load full story, trace, session, or daily history unless full context is requested.',
+    '',
+  ].join('\n');
+}
+
+function glossaryTemplate(): string {
+  return [
+    '# Glossary',
+    '',
+    '- Daily log: what happened today.',
+    '- Active Plan State: the current implementation step and verification state.',
+    '- Product Harness: feature goal, scope, risk, proof, trace, and friction.',
+    '- Trace: a short breadcrumb of meaningful work after it happened.',
+    '- Friction: a workflow pain that should improve the kit next time.',
+    '- Memory Engine: the AI-facing index that filters Vault memory without replacing Markdown.',
+    '- Memory Firewall: rules that prevent unrelated project memory from leaking into current context.',
+    '',
+  ].join('\n');
+}
+
+function maturityTemplate(): string {
+  return [
+    '# Harness Maturity',
+    '',
+    'Use this as a lightweight health signal, not a scorecard.',
+    '',
+    '## Stages',
+    '',
+    '- Stage 0 - Ad hoc: notes exist but feature proof is inconsistent.',
+    '- Stage 1 - Basic harness: stories, risk, and proof exist for important work.',
+    '- Stage 2 - Traceable delivery: proof, traces, and decisions connect to plans.',
+    '- Stage 3 - Adaptive harness: recurring friction becomes kit improvement.',
+    '',
+    'Current default: Stage 1 until the project has repeated proof, trace, and friction review.',
+    '',
+  ].join('\n');
+}
+
+function componentsTemplate(): string {
+  return [
+    '# Harness Components',
+    '',
+    '- `PRODUCT.md`: what the product is and what users can trust.',
+    '- `HARNESS.md`: how feature intent, risk, proof, trace, and friction fit together.',
+    '- `SYSTEM_MAP.md`: product and system boundaries.',
+    '- `CONTEXT_RULES.md`: what AI should load first and what to skip.',
+    '- `GLOSSARY.md`: shared meaning for recurring workflow terms.',
+    '- `MATURITY.md`: lightweight adoption stages.',
+    '- `HARNESS_BACKLOG.md`: open workflow friction.',
+    '- `docs/stories/`: feature stories and high-risk story packets.',
+    '- `docs/validation/TEST_MATRIX.md`: proof visibility.',
+    '- `docs/product/traces/`: short execution traces.',
+    '',
+  ].join('\n');
+}
+
 function tracesReadmeTemplate(): string {
   return [
     '# Harness Traces',
@@ -492,6 +600,11 @@ function mirrorHarnessToVault(repoRoot: string, config: RepoConfig): void {
   ensureHarnessDirectories(repoRoot, config);
   copyIfExists(path.join(repoProductRoot(repoRoot), 'PRODUCT.md'), path.join(getVaultProductHarnessRoot(config), 'PRODUCT.md'));
   copyIfExists(path.join(repoProductRoot(repoRoot), 'HARNESS.md'), path.join(getVaultProductHarnessRoot(config), 'HARNESS.md'));
+  copyIfExists(path.join(repoProductRoot(repoRoot), 'SYSTEM_MAP.md'), path.join(getVaultProductHarnessRoot(config), 'SYSTEM_MAP.md'));
+  copyIfExists(path.join(repoProductRoot(repoRoot), 'CONTEXT_RULES.md'), path.join(getVaultProductHarnessRoot(config), 'CONTEXT_RULES.md'));
+  copyIfExists(path.join(repoProductRoot(repoRoot), 'GLOSSARY.md'), path.join(getVaultProductHarnessRoot(config), 'GLOSSARY.md'));
+  copyIfExists(path.join(repoProductRoot(repoRoot), 'MATURITY.md'), path.join(getVaultProductHarnessRoot(config), 'MATURITY.md'));
+  copyIfExists(path.join(repoProductRoot(repoRoot), 'COMPONENTS.md'), path.join(getVaultProductHarnessRoot(config), 'COMPONENTS.md'));
   copyIfExists(repoBacklogPath(repoRoot), vaultBacklogPath(config));
   fs.cpSync(repoTracesRoot(repoRoot), vaultTracesRoot(config), { recursive: true });
   fs.cpSync(repoStoriesRoot(repoRoot), vaultStoriesRoot(config), { recursive: true });
@@ -502,6 +615,11 @@ function mirrorHarnessToVault(repoRoot: string, config: RepoConfig): void {
 function writeHarnessDefaults(repoRoot: string, config: RepoConfig): void {
   writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'PRODUCT.md'), productTemplate(config));
   writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'HARNESS.md'), harnessTemplate());
+  writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'SYSTEM_MAP.md'), systemMapTemplate(config));
+  writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'CONTEXT_RULES.md'), contextRulesTemplate());
+  writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'GLOSSARY.md'), glossaryTemplate());
+  writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'MATURITY.md'), maturityTemplate());
+  writeFileIfMissing(path.join(repoProductRoot(repoRoot), 'COMPONENTS.md'), componentsTemplate());
   writeFileIfMissing(repoBacklogPath(repoRoot), backlogTemplate());
   writeFileIfMissing(path.join(repoTracesRoot(repoRoot), 'README.md'), tracesReadmeTemplate());
   writeFileIfMissing(path.join(repoStoriesRoot(repoRoot), 'INDEX.md'), storiesIndexTemplate());
@@ -509,6 +627,11 @@ function writeHarnessDefaults(repoRoot: string, config: RepoConfig): void {
   writeFileIfMissing(path.join(repoDecisionsRoot(repoRoot), 'INDEX.md'), decisionsTemplate());
   writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'PRODUCT.md'), productTemplate(config));
   writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'HARNESS.md'), harnessTemplate());
+  writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'SYSTEM_MAP.md'), systemMapTemplate(config));
+  writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'CONTEXT_RULES.md'), contextRulesTemplate());
+  writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'GLOSSARY.md'), glossaryTemplate());
+  writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'MATURITY.md'), maturityTemplate());
+  writeFileIfMissing(path.join(getVaultProductHarnessRoot(config), 'COMPONENTS.md'), componentsTemplate());
   writeFileIfMissing(vaultBacklogPath(config), backlogTemplate());
   writeFileIfMissing(path.join(vaultTracesRoot(config), 'README.md'), tracesReadmeTemplate());
   writeFileIfMissing(path.join(vaultStoriesRoot(config), 'INDEX.md'), storiesIndexTemplate());
@@ -1148,6 +1271,50 @@ function currentPlanPointer(repoRoot: string): string {
   return body.match(/- Plan:\s+(.+)$/m)?.[1]?.trim() || toPosix(path.relative(repoRoot, currentPath));
 }
 
+function requiredHarnessDocs(repoRoot: string, config: RepoConfig): Array<{ label: string; repoPath: string; vaultPath: string }> {
+  return [
+    ['PRODUCT.md', 'PRODUCT.md'],
+    ['HARNESS.md', 'HARNESS.md'],
+    ['SYSTEM_MAP.md', 'SYSTEM_MAP.md'],
+    ['CONTEXT_RULES.md', 'CONTEXT_RULES.md'],
+    ['GLOSSARY.md', 'GLOSSARY.md'],
+    ['MATURITY.md', 'MATURITY.md'],
+    ['COMPONENTS.md', 'COMPONENTS.md'],
+    ['HARNESS_BACKLOG.md', 'HARNESS_BACKLOG.md'],
+  ].map(([label, fileName]) => ({
+    label,
+    repoPath: path.join(repoProductRoot(repoRoot), fileName),
+    vaultPath: path.join(getVaultProductHarnessRoot(config), fileName),
+  }));
+}
+
+export function checkProductHarnessDocs({ repoRoot, config }: { repoRoot: string; config: RepoConfig }): HarnessDocsHealth {
+  const required = requiredHarnessDocs(repoRoot, config);
+  const missing = required.flatMap((item) => {
+    const misses: string[] = [];
+    if (!fs.existsSync(item.repoPath)) misses.push(toPosix(path.relative(repoRoot, item.repoPath)));
+    if (!fs.existsSync(item.vaultPath)) misses.push(toPosix(path.relative(config.project_root, item.vaultPath)));
+    return misses;
+  });
+  const traces = traceFiles(repoTracesRoot(repoRoot)).length;
+  const stories = readStories(repoRoot, config);
+  const friction = readOpenFriction(repoRoot, config);
+  const hasProof = stories.some((story) => story.proofCount > 0);
+  const maturityStage = traces > 0 && hasProof && friction.length > 0
+    ? 'Stage 3 - Adaptive harness'
+    : traces > 0 && hasProof
+      ? 'Stage 2 - Traceable delivery'
+      : stories.length > 0
+        ? 'Stage 1 - Basic harness'
+        : 'Stage 1 - Basic harness';
+  return {
+    ok: missing.length === 0,
+    missing,
+    maturityStage,
+    required: required.map((item) => toPosix(path.relative(repoRoot, item.repoPath))),
+  };
+}
+
 export function ensureProductHarness(repoRoot: string, config: RepoConfig): ProductHarnessStatus {
   ensureHarnessDirectories(repoRoot, config);
   writeHarnessDefaults(repoRoot, config);
@@ -1164,8 +1331,10 @@ export function getProductHarnessStatus({ repoRoot, config }: { repoRoot: string
   const decisionCount = (decisionsBody.match(/^##\s+/gm) || []).length;
   const openFriction = readOpenFriction(repoRoot, config);
   const traceCount = traceFiles(repoTracesRoot(repoRoot)).length;
+  const docsHealth = checkProductHarnessDocs({ repoRoot, config });
   return {
-    ok: fs.existsSync(path.join(repoProductRoot(repoRoot), 'HARNESS.md'))
+    ok: docsHealth.ok
+      && fs.existsSync(path.join(repoProductRoot(repoRoot), 'HARNESS.md'))
       && fs.existsSync(repoBacklogPath(repoRoot))
       && fs.existsSync(repoTracesRoot(repoRoot))
       && fs.existsSync(path.join(vaultStoriesRoot(config), 'INDEX.md'))
@@ -1173,6 +1342,7 @@ export function getProductHarnessStatus({ repoRoot, config }: { repoRoot: string
       && fs.existsSync(vaultTracesRoot(config)),
     repoHarnessRoot: path.join(repoRoot, 'docs'),
     vaultHarnessRoot: getVaultProductHarnessRoot(config),
+    docsHealth,
     currentStory,
     latestTrace: latestTrace(repoRoot, config),
     openFriction,
@@ -1419,6 +1589,8 @@ export function formatProductHarnessContext(status: ProductHarnessStatus): strin
     `- Stories missing proof: ${status.counts.storiesMissingProof}`,
     `- Traces: ${status.counts.traces}`,
     `- Open friction: ${status.counts.openFriction}`,
+    `- Docs health: ${status.docsHealth.ok ? 'ok' : 'missing docs'}`,
+    `- Maturity: ${status.docsHealth.maturityStage}`,
     '',
     '## Current Story',
   ];
@@ -1483,6 +1655,12 @@ export function runHarnessCommand(subcommand: string, options: HarnessCommandOpt
     case 'status':
       ensureProductHarness(options.repoRoot, options.config);
       return getProductHarnessStatus({ repoRoot: options.repoRoot, config: options.config });
+    case 'check':
+      ensureHarnessDirectories(options.repoRoot, options.config);
+      return {
+        action: 'harness-check',
+        ...checkProductHarnessDocs({ repoRoot: options.repoRoot, config: options.config }),
+      };
     case 'intake':
       return startHarnessIntake(options);
     case 'proof':
@@ -1494,6 +1672,6 @@ export function runHarnessCommand(subcommand: string, options: HarnessCommandOpt
     case 'friction':
       return recordHarnessFriction(options);
     default:
-      throw new Error('Unknown harness command. Use: status, intake, proof, decision, trace, friction.');
+      throw new Error('Unknown harness command. Use: status, check, intake, proof, decision, trace, friction.');
   }
 }

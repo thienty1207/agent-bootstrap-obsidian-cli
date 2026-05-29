@@ -1,12 +1,13 @@
 {
   "name": "@kakasitink/agent-bootstrap",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "description": "Portable Obsidian vault bootstrap CLI for coding projects",
   "files": [
     ".codex",
     "docs",
     "plans",
     "runtime",
+    "accelerators",
     "README.md"
   ],
   "bin": {

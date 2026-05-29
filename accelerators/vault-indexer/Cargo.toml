@@ -1,0 +1,8 @@
+[package]
+name = "vault-indexer"
+version = "1.0.0"
+edition = "2021"
+license = "MIT"
+description = "Optional Agent Bootstrap Vault indexing accelerator"
+
+[dependencies]

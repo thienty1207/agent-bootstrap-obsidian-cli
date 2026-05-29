@@ -20,6 +20,7 @@ const node_fs_1 = __importDefault(require("node:fs"));
 const node_path_1 = __importDefault(require("node:path"));
 const date_1 = require("./date");
 const fs_utils_1 = require("./fs-utils");
+const memory_engine_1 = require("./memory-engine");
 const DEFAULT_FOLDERS = [
     'Archive',
     'Daily',
@@ -526,6 +527,7 @@ function appConfig() {
 }
 function ensureVaultScaffold(vaultRoot) {
     (0, fs_utils_1.ensureDir)(vaultRoot);
+    (0, memory_engine_1.ensureMemoryEngineArtifacts)(vaultRoot);
     for (const folder of DEFAULT_FOLDERS) {
         (0, fs_utils_1.ensureDir)(node_path_1.default.join(vaultRoot, folder));
     }

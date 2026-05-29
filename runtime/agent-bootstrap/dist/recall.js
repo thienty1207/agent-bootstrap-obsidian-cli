@@ -13,6 +13,7 @@ const node_path_1 = __importDefault(require("node:path"));
 const fs_utils_1 = require("./fs-utils");
 const vault_1 = require("./vault");
 const date_1 = require("./date");
+const memory_engine_1 = require("./memory-engine");
 const MAX_MARKDOWN_FILES_PER_DIR = 40;
 const DEFAULT_RECALL_LIMIT = 5;
 const STOP_WORDS = new Set([
@@ -371,8 +372,33 @@ function snippetForTerms(content, terms, concepts = []) {
     return compactPreview(`${prefix}${content.slice(start, end)}${suffix}`, 360);
 }
 function recallProjectMemory(config, query, limit = DEFAULT_RECALL_LIMIT, repoRoot) {
-    const { documents } = buildRecallIndex(config, repoRoot);
-    return scoreDocuments(query, documents).slice(0, limit);
+    const recallIndex = buildRecallIndex(config, repoRoot);
+    if (repoRoot) {
+        const engineIndex = (0, memory_engine_1.buildMemoryEngineIndex)(config, repoRoot);
+        const engineResults = (0, memory_engine_1.searchMemoryEngine)(engineIndex, query, limit);
+        if (engineResults.length > 0) {
+            return engineResults.map((result) => ({
+                id: result.id,
+                kind: result.scope === 'cross-project' ? `cross-project ${result.kind}` : result.kind,
+                title: result.title,
+                path: result.path,
+                preview: result.preview,
+                concepts: result.concepts,
+                bytes: result.bytes,
+                updatedAt: result.updatedAt,
+                score: result.score,
+                snippet: result.snippet,
+                scoreBreakdown: {
+                    lexical: result.scoreBreakdown.lexical,
+                    concept: result.scoreBreakdown.concept,
+                    title: 0,
+                    kind: result.scoreBreakdown.scope + result.scoreBreakdown.confidence + result.scoreBreakdown.proof,
+                    recency: result.scoreBreakdown.recency,
+                },
+            }));
+        }
+    }
+    return scoreDocuments(query, recallIndex.documents).slice(0, limit);
 }
 function readRecallIndexDocumentCount(config) {
     const raw = (0, fs_utils_1.readIfExists)(getRecallIndexPath(config.project_root));

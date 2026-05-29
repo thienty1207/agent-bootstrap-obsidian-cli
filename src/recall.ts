@@ -4,6 +4,7 @@ import type { RepoConfig } from './context';
 import { ensureDir, readIfExists } from './fs-utils';
 import { readProjectMemoryIndex, type MemoryIndexRecord } from './vault';
 import { getIsoTimestamp } from './date';
+import { buildMemoryEngineIndex, searchMemoryEngine } from './memory-engine';
 
 export interface RecallIndexDocument {
   id: string;
@@ -417,8 +418,33 @@ function snippetForTerms(content: string, terms: string[], concepts: string[] = 
 }
 
 export function recallProjectMemory(config: RepoConfig, query: string, limit = DEFAULT_RECALL_LIMIT, repoRoot?: string): RecallResult[] {
-  const { documents } = buildRecallIndex(config, repoRoot);
-  return scoreDocuments(query, documents).slice(0, limit);
+  const recallIndex = buildRecallIndex(config, repoRoot);
+  if (repoRoot) {
+    const engineIndex = buildMemoryEngineIndex(config, repoRoot);
+    const engineResults = searchMemoryEngine(engineIndex, query, limit);
+    if (engineResults.length > 0) {
+      return engineResults.map((result) => ({
+        id: result.id,
+        kind: result.scope === 'cross-project' ? `cross-project ${result.kind}` : result.kind,
+        title: result.title,
+        path: result.path,
+        preview: result.preview,
+        concepts: result.concepts,
+        bytes: result.bytes,
+        updatedAt: result.updatedAt,
+        score: result.score,
+        snippet: result.snippet,
+        scoreBreakdown: {
+          lexical: result.scoreBreakdown.lexical,
+          concept: result.scoreBreakdown.concept,
+          title: 0,
+          kind: result.scoreBreakdown.scope + result.scoreBreakdown.confidence + result.scoreBreakdown.proof,
+          recency: result.scoreBreakdown.recency,
+        },
+      }));
+    }
+  }
+  return scoreDocuments(query, recallIndex.documents).slice(0, limit);
 }
 
 function readRecallIndexDocumentCount(config: RepoConfig): number {

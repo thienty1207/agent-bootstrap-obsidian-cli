@@ -34,6 +34,11 @@ function runDoctor({ repoRoot } = {}) {
         ['Plans/INDEX.md', node_path_1.default.join(config.project_root, 'Plans', 'INDEX.md')],
         ['ProductHarness/HARNESS.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS.md')],
         ['ProductHarness/HARNESS_BACKLOG.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md')],
+        ['ProductHarness/SYSTEM_MAP.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'SYSTEM_MAP.md')],
+        ['ProductHarness/CONTEXT_RULES.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'CONTEXT_RULES.md')],
+        ['ProductHarness/GLOSSARY.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'GLOSSARY.md')],
+        ['ProductHarness/MATURITY.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'MATURITY.md')],
+        ['ProductHarness/COMPONENTS.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'COMPONENTS.md')],
         ['ProductHarness/Traces', node_path_1.default.join(config.project_root, 'ProductHarness', 'Traces')],
         ['ProductHarness/Stories/INDEX.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')],
     ]
@@ -54,10 +59,20 @@ function runDoctor({ repoRoot } = {}) {
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'Plans', 'CURRENT.md')),
         productHarness: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'SYSTEM_MAP.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'CONTEXT_RULES.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'GLOSSARY.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'MATURITY.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'COMPONENTS.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'traces'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'stories', 'INDEX.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'SYSTEM_MAP.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'CONTEXT_RULES.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'GLOSSARY.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'MATURITY.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'COMPONENTS.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'Traces'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')),
         gitAvailable: hasGit(),

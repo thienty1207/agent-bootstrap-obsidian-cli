@@ -171,6 +171,11 @@ function assertProductHarnessWorkspace(repoRoot, vaultProjectRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'PRODUCT.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'HARNESS.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'SYSTEM_MAP.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'CONTEXT_RULES.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'GLOSSARY.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'MATURITY.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'COMPONENTS.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'traces')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'stories', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'validation', 'TEST_MATRIX.md')), true);
@@ -178,10 +183,24 @@ function assertProductHarnessWorkspace(repoRoot, vaultProjectRoot) {
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'PRODUCT.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'HARNESS.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'SYSTEM_MAP.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'CONTEXT_RULES.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'GLOSSARY.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'MATURITY.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'COMPONENTS.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'Traces')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'Stories', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'Validation', 'TEST_MATRIX.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'Decisions', 'INDEX.md')), true);
+}
+
+function assertMemoryEngineWorkspace(vaultRoot) {
+  const engineRoot = path.join(vaultRoot, 'Artifacts', 'AgentBootstrap');
+  assert.equal(fs.existsSync(engineRoot), true);
+  assert.equal(fs.existsSync(path.join(engineRoot, 'memory-engine-index.json')), true);
+  assert.equal(fs.existsSync(path.join(engineRoot, 'memory-engine-state.json')), true);
+  assert.equal(fs.existsSync(path.join(engineRoot, 'APPROVED_GLOBAL.md')), true);
+  assert.equal(fs.existsSync(path.join(engineRoot, 'GLOBAL_CANDIDATES.md')), true);
 }
 
 function assertLegacyGithubAgentAssetsRemoved(repoRoot) {
@@ -253,6 +272,7 @@ test('setup initializes a portable vault skeleton on an empty path', () => {
   assert.equal(fs.existsSync(path.join(vaultRoot, 'Projects', '_template', 'README.md')), true);
   assert.equal(fs.existsSync(path.join(vaultRoot, 'Research')), true);
   assert.equal(fs.existsSync(path.join(vaultRoot, 'Notes')), true);
+  assertMemoryEngineWorkspace(vaultRoot);
   assert.equal(fs.existsSync(path.join(vaultRoot, '.obsidian', 'core-plugins.json')), true);
   assert.equal(fs.existsSync(path.join(vaultRoot, '.obsidian', 'daily-notes.json')), true);
 
@@ -335,10 +355,14 @@ test('--help prints the quickstart flow', () => {
   assert.match(result.stdout, /agent-bootstrap recall/);
   assert.match(result.stdout, /agent-bootstrap memory status/);
   assert.match(result.stdout, /agent-bootstrap memory import-sessions/);
+  assert.match(result.stdout, /agent-bootstrap memory index/);
+  assert.match(result.stdout, /agent-bootstrap memory compact/);
+  assert.match(result.stdout, /agent-bootstrap memory promote-global/);
   assert.match(result.stdout, /agent-bootstrap plan status/);
   assert.match(result.stdout, /agent-bootstrap plan start/);
   assert.match(result.stdout, /agent-bootstrap harness status/);
   assert.match(result.stdout, /agent-bootstrap harness intake/);
+  assert.match(result.stdout, /agent-bootstrap harness check/);
   assert.match(result.stdout, /agent-bootstrap harness trace/);
   assert.match(result.stdout, /agent-bootstrap harness friction/);
   assert.match(result.stdout, /npm uninstall -g @kakasitink\/agent-bootstrap/);
@@ -363,7 +387,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '0.7.0');
+  assert.equal(packageJson.version, '1.0.0');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -375,14 +399,22 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.match(readme, /Automatic Memory Recall/);
   assert.match(readme, /Automatic Active Plan State/);
   assert.match(readme, /Product Harness/);
+  assert.match(readme, /AI Memory Engine/);
+  assert.match(readme, /Memory Firewall/);
+  assert.match(readme, /Verified Global Memory/);
+  assert.match(readme, /Optional Rust Accelerator/);
   assert.match(readme, /Daily log/i);
   assert.match(readme, /Update an existing project's kit files/);
   assert.match(readme, /Optional: AI Context/);
   assert.match(readme, /AI agents should run it automatically from `AGENTS\.md`/);
   assert.match(readme, /agent-bootstrap recall "<query>"/);
   assert.match(readme, /agent-bootstrap memory backup/);
+  assert.match(readme, /agent-bootstrap memory index/);
+  assert.match(readme, /agent-bootstrap memory compact/);
+  assert.match(readme, /agent-bootstrap memory promote-global/);
   assert.match(readme, /agent-bootstrap plan status/);
   assert.match(readme, /agent-bootstrap harness status/);
+  assert.match(readme, /agent-bootstrap harness check/);
   assert.match(readme, /agent-bootstrap harness trace/);
   assert.match(readme, /agent-bootstrap harness friction/);
   assert.match(readme, /Trace = task này đã đi qua đường nào|Trace/i);
@@ -435,6 +467,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.equal(result.status, 0, result.stderr);
 
   const projectRoot = path.join(vaultRoot, 'Projects', 'face-gen-tools');
+  assertMemoryEngineWorkspace(vaultRoot);
   assert.ok(fs.existsSync(path.join(projectRoot, 'README.md')));
   assert.ok(fs.existsSync(path.join(projectRoot, 'Facts.md')));
   assert.ok(fs.existsSync(path.join(projectRoot, 'Open Questions.md')));
@@ -474,6 +507,8 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(repoReadme, /optional project-specific custom skills/i);
   assert.match(repoReadme, /Automatic Active Plan State/i);
   assert.match(repoReadme, /Product Harness/i);
+  assert.match(repoReadme, /AI Memory Engine/i);
+  assert.match(repoReadme, /Memory Firewall/i);
   assert.match(repoReadme, /docs\/stories/i);
   assert.match(repoReadme, /agent-bootstrap plan status/i);
   assert.doesNotMatch(repoReadme, /`\.codex\/skills\/agent-api\/`/i);
@@ -487,7 +522,10 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(rootAgent, /agent-bootstrap plan status/);
   assert.match(rootAgent, /agent-bootstrap plan start/);
   assert.match(rootAgent, /agent-bootstrap harness status/);
+  assert.match(rootAgent, /agent-bootstrap harness check/);
   assert.match(rootAgent, /agent-bootstrap harness intake/);
+  assert.match(rootAgent, /agent-bootstrap memory index/);
+  assert.match(rootAgent, /agent-bootstrap memory compact/);
   assert.match(rootAgent, /agent-bootstrap harness trace/);
   assert.match(rootAgent, /agent-bootstrap harness friction/);
   assert.match(rootAgent, /Product Harness is not a skill/i);
@@ -704,6 +742,7 @@ test('update command refreshes Codex assets while preserving project and vault m
   writeFile(path.join(repoRoot, 'docs', 'decisions', 'INDEX.md'), '# Product Decisions\n\n## Custom decision\nKeep this decision.\n');
   writeFile(path.join(repoRoot, 'docs', 'product', 'traces', getTodayString(), `${getTodayString()}-custom-trace.md`), '# Custom Trace\n\nKeep this trace.\n');
   writeFile(path.join(repoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md'), '# Harness Backlog\n\n## Open Friction\n\n- Keep this backlog item.\n');
+  writeFile(path.join(vaultRoot, 'Artifacts', 'AgentBootstrap', 'APPROVED_GLOBAL.md'), '# Approved Global Memory\n\n## Keep approved global\n- Summary: This global learning must survive update.\n');
   const existingPlanPath = path.join(repoRoot, 'docs', 'superpowers', 'plans', getTodayString(), `${getTodayString()}-keep-user-plan.md`);
   writeFile(existingPlanPath, [
     '---',
@@ -722,6 +761,7 @@ test('update command refreshes Codex assets while preserving project and vault m
   ].join('\n'));
   fs.rmSync(path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md'), { force: true });
   fs.rmSync(path.join(repoRoot, 'docs', 'product', 'HARNESS.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, 'docs', 'product', 'SYSTEM_MAP.md'), { force: true });
   fs.rmSync(path.join(repoRoot, 'docs', 'validation', 'TEST_MATRIX.md'), { force: true });
 
   const projectConfigBefore = JSON.parse(readFile(path.join(repoRoot, 'vault.config.json')));
@@ -755,12 +795,15 @@ test('update command refreshes Codex assets while preserving project and vault m
   assert.equal(fs.existsSync(path.join(repoRoot, 'plans', 'my-feature-plan.md')), true);
   assertActivePlanWorkspace(repoRoot, projectConfigAfter.project_root);
   assertProductHarnessWorkspace(repoRoot, projectConfigAfter.project_root);
+  assertMemoryEngineWorkspace(vaultRoot);
+  assert.match(readFile(path.join(vaultRoot, 'Artifacts', 'AgentBootstrap', 'APPROVED_GLOBAL.md')), /Keep approved global/);
   assert.equal(fs.existsSync(existingPlanPath), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'stories', getTodayString(), `${getTodayString()}-custom-user-story.md`)), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'traces', getTodayString(), `${getTodayString()}-custom-trace.md`)), true);
   assert.match(readFile(path.join(repoRoot, 'docs', 'decisions', 'INDEX.md')), /Custom decision/);
   assert.match(readFile(path.join(repoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md')), /Keep this backlog item/);
   assert.match(readFile(path.join(repoRoot, 'docs', 'product', 'HARNESS.md')), /Product Harness/);
+  assert.match(readFile(path.join(repoRoot, 'docs', 'product', 'SYSTEM_MAP.md')), /System Map/);
   assert.match(readFile(path.join(repoRoot, 'docs', 'validation', 'TEST_MATRIX.md')), /TEST_MATRIX|Test Matrix/i);
   assert.match(readFile(path.join(repoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md')), /Current Plan State/);
   assertLegacyGithubAgentAssetsRemoved(repoRoot);
@@ -800,6 +843,10 @@ test('context modes keep compact context narrow and explain context choices', ()
   assert.match(compact.stdout, /Active Plan State/);
   assert.match(compact.stdout, /Active Plan/);
   assert.match(compact.stdout, /Product Harness/);
+  assert.match(compact.stdout, /Memory Engine/);
+  assert.match(compact.stdout, /Memory firewall/i);
+  assert.match(compact.stdout, /System Map/i);
+  assert.match(compact.stdout, /Context Rules/i);
   assert.match(compact.stdout, /frontend HomePage/i);
   assert.match(compact.stdout, /frontend HomePage/i);
   assert.match(compact.stdout, /Latest Trace/i);
@@ -827,6 +874,7 @@ test('context modes keep compact context narrow and explain context choices', ()
   assert.match(why.stdout, /Plan history date folders/);
   assert.match(why.stdout, /Story history date folders/);
   assert.match(why.stdout, /Trace and friction history/);
+  assert.match(why.stdout, /cross-project memory/i);
 
   const full = runCli(['context', '--full'], { configHome, cwd: nested });
   assert.equal(full.status, 0, full.stderr);
@@ -835,6 +883,147 @@ test('context modes keep compact context narrow and explain context choices', ()
   assert.match(full.stdout, /Recent Story/);
   assert.match(full.stdout, /Recent Harness Trace/);
   assert.ok(full.stdout.length > compact.stdout.length);
+});
+
+test('memory engine indexes a shared vault without leaking weak cross-project memory', () => {
+  const root = makeTempDir('agent-bootstrap-memory-engine-');
+  const vaultRoot = path.join(root, 'vault');
+  const configHome = path.join(root, 'config-home');
+  const tomotyRoot = path.join(root, 'tomoty');
+  const demoRoot = path.join(root, 'agent-bootstrap-demo');
+
+  fs.mkdirSync(tomotyRoot, { recursive: true });
+  fs.mkdirSync(demoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: tomotyRoot });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['init', tomotyRoot, '--slug', 'tomoty'], { configHome, cwd: tomotyRoot });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['init', demoRoot, '--slug', 'agent-bootstrap-demo'], { configHome, cwd: demoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  writeFile(path.join(vaultRoot, 'Projects', 'tomoty', 'Facts.md'), [
+    '# Facts',
+    '',
+    '## Tenant auth',
+    '- Fact: Tomoty uses Supabase RLS tenant isolation for customer security.',
+    '- Source: verified test',
+    '- Confidence: high',
+    '- Last verified: 2026-05-29',
+    '',
+  ].join('\n'));
+  writeFile(path.join(vaultRoot, 'Projects', 'agent-bootstrap-demo', 'Facts.md'), [
+    '# Facts',
+    '',
+    '## Auth note',
+    '- Fact: Agent bootstrap demo auth note should stay isolated unless explicitly requested.',
+    '- Source: fixture',
+    '- Confidence: high',
+    '',
+  ].join('\n'));
+
+  result = runCli(['memory', 'promote-global', 'Use smallest verified security proof for auth and tenant work', tomotyRoot], { configHome, cwd: tomotyRoot });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['memory', 'index', tomotyRoot], { configHome, cwd: tomotyRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const indexed = parseJson(result.stdout);
+  assert.equal(indexed.action, 'memory-indexed');
+  assert.equal(indexed.provider, 'node');
+  assert.ok(indexed.counts.currentProject > 0);
+  assert.ok(indexed.counts.crossProject > 0);
+  assert.ok(indexed.counts.globalApproved > 0);
+
+  result = runCli(['recall', 'auth tenant rls', tomotyRoot], { configHome, cwd: tomotyRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Tomoty uses Supabase RLS tenant isolation/i);
+  assert.doesNotMatch(result.stdout, /Agent bootstrap demo auth note/i);
+
+  result = runCli(['recall', 'agent-bootstrap-demo auth note', tomotyRoot], { configHome, cwd: tomotyRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /cross-project/i);
+  assert.match(result.stdout, /Agent bootstrap demo auth note/i);
+
+  result = runCli(['context', '--compact', tomotyRoot], { configHome, cwd: tomotyRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Memory Engine/);
+  assert.match(result.stdout, /Use smallest verified security proof/i);
+  assert.doesNotMatch(result.stdout, /Agent bootstrap demo auth note/i);
+});
+
+test('harness check reports docs health and update recreates missing harness docs', () => {
+  const root = makeTempDir('agent-bootstrap-harness-check-');
+  const repoRoot = path.join(root, 'repo');
+  const vaultRoot = path.join(root, 'vault');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['init'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['harness', 'check'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  let check = parseJson(result.stdout);
+  assert.equal(check.ok, true);
+  assert.equal(check.missing.length, 0);
+  assert.match(check.maturityStage, /Stage/);
+
+  fs.rmSync(path.join(repoRoot, 'docs', 'product', 'GLOSSARY.md'), { force: true });
+  result = runCli(['harness', 'check'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  check = parseJson(result.stdout);
+  assert.equal(check.ok, false);
+  assert.ok(check.missing.some((item) => item.endsWith('docs/product/GLOSSARY.md')));
+
+  result = runCli(['update', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'GLOSSARY.md')), true);
+});
+
+test('memory engine supports optional Rust accelerator with Node fallback', () => {
+  const root = makeTempDir('agent-bootstrap-rust-accelerator-');
+  const repoRoot = path.join(root, 'repo');
+  const vaultRoot = path.join(root, 'vault');
+  const configHome = path.join(root, 'config-home');
+  const fakeOk = path.join(root, process.platform === 'win32' ? 'fake-indexer.cmd' : 'fake-indexer.sh');
+  const fakeFail = path.join(root, process.platform === 'win32' ? 'fake-fail.cmd' : 'fake-fail.sh');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  result = runCli(['init'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  if (process.platform === 'win32') {
+    writeFile(fakeOk, '@echo off\r\necho {"provider":"rust","diagnostics":["fake rust accelerator"]}\r\n');
+    writeFile(fakeFail, '@echo off\r\nexit /b 3\r\n');
+  } else {
+    writeFile(fakeOk, '#!/usr/bin/env sh\necho \'{"provider":"rust","diagnostics":["fake rust accelerator"]}\'\n');
+    writeFile(fakeFail, '#!/usr/bin/env sh\nexit 3\n');
+    fs.chmodSync(fakeOk, 0o755);
+    fs.chmodSync(fakeFail, 0o755);
+  }
+
+  result = runCli(['memory', 'index'], {
+    configHome,
+    cwd: repoRoot,
+    env: { AGENT_BOOTSTRAP_RUST_INDEXER: fakeOk },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  let indexed = parseJson(result.stdout);
+  assert.equal(indexed.provider, 'rust');
+  assert.match(indexed.diagnostics.join('\n'), /fake rust accelerator/);
+
+  result = runCli(['memory', 'index'], {
+    configHome,
+    cwd: repoRoot,
+    env: { AGENT_BOOTSTRAP_RUST_INDEXER: fakeFail },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  indexed = parseJson(result.stdout);
+  assert.equal(indexed.provider, 'node-fallback');
+  assert.match(indexed.diagnostics.join('\n'), /Rust accelerator failed/i);
 });
 
 test('daily note log entries stay inside the Agent Log section', () => {
@@ -1731,6 +1920,9 @@ test('context compact automatically imports matching Codex sessions with redacti
   assert.equal(result.status, 0, result.stderr);
   const status = parseJson(result.stdout);
   assert.equal(status.recallMode, 'hybrid');
+  assert.equal(status.checks.memoryEngine, true);
+  assert.equal(status.memoryEngine.provider, 'node');
+  assert.ok(status.memoryEngine.counts.currentProject > 0);
   assert.equal(status.imports.importedSessions, 1);
   assert.ok(status.imports.skippedUnmatched >= 1);
   assert.ok(status.diagnostics.some((item) => item.code === 'session-import-ready'));
@@ -1847,6 +2039,8 @@ test('memory commands report status sync sessions export and backup project memo
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Repo/docs/superpowers/plans/CURRENT.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'ProductHarness/HARNESS.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'ProductHarness/HARNESS_BACKLOG.md'));
+  assert.ok(exportBody.files.some((file) => file.relativePath === 'Artifacts/AgentBootstrap/APPROVED_GLOBAL.md'));
+  assert.ok(exportBody.files.some((file) => file.relativePath === 'Artifacts/AgentBootstrap/memory-engine-index.json'));
   assert.ok(exportBody.files.some((file) => file.relativePath.startsWith('ProductHarness/Traces/')));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Repo/docs/stories/INDEX.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath.startsWith('Repo/docs/product/traces/')));
@@ -1861,6 +2055,8 @@ test('memory commands report status sync sessions export and backup project memo
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Repo', 'docs', 'superpowers', 'plans', 'CURRENT.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'HARNESS.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'Artifacts', 'AgentBootstrap', 'APPROVED_GLOBAL.md')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'Artifacts', 'AgentBootstrap', 'memory-engine-index.json')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'Traces')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Repo', 'docs', 'stories', 'INDEX.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Repo', 'docs', 'product', 'traces')), true);
@@ -1993,6 +2189,25 @@ test('repo-local runtime mirrors recall and memory status commands from nested p
   const status = parseJson(result.stdout);
   assert.equal(status.projectSlug, 'repo');
   assert.equal(status.ok, true);
+  assert.equal(status.checks.memoryEngine, true);
+
+  result = runRuntime(repoRoot, ['memory', 'promote-global', 'Shared recall snippets should stay short'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const promoted = parseJson(result.stdout);
+  assert.equal(promoted.action, 'global-memory-promoted');
+  assert.equal(fs.existsSync(promoted.approvedGlobalPath), true);
+
+  result = runRuntime(repoRoot, ['memory', 'index'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const indexed = parseJson(result.stdout);
+  assert.equal(indexed.action, 'memory-indexed');
+  assert.ok(indexed.counts.globalApproved > 0);
+
+  result = runRuntime(repoRoot, ['memory', 'compact'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const compacted = parseJson(result.stdout);
+  assert.equal(compacted.action, 'memory-compacted');
+  assert.equal(fs.existsSync(compacted.compactPath), true);
 
   result = runRuntime(repoRoot, ['plan', 'start', 'auth security review'], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);
@@ -2018,6 +2233,12 @@ test('repo-local runtime mirrors recall and memory status commands from nested p
   const harnessStatus = parseJson(result.stdout);
   assert.equal(harnessStatus.currentStory.title, 'auth login');
   assert.ok(harnessStatus.proofGaps.length > 0);
+
+  result = runRuntime(repoRoot, ['harness', 'check'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const harnessCheck = parseJson(result.stdout);
+  assert.equal(harnessCheck.ok, true);
+  assert.equal(harnessCheck.missing.length, 0);
 
   result = runRuntime(repoRoot, ['harness', 'trace', 'completed auth login packet'], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);

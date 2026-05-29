@@ -11,6 +11,7 @@ import {
 import { formatAutoRecallContext, getRecallIndexPath } from './recall';
 import { formatSessionImportReport, importCodexSessionsForProject } from './session-importer';
 import { ensurePlanState, getActivePlanFile, getRecentPlanFiles } from './plan-state';
+import { formatMemoryEngineContext } from './memory-engine';
 import {
   ensureProductHarness,
   formatProductHarnessContext,
@@ -172,6 +173,8 @@ export function getContext({
       { label: 'Active Plan State', filePath: path.join(resolvedRepoRoot, 'docs', 'superpowers', 'plans', 'CURRENT.md') },
       { label: 'Product Contract', filePath: path.join(resolvedRepoRoot, 'docs', 'product', 'PRODUCT.md') },
       { label: 'Product Harness Guide', filePath: path.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS.md') },
+      { label: 'Product System Map', filePath: path.join(resolvedRepoRoot, 'docs', 'product', 'SYSTEM_MAP.md') },
+      { label: 'Product Context Rules', filePath: path.join(resolvedRepoRoot, 'docs', 'product', 'CONTEXT_RULES.md') },
       { label: 'Today Daily Note', filePath: getDailyNotePath(config.vault_root), fullOnly: true },
     );
     const activePlanFile = getActivePlanFile(resolvedRepoRoot, config);
@@ -196,6 +199,7 @@ export function getContext({
     skipped.push('Plan history date folders (compact context loads CURRENT.md and the active plan only)');
     skipped.push('Story history date folders (compact context loads Product Harness summary and current story only)');
     skipped.push('Trace and friction history (compact context loads only latest trace and open friction count)');
+    skipped.push('Weak cross-project memory (Memory Engine firewall blocks it unless targeted recall has a strong explicit match)');
   } else {
     skipped.push('vault.config.json missing; loaded repo-local source context only');
     skipped.push('Vault/project memory files unavailable until `agent-bootstrap setup` and `agent-bootstrap init` run');
@@ -231,6 +235,8 @@ export function getContext({
     const harnessStatus = getProductHarnessStatus({ repoRoot: resolvedRepoRoot, config });
     output.push(`===== Product Harness =====\n${formatProductHarnessContext(harnessStatus).trimEnd()}\n`);
     loaded.push({ label: 'Product Harness State', filePath: path.join(resolvedRepoRoot, 'docs', 'stories', 'INDEX.md') });
+    output.push(`===== Memory Engine =====\n${formatMemoryEngineContext(config, resolvedRepoRoot).trimEnd()}\n`);
+    loaded.push({ label: 'Memory Engine Index', filePath: path.join(config.vault_root, 'Artifacts', 'AgentBootstrap', 'memory-engine-index.json') });
     const autoRecall = formatAutoRecallContext(config, mode === 'full' ? 8 : 5);
     output.push(`===== Auto Recall =====\n${autoRecall.trimEnd()}\n`);
     loaded.push({ label: 'Recall Index', filePath: getRecallIndexPath(config.project_root) });

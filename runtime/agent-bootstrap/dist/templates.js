@@ -200,8 +200,8 @@ It keeps the agent workspace under \`.codex\`, while GitHub automation stays und
 Project slug: \`${projectSlug}\`
 Project type: \`${projectType}\`
 
-This package is documented around install/update, setup, init, project update, automatic context, semantic recall, active plan state, Product Harness, memory status, automatic session import, backup, and uninstall.
-\`agent-bootstrap context --compact\` is automatic agent startup; \`plan\`, \`harness\`, \`recall\`, and \`memory\` commands are available for targeted execution state, product understanding, inspection, and maintenance.
+This package is documented around install/update, setup, init, project update, automatic context, AI Memory Engine, semantic recall, active plan state, Product Harness, memory status, automatic session import, backup, and uninstall.
+\`agent-bootstrap context --compact\` is automatic agent startup; \`plan\`, \`harness\`, \`recall\`, and \`memory\` commands are available for targeted execution state, product understanding, memory firewall inspection, and maintenance.
 
 ## Structure
 
@@ -226,7 +226,7 @@ This package is documented around install/update, setup, init, project update, a
 - \`docs/\`: project documentation and reference notes
 - \`plans/\`: clean local planning templates and handoff report templates
 - \`docs/superpowers/plans/\`: active implementation plan state with \`CURRENT.md\`, \`INDEX.md\`, and dated plan folders
-- \`docs/product/\`, \`docs/stories/\`, \`docs/validation/\`, and \`docs/decisions/\`: Product Harness layer for product intent, feature stories, proof, trace, friction, and product decisions
+- \`docs/product/\`, \`docs/stories/\`, \`docs/validation/\`, and \`docs/decisions/\`: Product Harness layer for product intent, system map, context rules, feature stories, proof, trace, friction, and product decisions
 - \`scripts/\`: repo-local runtime helpers for durable memory write-back
 
 ## Ownership Boundaries
@@ -259,12 +259,19 @@ This package is documented around install/update, setup, init, project update, a
 - \`agent-bootstrap context --compact\` imports matched Codex sessions, redacts obvious secrets, dedupes imports, refreshes \`Artifacts/recall-index.json\`, and includes bounded semantic Auto Recall.
 - \`agent-bootstrap recall "<query>"\` searches project memory Markdown with hybrid lexical + concept recall without external QMD, vector DB, server, or API key.
 - \`agent-bootstrap memory status\` reports vault, project capsule, memory index, recall index, import state, session, export, backup health, diagnostics, and recommended next actions.
+- \`agent-bootstrap memory index\` refreshes the AI Memory Engine index so current project memory, verified global memory, and cross-project candidates are separated before AI reads them.
+- \`agent-bootstrap memory compact\` writes a short Memory Engine summary for future sessions.
+- \`agent-bootstrap memory promote-global "<summary>"\` records a verified cross-project learning in approved global memory.
 - \`agent-bootstrap memory import-sessions\` runs the same Codex session importer for maintenance inspection and reports a plain summary plus next action; normal AI startup runs it automatically through compact context.
 - \`agent-bootstrap memory sync-sessions\` writes a clean session summary under \`Sessions/\` and updates the recall index.
 - \`agent-bootstrap memory export\` writes a JSON export under \`Artifacts/Exports/\`.
 - \`agent-bootstrap memory backup\` writes a timestamped plain-file backup under \`Artifacts/Backups/\`.
 - \`agent-bootstrap plan status\` reports the active Superpowers plan dashboard; \`plan start/update/complete/interrupt\` keeps \`docs/superpowers/plans/\` and the vault \`Plans/\` mirror aligned.
-- \`agent-bootstrap harness status\` reports Product Harness readiness; \`harness intake/proof/decision/trace/friction\` keeps feature intent, risk, scope, proof, trace, friction, and product decisions aligned with the vault.
+- \`agent-bootstrap harness status\` reports Product Harness readiness; \`harness check\` reports docs health; \`harness intake/proof/decision/trace/friction\` keeps feature intent, risk, scope, proof, trace, friction, and product decisions aligned with the vault.
+
+## AI Memory Engine
+
+The AI Memory Engine is the memory firewall between a growing shared Vault and the current project. Vault Markdown remains the source of truth; the engine index is only a cache/mục lục. Current project memory is preferred, verified global memory can be used when relevant, and weak cross-project memory is blocked unless targeted recall has a clear match.
 
 ## Automatic Active Plan State
 
@@ -364,7 +371,7 @@ The compact context includes this read order:
 11. \`${projectRoot}/Handoff.md\`
 12. \`docs/superpowers/plans/CURRENT.md\`, the active plan body, and \`${projectRoot}/Plans/\` through bounded Active Plan State
 13. \`docs/product/\`, \`docs/stories/\`, \`docs/validation/\`, \`docs/decisions/\`, and \`${projectRoot}/ProductHarness/\` through bounded Product Harness
-14. \`${projectRoot}/Sessions/\` summaries, \`${projectRoot}/Sessions/Imported/\` Codex imports, \`${projectRoot}/Artifacts/session-import-state.json\`, and \`${projectRoot}/Artifacts/recall-index.json\` through bounded Auto Recall
+14. \`${projectRoot}/Sessions/\` summaries, \`${projectRoot}/Sessions/Imported/\` Codex imports, \`${projectRoot}/Artifacts/session-import-state.json\`, \`${projectRoot}/Artifacts/recall-index.json\`, and \`${vaultRoot}/Artifacts/AgentBootstrap/memory-engine-index.json\` through bounded Auto Recall and AI Memory Engine
 15. relevant docs under \`docs/\`, targeted agent assets under \`.codex/\`, and workflows under \`.github/workflows/\`
 
 ## Context discipline
@@ -377,6 +384,8 @@ The compact context includes this read order:
 - Superpowers is the workflow brain. The 3 bundled core subagents are quality gates: \`code-reviewer\`, \`security-auditor\`, and \`test-engineer\`.
 - Optional project agents must be registered in \`.codex/agents/INDEX.md\` before use.
 - Product Harness is not a skill, not a new core, and not a replacement for Superpowers. It is a lightweight product contract layer for feature intent, scope, risk, proof, trace, and friction.
+- AI Memory Engine is the memory firewall for shared Vaults. Vault Markdown is source of truth; the engine index is only a cache/mục lục.
+- Prefer current project memory, use approved global memory only when relevant, and treat cross-project memory as reference unless targeted recall has a clear match.
 - Do not let subagents invoke other subagents; composition belongs to the parent agent, command, or user.
 - Do not recursively scan \`.codex/agents\`; use the index and load one routed TOML only when needed.
 - Do not recursively scan \`.codex/skills\`; load one narrow skill only when needed.
@@ -402,12 +411,16 @@ ${typeFocus(projectType).join('\n')}
 - \`agent-bootstrap context --compact\`
 - \`agent-bootstrap recall "<query>"\`
 - \`agent-bootstrap memory status\`
+- \`agent-bootstrap memory index\`
+- \`agent-bootstrap memory compact\`
+- \`agent-bootstrap memory promote-global "<summary>"\`
 - \`agent-bootstrap plan status\`
 - \`agent-bootstrap plan start "<task title>"\`
 - \`agent-bootstrap plan update "<progress note>"\`
 - \`agent-bootstrap plan complete "<verification summary>"\`
 - \`agent-bootstrap plan interrupt "<last known state>"\`
 - \`agent-bootstrap harness status\`
+- \`agent-bootstrap harness check\`
 - \`agent-bootstrap harness intake "<feature title>"\`
 - \`agent-bootstrap harness proof "<verification summary>"\`
 - \`agent-bootstrap harness decision "<decision summary>"\`
@@ -417,11 +430,11 @@ ${typeFocus(projectType).join('\n')}
 - \`agent-bootstrap context --why\`
 - \`agent-bootstrap context --full\`
 
-Running \`agent-bootstrap context --compact\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, imports matched Codex sessions, refreshes the hybrid recall index, loads routed repo/vault memory, loads bounded Active Plan State, and includes bounded Auto Recall so the agent does not need to scan the vault manually.
+Running \`agent-bootstrap context --compact\` should be the first step in a fresh session. It ensures today's daily note exists, records a session marker automatically, imports matched Codex sessions, refreshes the hybrid recall index and AI Memory Engine, loads routed repo/vault memory, loads bounded Active Plan State, and includes bounded Auto Recall so the agent does not need to scan the vault manually.
 
 Immediately after compact context, run \`agent-bootstrap plan status\` silently for implementation, fix, security, frontend, backend, or verification work. Before editing, create or resume a plan with \`agent-bootstrap plan start "<task title>"\`. During work, run \`agent-bootstrap plan update "<what changed, what remains, verification state>"\`. Before the final response, run \`agent-bootstrap plan complete "<verification command/result summary>"\` only when verification passed; otherwise run \`agent-bootstrap plan interrupt "<last known state and next action>"\`. Do not infer completion from silence, shutdown, or lack of user response.
 
-For medium or high-risk work, run Product Harness silently after plan status. Use \`agent-bootstrap harness status\` to inspect the feature contract layer. Before coding auth, login, password, token, payment, billing, subscription, permission, admin, tenant, RLS, migration, upload, security, API, backend, frontend flow, form, dashboard, state, or integration work, run \`agent-bootstrap harness intake "<task title>"\`. Before the final response, if verification exists, run \`agent-bootstrap harness proof "<verification summary>"\`. Before the final response after meaningful work, run \`agent-bootstrap harness trace "<task summary/outcome>"\`. If a product decision appears, run \`agent-bootstrap harness decision "<decision summary>"\`. If the workflow itself is unclear, run \`agent-bootstrap harness friction "<pain or missing workflow>"\`. Small docs/copy/polish tasks stay lightweight and do not need a heavy story unless they become broader product work.
+For medium or high-risk work, run Product Harness silently after plan status. Use \`agent-bootstrap harness status\` and \`agent-bootstrap harness check\` to inspect the feature contract and docs health layer. Before coding auth, login, password, token, payment, billing, subscription, permission, admin, tenant, RLS, migration, upload, security, API, backend, frontend flow, form, dashboard, state, or integration work, run \`agent-bootstrap harness intake "<task title>"\`. Before the final response, if verification exists, run \`agent-bootstrap harness proof "<verification summary>"\`. Before the final response after meaningful work, run \`agent-bootstrap harness trace "<task summary/outcome>"\`. If a product decision appears, run \`agent-bootstrap harness decision "<decision summary>"\`. If the workflow itself is unclear, run \`agent-bootstrap harness friction "<pain or missing workflow>"\`. Small docs/copy/polish tasks stay lightweight and do not need a heavy story unless they become broader product work.
 
 ## Write-back rules
 
@@ -443,21 +456,22 @@ The repo runtime handles the low-friction automation:
 - it routes \`research\` and \`note\` entries to project or global scope automatically unless you override \`--scope\`
 - it records routing reasons and keeps a compact project memory index under \`Artifacts/memory-index.json\`
 - it keeps a local QMD-inspired semantic recall index under \`Artifacts/recall-index.json\`
+- it keeps the AI Memory Engine index under \`${vaultRoot}/Artifacts/AgentBootstrap/\`
 - it imports matched Codex sessions into \`Sessions/Imported/\`, redacts obvious secrets, and tracks dedupe state under \`Artifacts/session-import-state.json\`
 - it mirrors active plan state from \`docs/superpowers/plans/\` into vault \`Plans/\`
 - it mirrors Product Harness state from repo docs into vault \`ProductHarness/\`
 - it writes clean session summaries under \`Sessions/\` through \`compact\` or \`memory sync-sessions\`
 - it still supports explicit \`--scope project\` or \`--scope global\` when needed
 
-Before a final response after meaningful work, run \`node scripts/agent-memory.js compact\` silently when it would help the next session. Use \`node scripts/agent-memory.js memory sync-sessions\` for an explicit clean session replay note.
+Before a final response after meaningful work, run \`node scripts/agent-memory.js compact\` and \`node scripts/agent-memory.js memory compact\` silently when it would help the next session. Use \`node scripts/agent-memory.js memory sync-sessions\` for an explicit clean session replay note. Use \`node scripts/agent-memory.js memory promote-global "<summary>"\` only for confirmed cross-project learnings.
 
 ## Repo-local runtime
 
 - \`agent-bootstrap context\` for read-only session context
 - \`agent-bootstrap recall "<query>"\` or \`node scripts/agent-memory.js recall "<query>"\` for targeted memory search
-- \`agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup>\` or \`node scripts/agent-memory.js memory <status|import-sessions|sync-sessions|export|backup>\` for memory health, import inspection, and backup
+- \`agent-bootstrap memory <status|index|compact|promote-global|import-sessions|sync-sessions|export|backup>\` or \`node scripts/agent-memory.js memory <status|index|compact|promote-global|import-sessions|sync-sessions|export|backup>\` for memory health, indexing, import inspection, and backup
 - \`agent-bootstrap plan <status|start|update|complete|interrupt>\` or \`node scripts/agent-memory.js plan <status|start|update|complete|interrupt>\` for active plan tracking
-- \`agent-bootstrap harness <status|intake|proof|decision|trace|friction>\` or \`node scripts/agent-memory.js harness <status|intake|proof|decision|trace|friction>\` for Product Harness tracking
+- \`agent-bootstrap harness <status|check|intake|proof|decision|trace|friction>\` or \`node scripts/agent-memory.js harness <status|check|intake|proof|decision|trace|friction>\` for Product Harness tracking
 - \`node scripts/agent-memory.js <task|decision|research|note|fact|question|handoff|compact>\` for write-back and memory compaction
 - git \`post-commit\` hook auto-writes a durable worklog note into the vault
 `;
@@ -949,6 +963,158 @@ function formatProjectMemoryIndex(index) {
 
 function getRecallIndexPath(projectRoot) {
   return path.join(projectRoot, 'Artifacts', 'recall-index.json');
+}
+
+function getMemoryEnginePaths(vaultRoot) {
+  const root = path.join(vaultRoot, 'Artifacts', 'AgentBootstrap');
+  return {
+    root,
+    indexPath: path.join(root, 'memory-engine-index.json'),
+    statePath: path.join(root, 'memory-engine-state.json'),
+    approvedGlobalPath: path.join(root, 'APPROVED_GLOBAL.md'),
+    globalCandidatesPath: path.join(root, 'GLOBAL_CANDIDATES.md'),
+  };
+}
+
+function ensureMemoryEngineArtifacts(vaultRoot) {
+  const paths = getMemoryEnginePaths(vaultRoot);
+  ensureDir(paths.root);
+  writeFileIfMissing(paths.approvedGlobalPath, '# Approved Global Memory\\n\\nOnly confirmed cross-project learnings belong here.\\n');
+  writeFileIfMissing(paths.globalCandidatesPath, '# Global Memory Candidates\\n\\nPotential cross-project learnings live here until confirmed.\\n');
+  writeFileIfMissing(paths.statePath, JSON.stringify({ version: 1, updatedAt: getIsoTimestamp(), provider: 'node', lastDiagnostics: [] }, null, 2));
+  writeFileIfMissing(paths.indexPath, JSON.stringify({ version: 1, mode: 'memory-engine', provider: 'node', generatedAt: getIsoTimestamp(), vaultRoot, currentProjectSlug: '', documents: [], diagnostics: [] }, null, 2));
+  return paths;
+}
+
+function enginePreview(content, scope) {
+  if (scope === 'global-approved') {
+    const summaries = (content.match(/^- Summary:\\s+(.+)$/gm) || []).map((line) => line.replace(/^- Summary:\\s+/, '').trim()).filter(Boolean);
+    if (summaries.length) return compactPreview(summaries.slice(-5).join(' '), 260);
+  }
+  return compactPreview(content, 260);
+}
+
+function engineKind(filePath) {
+  const normalized = filePath.replace(/\\\\/g, '/');
+  if (normalized.includes('/Plans/')) return 'plan';
+  if (normalized.includes('/ProductHarness/Traces/')) return 'harness-trace';
+  if (normalized.includes('/ProductHarness/Stories/')) return 'harness-story';
+  if (normalized.includes('/ProductHarness/')) return 'harness-product';
+  if (normalized.includes('/Sessions/')) return 'session';
+  if (normalized.includes('/Research/')) return 'research';
+  if (normalized.includes('/Notes/')) return 'note';
+  if (normalized.endsWith('/Tasks.md')) return 'task';
+  if (normalized.endsWith('/Decisions.md')) return 'decision';
+  if (normalized.endsWith('/Facts.md')) return 'fact';
+  if (normalized.endsWith('/Open Questions.md')) return 'question';
+  if (normalized.endsWith('/Handoff.md')) return 'handoff';
+  return 'memory';
+}
+
+function engineDocument(config, filePath, scope) {
+  const content = readFile(filePath);
+  if (!content || !content.trim()) return null;
+  const stat = fs.statSync(filePath);
+  const title = titleFromMarkdown(filePath, content);
+  const proof = /proof|verification|verified|test(s)? passed|npm test|go test|cargo test|pytest|smoke/i.test(content);
+  const confidence = scope === 'global-approved' || /Confidence:\\s*high/i.test(content) || proof ? 'high' : (/draft|not_run|interrupted/i.test(content) ? 'low' : 'medium');
+  return {
+    id: scope + ':' + path.relative(config.vault_root, filePath).replace(/\\\\/g, '/'),
+    kind: engineKind(filePath),
+    title,
+    path: filePath,
+    relativePath: path.relative(config.vault_root, filePath).replace(/\\\\/g, '/'),
+    projectSlug: scope === 'current-project' ? config.project_slug : null,
+    projectType: scope === 'current-project' ? config.project_type : null,
+    scope,
+    confidence,
+    proof,
+    status: /completed/i.test(content) ? 'completed' : 'active',
+    concepts: extractConcepts(scope + '\\n' + title + '\\n' + content),
+    preview: enginePreview(content, scope),
+    bytes: Buffer.byteLength(content, 'utf8'),
+    updatedAt: stat.mtime.toISOString(),
+  };
+}
+
+function collectEngineFiles(root, limit) {
+  if (!fs.existsSync(root)) return [];
+  return recentMarkdownFiles(root, limit, true);
+}
+
+function buildMemoryEngineIndex(config) {
+  const paths = ensureMemoryEngineArtifacts(config.vault_root);
+  const files = [
+    path.join(config.project_root, 'README.md'),
+    path.join(config.project_root, config.tasks_file),
+    path.join(config.project_root, config.decisions_file),
+    path.join(config.project_root, config.facts_file || 'Facts.md'),
+    path.join(config.project_root, config.open_questions_file || 'Open Questions.md'),
+    path.join(config.project_root, config.handoff_file || 'Handoff.md'),
+    ...collectEngineFiles(path.join(config.project_root, 'Plans'), 80),
+    ...collectEngineFiles(path.join(config.project_root, 'ProductHarness'), 80),
+    ...collectEngineFiles(path.join(config.project_root, config.research_dir), 80),
+    ...collectEngineFiles(path.join(config.project_root, config.notes_dir), 80),
+    ...collectEngineFiles(path.join(config.project_root, 'Sessions'), 80),
+  ].filter((filePath) => fs.existsSync(filePath));
+  const documents = [
+    ...[...new Set(files)].map((filePath) => engineDocument(config, filePath, 'current-project')).filter(Boolean),
+    engineDocument(config, paths.approvedGlobalPath, 'global-approved'),
+    engineDocument(config, paths.globalCandidatesPath, 'global-candidate'),
+  ].filter(Boolean);
+  const index = {
+    version: 1,
+    mode: 'memory-engine',
+    provider: 'node',
+    generatedAt: getIsoTimestamp(),
+    vaultRoot: config.vault_root,
+    currentProjectSlug: config.project_slug,
+    documents,
+    diagnostics: [],
+  };
+  writeFile(paths.indexPath, JSON.stringify(index, null, 2));
+  writeFile(paths.statePath, JSON.stringify({ version: 1, updatedAt: index.generatedAt, provider: 'node', lastDiagnostics: [] }, null, 2));
+  return index;
+}
+
+function memoryEngineStatus(config) {
+  const index = buildMemoryEngineIndex(config);
+  const paths = ensureMemoryEngineArtifacts(config.vault_root);
+  return {
+    ok: fs.existsSync(paths.indexPath) && fs.existsSync(paths.approvedGlobalPath),
+    provider: index.provider,
+    indexPath: paths.indexPath,
+    statePath: paths.statePath,
+    approvedGlobalPath: paths.approvedGlobalPath,
+    globalCandidatesPath: paths.globalCandidatesPath,
+    counts: {
+      documents: index.documents.length,
+      currentProject: index.documents.filter((document) => document.scope === 'current-project').length,
+      globalApproved: index.documents.filter((document) => document.scope === 'global-approved').length,
+      globalCandidates: index.documents.filter((document) => document.scope === 'global-candidate').length,
+      crossProject: 0,
+    },
+    diagnostics: index.diagnostics,
+  };
+}
+
+function promoteGlobalMemory(config, summary) {
+  const paths = ensureMemoryEngineArtifacts(config.vault_root);
+  if (!summary || !summary.trim()) throw new Error('memory promote-global requires a summary.');
+  const existing = readFile(paths.approvedGlobalPath) || '# Approved Global Memory\\n';
+  writeFile(paths.approvedGlobalPath, existing.trimEnd() + '\\n\\n## ' + getIsoTimestamp() + '\\n- Summary: ' + summary.trim() + '\\n- Confidence: high\\n- Scope: global-approved\\n');
+  buildMemoryEngineIndex(config);
+  return { action: 'global-memory-promoted', approvedGlobalPath: paths.approvedGlobalPath };
+}
+
+function compactMemoryEngine(config) {
+  const index = buildMemoryEngineIndex(config);
+  const paths = ensureMemoryEngineArtifacts(config.vault_root);
+  const compactPath = path.join(config.project_root, 'Artifacts', 'memory-engine-compact.md');
+  const current = index.documents.filter((document) => document.scope === 'current-project').slice(0, 8);
+  const approved = index.documents.filter((document) => document.scope === 'global-approved').slice(0, 3);
+  writeFile(compactPath, ['# Memory Engine Compact Summary', '', '- Project: ' + config.project_slug, '- Updated: ' + getIsoTimestamp(), '- Index: ' + paths.indexPath, '', '## Current Project Signals', ...(current.length ? current.map((document) => '- ' + document.kind + ': ' + document.title + ' [' + document.confidence + '] - ' + document.preview) : ['- none']), '', '## Approved Global Signals', ...(approved.length ? approved.map((document) => '- ' + document.title + ' - ' + document.preview) : ['- none']), ''].join('\\n'));
+  return { action: 'memory-compacted', compactPath, indexPath: paths.indexPath, documents: index.documents.length };
 }
 
 const CONCEPT_ALIASES = {
@@ -1740,6 +1906,10 @@ function getCriticalMemoryPaths(config, repoRoot) {
     getProjectMemoryIndexPath(config.project_root),
     getRecallIndexPath(config.project_root),
     path.join(config.project_root, 'Artifacts', 'session-summary.md'),
+    getMemoryEnginePaths(config.vault_root).indexPath,
+    getMemoryEnginePaths(config.vault_root).statePath,
+    getMemoryEnginePaths(config.vault_root).approvedGlobalPath,
+    getMemoryEnginePaths(config.vault_root).globalCandidatesPath,
   ];
   [config.research_dir, config.notes_dir, 'Sessions', 'Plans', 'ProductHarness'].forEach((dirName) => {
     const root = path.join(config.project_root, dirName);
@@ -1785,6 +1955,7 @@ function memoryStatus(repoRoot, config) {
   ensureProductHarness(repoRoot, config);
   const planState = getPlanStatus(repoRoot, config);
   const productHarness = getProductHarnessStatus(repoRoot, config);
+  const engine = memoryEngineStatus(config);
   const built = buildRecallIndex(config);
   const sessionsRoot = path.join(config.project_root, 'Sessions');
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
@@ -1807,6 +1978,7 @@ function memoryStatus(repoRoot, config) {
       recallIndex: fs.existsSync(getRecallIndexPath(config.project_root)),
       sessionsDir: fs.existsSync(sessionsRoot),
       sessionImportState: fs.existsSync(getSessionImportStatePath(config.project_root)),
+      memoryEngine: engine.ok,
       planState: fs.existsSync(planState.currentPath) && fs.existsSync(planState.vaultCurrentPath),
       productHarness: productHarness.ok,
     },
@@ -1819,11 +1991,13 @@ function memoryStatus(repoRoot, config) {
       backups: fs.existsSync(backupsRoot)
         ? fs.readdirSync(backupsRoot).filter((entry) => fs.statSync(path.join(backupsRoot, entry)).isDirectory()).length
         : 0,
+      memoryEngineDocuments: engine.counts.documents,
       plans: planState.counts.total,
       stories: productHarness.counts.stories,
     },
     planState,
     productHarness,
+    memoryEngine: engine,
     imports: {
       mode: 'automatic Codex session importer',
       statePath: getSessionImportStatePath(config.project_root),
@@ -1836,7 +2010,7 @@ function memoryStatus(repoRoot, config) {
       lastImportAt: importState.last_run ? importState.last_run.at : null,
     },
     diagnostics: diagnostics.diagnostics,
-    nextActions: diagnostics.nextActions,
+    nextActions: uniqueValues([...diagnostics.nextActions, 'agent-bootstrap memory index', 'agent-bootstrap memory compact']),
     latestSession: latestSession ? { path: latestSession, updatedAt: fs.statSync(latestSession).mtime.toISOString() } : null,
   };
 }
@@ -1845,6 +2019,7 @@ function exportMemory(repoRoot, config) {
   ensurePlanState(repoRoot, config);
   ensureProductHarness(repoRoot, config);
   const built = buildRecallIndex(config);
+  const engine = buildMemoryEngineIndex(config);
   const exportsRoot = path.join(config.project_root, 'Artifacts', 'Exports');
   ensureDir(exportsRoot);
   const exportPath = path.join(exportsRoot, 'agent-bootstrap-memory-' + timestampForFile() + '.json');
@@ -1864,6 +2039,7 @@ function exportMemory(repoRoot, config) {
     },
     memoryIndex: readProjectMemoryIndex(config.project_root, config.project_slug, config.project_type),
     recallIndex: built.index,
+    memoryEngineIndex: engine,
     files,
   }, null, 2));
   return { exportPath, files: files.length, recallDocuments: built.index.documents.length };
@@ -1873,6 +2049,7 @@ function backupMemory(repoRoot, config) {
   ensurePlanState(repoRoot, config);
   ensureProductHarness(repoRoot, config);
   buildRecallIndex(config);
+  buildMemoryEngineIndex(config);
   const backupPath = path.join(config.project_root, 'Artifacts', 'Backups', timestampForFile());
   ensureDir(backupPath);
   const copied = [];
@@ -1937,10 +2114,30 @@ function buildMemoryDiagnostics(recallDocuments, importState) {
   return { diagnostics, nextActions: uniqueValues(nextActions) };
 }
 
-function runMemoryCommand(repoRoot, config, subcommand) {
+function runMemoryCommand(repoRoot, config, subcommand, value) {
   switch (subcommand) {
     case 'status':
       return memoryStatus(repoRoot, config);
+    case 'index': {
+      const index = buildMemoryEngineIndex(config);
+      return {
+        action: 'memory-indexed',
+        provider: index.provider,
+        indexPath: getMemoryEnginePaths(config.vault_root).indexPath,
+        counts: {
+          documents: index.documents.length,
+          currentProject: index.documents.filter((document) => document.scope === 'current-project').length,
+          globalApproved: index.documents.filter((document) => document.scope === 'global-approved').length,
+          globalCandidates: index.documents.filter((document) => document.scope === 'global-candidate').length,
+          crossProject: 0,
+        },
+        diagnostics: index.diagnostics,
+      };
+    }
+    case 'compact':
+      return compactMemoryEngine(config);
+    case 'promote-global':
+      return promoteGlobalMemory(config, value || '');
     case 'import-sessions': {
       const imported = importCodexSessions(repoRoot, config, { maxFiles: 400, maxImports: 32 });
       const built = buildRecallIndex(config);
@@ -1976,7 +2173,7 @@ function runMemoryCommand(repoRoot, config, subcommand) {
     case 'backup':
       return backupMemory(repoRoot, config);
     default:
-      throw new Error('Unknown memory command. Use: status, import-sessions, sync-sessions, export, backup.');
+      throw new Error('Unknown memory command. Use: status, index, compact, promote-global, import-sessions, sync-sessions, export, backup.');
   }
 }
 
@@ -2226,6 +2423,9 @@ function getContext(repoRoot, config, mode = 'compact', includeWhy = false) {
     }
     output.push(\`===== Product Harness =====\\n\${renderHarnessContext(getProductHarnessStatus(repoRoot, config)).trimEnd()}\\n\`);
     loaded.push({ label: 'Product Harness State', filePath: path.join(repoRoot, 'docs', 'stories', 'INDEX.md') });
+    const engine = memoryEngineStatus(config);
+    output.push('===== Memory Engine =====\\n# Memory Engine\\n\\n- Memory firewall: current project memory is preferred; cross-project memory is blocked unless recall has a strong explicit match.\\n- Vault Markdown remains the source of truth; the engine index is only a cache/muc luc.\\n- Provider: ' + engine.provider + '\\n- Index: ' + engine.indexPath + '\\n- Indexed documents: ' + engine.counts.documents + '\\n');
+    loaded.push({ label: 'Memory Engine Index', filePath: engine.indexPath });
     output.push(\`===== Auto Recall =====\\n\${formatAutoRecallContext(config, mode === 'full' ? 8 : 5).trimEnd()}\\n\`);
     loaded.push({ label: 'Recall Index', filePath: getRecallIndexPath(config.project_root) });
   } else {
@@ -3167,6 +3367,30 @@ function readOpenFriction(repoRoot, config) {
   return records;
 }
 
+function checkHarnessDocs(repoRoot, config) {
+  const required = ['PRODUCT.md', 'HARNESS.md', 'SYSTEM_MAP.md', 'CONTEXT_RULES.md', 'GLOSSARY.md', 'MATURITY.md', 'COMPONENTS.md', 'HARNESS_BACKLOG.md'];
+  const missing = [];
+  required.forEach((fileName) => {
+    const repoPath = path.join(getRepoProductRoot(repoRoot), fileName);
+    const vaultPath = path.join(getVaultProductHarnessRoot(config), fileName);
+    if (!fs.existsSync(repoPath)) missing.push(path.relative(repoRoot, repoPath).replace(/\\\\/g, '/'));
+    if (!fs.existsSync(vaultPath)) missing.push(path.relative(config.project_root, vaultPath).replace(/\\\\/g, '/'));
+  });
+  const status = getProductHarnessStatus(repoRoot, config);
+  const maturityStage = status.counts.traces > 0 && status.stories.some((story) => story.proofCount > 0) && status.openFriction.length > 0
+    ? 'Stage 3 - Adaptive harness'
+    : status.counts.traces > 0 && status.stories.some((story) => story.proofCount > 0)
+      ? 'Stage 2 - Traceable delivery'
+      : 'Stage 1 - Basic harness';
+  return {
+    action: 'harness-check',
+    ok: missing.length === 0,
+    missing,
+    maturityStage,
+    required: required.map((fileName) => 'docs/product/' + fileName),
+  };
+}
+
 function inferHarnessOutcome(summary) {
   const value = String(summary || '').toLowerCase();
   if (/\\bblocked\\b|\\bstuck\\b|\\bwaiting\\b/.test(value)) return 'blocked';
@@ -3189,6 +3413,7 @@ function currentPlanPointer(repoRoot) {
 
 function runHarnessCommand(repoRoot, config, subcommand, value) {
   ensureProductHarness(repoRoot, config);
+  if (subcommand === 'check') return checkHarnessDocs(repoRoot, config);
   if (subcommand === 'status') return getProductHarnessStatus(repoRoot, config);
   if (subcommand === 'intake') {
     const title = (value || '').trim();
@@ -3269,7 +3494,7 @@ function runHarnessCommand(repoRoot, config, subcommand, value) {
     ensureProductHarness(repoRoot, config);
     return { action: 'friction-recorded', status: 'proposed', backlogPath: getRepoBacklogPath(repoRoot), vaultBacklogPath: getVaultBacklogPath(config) };
   }
-  throw new Error('Unknown harness command. Use: status, intake, proof, decision, trace, friction.');
+  throw new Error('Unknown harness command. Use: status, check, intake, proof, decision, trace, friction.');
 }
 
 function parseFlags(argv) {
@@ -3383,9 +3608,9 @@ function main(argv) {
 
   if (command === 'memory') {
     if (!maybeContent) {
-      throw new Error('Memory requires a subcommand: status, import-sessions, sync-sessions, export, backup.');
+      throw new Error('Memory requires a subcommand: status, index, compact, promote-global, import-sessions, sync-sessions, export, backup.');
     }
-    process.stdout.write(\`\${JSON.stringify(runMemoryCommand(repoRoot, config, maybeContent), null, 2)}\\n\`);
+    process.stdout.write(\`\${JSON.stringify(runMemoryCommand(repoRoot, config, maybeContent, rest[2]), null, 2)}\\n\`);
     return;
   }
 
@@ -3399,7 +3624,7 @@ function main(argv) {
 
   if (command === 'harness') {
     if (!maybeContent) {
-      throw new Error('Harness requires a subcommand: status, intake, proof, decision, trace, friction.');
+      throw new Error('Harness requires a subcommand: status, check, intake, proof, decision, trace, friction.');
     }
     process.stdout.write(\`\${JSON.stringify(runHarnessCommand(repoRoot, config, maybeContent, rest[2]), null, 2)}\\n\`);
     return;

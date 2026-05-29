@@ -50,6 +50,11 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     ['Plans/INDEX.md', path.join(config.project_root, 'Plans', 'INDEX.md')],
     ['ProductHarness/HARNESS.md', path.join(config.project_root, 'ProductHarness', 'HARNESS.md')],
     ['ProductHarness/HARNESS_BACKLOG.md', path.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md')],
+    ['ProductHarness/SYSTEM_MAP.md', path.join(config.project_root, 'ProductHarness', 'SYSTEM_MAP.md')],
+    ['ProductHarness/CONTEXT_RULES.md', path.join(config.project_root, 'ProductHarness', 'CONTEXT_RULES.md')],
+    ['ProductHarness/GLOSSARY.md', path.join(config.project_root, 'ProductHarness', 'GLOSSARY.md')],
+    ['ProductHarness/MATURITY.md', path.join(config.project_root, 'ProductHarness', 'MATURITY.md')],
+    ['ProductHarness/COMPONENTS.md', path.join(config.project_root, 'ProductHarness', 'COMPONENTS.md')],
     ['ProductHarness/Traces', path.join(config.project_root, 'ProductHarness', 'Traces')],
     ['ProductHarness/Stories/INDEX.md', path.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')],
   ]
@@ -71,10 +76,20 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
       && fs.existsSync(path.join(config.project_root, 'Plans', 'CURRENT.md')),
     productHarness: fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS.md'))
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'SYSTEM_MAP.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'CONTEXT_RULES.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'GLOSSARY.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'MATURITY.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'COMPONENTS.md'))
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'traces'))
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'stories', 'INDEX.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'HARNESS.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'SYSTEM_MAP.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'CONTEXT_RULES.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'GLOSSARY.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'MATURITY.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'COMPONENTS.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'Traces'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'Stories', 'INDEX.md')),
     gitAvailable: hasGit(),

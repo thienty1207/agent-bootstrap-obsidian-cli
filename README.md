@@ -4,7 +4,7 @@ Portable CLI for bootstrapping coding projects into an Obsidian-backed AI memory
 
 ## Public Flow
 
-The core bootstrap flow stays small, with automatic memory, active-plan, and Product Harness commands available for agents and maintenance:
+The core bootstrap flow stays small, with automatic memory, AI Memory Engine, active-plan, and Product Harness commands available for agents and maintenance:
 
 1. Install or update the CLI
 2. Set the Obsidian vault path
@@ -14,7 +14,7 @@ The core bootstrap flow stays small, with automatic memory, active-plan, and Pro
 6. Export or back up memory, plan state, and Product Harness when needed
 7. Uninstall when no longer needed
 
-Generated `AGENTS.md` files tell AI agents to run compact context, plan status, and Product Harness automatically. Users can inspect recall, status, export, backup, plan state, and harness state manually, but normal AI work should not depend on manual memory commands.
+Generated `AGENTS.md` files tell AI agents to run compact context, Memory Engine refresh, plan status, and Product Harness automatically. Users can inspect recall, status, export, backup, plan state, and harness state manually, but normal AI work should not depend on manual memory commands.
 
 ## 1. Install Or Update CLI
 
@@ -61,7 +61,7 @@ If `--type` is omitted, the default is `tool`.
 - `.codex/` with Codex config, 3 core quality subagents, command templates, one bundled workflow skill, bundled optional domain skills, and optional custom skills/agents
 - `docs/vault-memory.md` and `docs/project-map.md`
 - `docs/superpowers/plans/` with `CURRENT.md`, `INDEX.md`, and dated active plan folders
-- `docs/product/`, `docs/stories/`, `docs/validation/`, and `docs/decisions/` for Product Harness
+- `docs/product/`, `docs/stories/`, `docs/validation/`, and `docs/decisions/` for Product Harness, System Map, Context Rules, Glossary, Maturity, and docs health
 - `plans/` with clean planning templates and handoff report templates only
 - `vault.config.json`
 - `scripts/agent-memory.js`
@@ -166,6 +166,7 @@ AI agents run these silently for medium or high-risk work:
 
 ```bash
 agent-bootstrap harness status
+agent-bootstrap harness check
 agent-bootstrap harness intake "<feature title>"
 agent-bootstrap harness proof "<verification summary>"
 agent-bootstrap harness decision "<decision summary>"
@@ -184,6 +185,50 @@ flat file: `overview.md`, `design.md`, `validation.md`, and `execplan.md`.
 `harness trace` records the short path taken after meaningful work. `harness
 friction` records unclear workflow moments so the kit can improve instead of
 letting the same confusion repeat.
+
+`harness check` verifies the Product Harness docs health layer: `SYSTEM_MAP.md`,
+`CONTEXT_RULES.md`, `GLOSSARY.md`, `MATURITY.md`, and `COMPONENTS.md`. These files
+help AI understand the product, shared terms, and context loading rules before it
+touches code.
+
+## AI Memory Engine
+
+AI Memory Engine is the long-term Memory Firewall for a shared Vault. Vault
+Markdown remains the source of truth; the engine index is only a cache/mục lục
+that helps AI choose the right slice.
+
+The engine creates Vault-level artifacts under:
+
+```text
+Artifacts/AgentBootstrap/
+  memory-engine-index.json
+  memory-engine-state.json
+  APPROVED_GLOBAL.md
+  GLOBAL_CANDIDATES.md
+```
+
+- Current project memory is always preferred.
+- Verified Global Memory from `APPROVED_GLOBAL.md` can be used when the task matches.
+- `GLOBAL_CANDIDATES.md` is not treated as fact.
+- Cross-project memory is blocked unless targeted recall has a strong explicit match.
+- Memory with proof, verification, or high confidence is ranked above drafts, imported session noise, interrupted plans, and old unverified notes.
+
+AI agents refresh this automatically through `context --compact`, but the public
+maintenance commands are:
+
+```bash
+agent-bootstrap memory index "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory compact "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory promote-global "<verified cross-project learning>" "D:\project\nodejs\srcEcommerce"
+```
+
+## Optional Rust Accelerator
+
+The default Memory Engine runs with Node so npm installs work on Windows without
+Rust or Cargo. Rust is allowed only as an optional accelerator. If
+`AGENT_BOOTSTRAP_RUST_INDEXER` points to a compatible binary, the CLI probes it;
+if it fails, the kit falls back to Node and reports a warning instead of
+breaking the workflow.
 
 ## Optional: AI Context
 
@@ -239,6 +284,9 @@ Memory maintenance:
 
 ```bash
 agent-bootstrap memory status "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory index "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory compact "D:\project\nodejs\srcEcommerce"
+agent-bootstrap memory promote-global "<verified cross-project learning>" "D:\project\nodejs\srcEcommerce"
 agent-bootstrap memory import-sessions "D:\project\nodejs\srcEcommerce"
 agent-bootstrap memory sync-sessions "D:\project\nodejs\srcEcommerce"
 agent-bootstrap memory export "D:\project\nodejs\srcEcommerce"
@@ -247,7 +295,10 @@ agent-bootstrap memory backup "D:\project\nodejs\srcEcommerce"
 
 - `memory status` reports vault, project capsule, memory index, recall index,
   semantic recall mode, automatic Codex session import health, sessions,
-  exports, backups, diagnostics, and recommended next actions.
+  Memory Engine, exports, backups, diagnostics, and recommended next actions.
+- `memory index` refreshes the AI Memory Engine index across the shared Vault.
+- `memory compact` writes a short Memory Engine summary for the current project.
+- `memory promote-global` records a confirmed reusable learning in approved global memory.
 - `memory import-sessions` runs the same automatic Codex session importer used
   by `context --compact`; it reports a plain summary and next action when no
   sessions are imported, but it is a maintenance command for inspection, not a
@@ -266,12 +317,16 @@ node scripts/agent-memory.js recall "<query>"
 node scripts/agent-memory.js plan status
 node scripts/agent-memory.js plan start "<task title>"
 node scripts/agent-memory.js harness status
+node scripts/agent-memory.js harness check
 node scripts/agent-memory.js harness intake "<feature title>"
 node scripts/agent-memory.js harness proof "<verification summary>"
 node scripts/agent-memory.js harness decision "<decision summary>"
 node scripts/agent-memory.js harness trace "<task summary/outcome>"
 node scripts/agent-memory.js harness friction "<pain or missing workflow>"
 node scripts/agent-memory.js memory status
+node scripts/agent-memory.js memory index
+node scripts/agent-memory.js memory compact
+node scripts/agent-memory.js memory promote-global "<verified cross-project learning>"
 node scripts/agent-memory.js memory import-sessions
 node scripts/agent-memory.js memory sync-sessions
 node scripts/agent-memory.js compact
