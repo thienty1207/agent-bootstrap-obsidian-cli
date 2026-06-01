@@ -46,7 +46,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Keep `agent-bootstrap update [projectPath]` sufficient to refresh kit-managed `.codex` and bridge files in projects already being built.
 - Keep `agent-bootstrap context --compact` as the automatic first command agents run at the start of a fresh project session.
 - Keep `agent-bootstrap plan <status|start|update|complete|interrupt> [projectPath]` available for active implementation state.
-- Keep `agent-bootstrap harness <status|check|intake|proof|decision|trace|friction> [projectPath]` available for Product Harness feature intent, docs health, risk, scope, proof, trace, friction, and product decisions.
+- Keep `agent-bootstrap harness <status|check|intake|proof|decision|trace|score-trace|friction|backlog|friction-report> [projectPath]` available for Product Harness feature intent, docs health, risk, scope, proof, trace quality, friction intelligence, backlog outcome loop, and product decisions.
 - Keep `agent-bootstrap recall "<query>" [projectPath]` available for targeted memory search when compact context is insufficient.
 - Keep `agent-bootstrap memory <status|index|compact|promote-global|import-sessions|sync-sessions|export|backup> [projectPath]` available for Memory Engine refresh, compaction, verified global memory, diagnostics, automatic Codex session import inspection, clean session summaries, JSON export, and plain-file backup.
 - Use `agent-bootstrap context --why` before expanding context, and `agent-bootstrap context --full` only when daily history is needed.
@@ -66,7 +66,7 @@ This source repo also contains lifecycle helper modules such as `syncProject`, `
 - Read `.codex/agents/INDEX.md` before dispatching a subagent. Optional project agents must be registered there before use.
 - Do not reintroduce `.codex/rules`; mandatory guardrails live in `AGENTS.md`, `.codex/INDEX.md`, and `.codex/skills/INDEX.md`.
 - Treat root `plans/` as clean template and handoff assets only. When Superpowers needs a real project plan, write it under `docs/superpowers/plans/`.
-- Treat Product Harness as a product contract layer, not a skill or new core. It complements daily logs, Active Plan State, trace, friction, System Map, Context Rules, Glossary, and Maturity docs.
+- Treat Product Harness as a product contract layer, not a skill or new core. It complements daily logs, Active Plan State, Trace Quality Gate, friction intelligence, backlog outcome loop, System Map, Context Rules, Glossary, and Maturity docs.
 - Do not infer completion from silence, shutdown, or lack of user response; active plan state must remain `in_progress` or `interrupted` until verification is recorded.
 - If a fact is not present in repo, context output, or a cited source, mark it unknown instead of guessing.
 - Treat `README.md` and `src/cli.ts` as the source of truth for the public CLI surface if an older plan file mentions superseded commands.
@@ -92,6 +92,6 @@ These are always-on guardrails, not a separate skill. Superpowers owns planning,
 4. Confirm `README.md` and `src/cli.ts` still agree on the public command surface
 5. In generated projects, use `agent-bootstrap context --compact` as the automatic first-step context loader and Codex session importer for AI sessions
 6. Use `agent-bootstrap plan status` silently when implementation state matters
-7. Use `agent-bootstrap harness status`, `agent-bootstrap harness check`, `agent-bootstrap harness intake "<feature title>"`, `agent-bootstrap harness trace "<summary>"`, and `agent-bootstrap harness friction "<pain>"` silently for medium/high-risk feature work
+7. Use `agent-bootstrap harness status`, `agent-bootstrap harness check`, `agent-bootstrap harness intake "<feature title>"`, `agent-bootstrap harness trace "<summary>"`, `agent-bootstrap harness score-trace`, `agent-bootstrap harness friction "<pain>"`, `agent-bootstrap harness backlog --open`, and `agent-bootstrap harness friction-report` silently for medium/high-risk feature work
 8. Use `agent-bootstrap recall "<query>"` silently when prior project memory is needed
 9. Use `agent-bootstrap memory status`, `agent-bootstrap memory index`, and `agent-bootstrap memory compact` before import/backup/export troubleshooting

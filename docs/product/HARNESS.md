@@ -11,4 +11,4 @@ It keeps feature work tied to plain product intent:
 - what trace was left after meaningful work
 - what workflow friction should improve next time
 
-Daily logs record what happened today. Active Plan State records what step is active. Product Harness records the feature contract, proof, trace, and friction.
+Daily logs record what happened today. Active Plan State records what step is active. Product Harness records the feature contract, proof, trace quality, friction, and backlog outcomes.

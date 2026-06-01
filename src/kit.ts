@@ -40,6 +40,7 @@ export const MANAGED_REPO_PATHS = [
   'docs/product/PRODUCT.md',
   'docs/product/HARNESS.md',
   'docs/product/HARNESS_BACKLOG.md',
+  'docs/product/TRACE_SPEC.md',
   'docs/product/SYSTEM_MAP.md',
   'docs/product/CONTEXT_RULES.md',
   'docs/product/GLOSSARY.md',

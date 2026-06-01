@@ -50,6 +50,7 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
     ['Plans/INDEX.md', path.join(config.project_root, 'Plans', 'INDEX.md')],
     ['ProductHarness/HARNESS.md', path.join(config.project_root, 'ProductHarness', 'HARNESS.md')],
     ['ProductHarness/HARNESS_BACKLOG.md', path.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md')],
+    ['ProductHarness/TRACE_SPEC.md', path.join(config.project_root, 'ProductHarness', 'TRACE_SPEC.md')],
     ['ProductHarness/SYSTEM_MAP.md', path.join(config.project_root, 'ProductHarness', 'SYSTEM_MAP.md')],
     ['ProductHarness/CONTEXT_RULES.md', path.join(config.project_root, 'ProductHarness', 'CONTEXT_RULES.md')],
     ['ProductHarness/GLOSSARY.md', path.join(config.project_root, 'ProductHarness', 'GLOSSARY.md')],
@@ -76,6 +77,7 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
       && fs.existsSync(path.join(config.project_root, 'Plans', 'CURRENT.md')),
     productHarness: fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS.md'))
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md'))
+      && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'TRACE_SPEC.md'))
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'SYSTEM_MAP.md'))
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'CONTEXT_RULES.md'))
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'product', 'GLOSSARY.md'))
@@ -85,6 +87,7 @@ export function runDoctor({ repoRoot }: { repoRoot?: string } = {}): DoctorRepor
       && fs.existsSync(path.join(resolvedRepoRoot, 'docs', 'stories', 'INDEX.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'HARNESS.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md'))
+      && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'TRACE_SPEC.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'SYSTEM_MAP.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'CONTEXT_RULES.md'))
       && fs.existsSync(path.join(config.project_root, 'ProductHarness', 'GLOSSARY.md'))

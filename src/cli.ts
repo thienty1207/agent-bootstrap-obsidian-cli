@@ -13,12 +13,13 @@ const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, 
 
 interface ParsedArgs {
   rest: string[];
-  options: Record<string, string>;
+  options: Record<string, string | boolean>;
 }
 
 function parseFlags(args: string[]): ParsedArgs {
-  const options: Record<string, string> = {};
+  const options: Record<string, string | boolean> = {};
   const rest: string[] = [];
+  const booleanFlags = new Set(['open', 'closed']);
 
   for (let index = 0; index < args.length; index += 1) {
     const value = args[index];
@@ -28,6 +29,10 @@ function parseFlags(args: string[]): ParsedArgs {
     }
 
     const flag = value.slice(2);
+    if (booleanFlags.has(flag)) {
+      options[flag] = true;
+      continue;
+    }
     const next = args[index + 1];
     if (next === undefined || next.startsWith('--')) {
       throw new Error(`Missing value for --${flag}`);
@@ -38,6 +43,10 @@ function parseFlags(args: string[]): ParsedArgs {
   }
 
   return { rest, options };
+}
+
+function optionString(options: Record<string, string | boolean>, key: string): string | undefined {
+  return typeof options[key] === 'string' ? options[key] as string : undefined;
 }
 
 function parseContextArgs(args: string[]): {
@@ -141,7 +150,13 @@ function writeHelp(): void {
         '  agent-bootstrap harness proof "<verification summary>" [project-path]',
         '  agent-bootstrap harness decision "<decision summary>" [project-path]',
         '  agent-bootstrap harness trace "<summary>" [project-path]',
+        '  agent-bootstrap harness score-trace [project-path]',
+        '  agent-bootstrap harness score-trace --id <trace-id> [project-path]',
         '  agent-bootstrap harness friction "<pain or missing workflow>" [project-path]',
+        '  agent-bootstrap harness backlog [project-path]',
+        '  agent-bootstrap harness backlog --open [project-path]',
+        '  agent-bootstrap harness backlog --closed [project-path]',
+        '  agent-bootstrap harness friction-report [project-path]',
         '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
@@ -172,9 +187,9 @@ export async function main(argv: string[]): Promise<void> {
     const { rest, options } = parseFlags(tail);
     writeJson(initProject({
       projectPath: rest[0] || process.cwd(),
-      slug: options.slug,
-      vaultRoot: options['vault-root'],
-      projectType: options.type,
+      slug: optionString(options, 'slug'),
+      vaultRoot: optionString(options, 'vault-root'),
+      projectType: optionString(options, 'type'),
     }));
     return;
   }
@@ -203,7 +218,7 @@ export async function main(argv: string[]): Promise<void> {
     process.stdout.write(`${runRecall({
       query,
       repoRoot: rest[1],
-      limit: options.limit ? Number.parseInt(options.limit, 10) : undefined,
+      limit: typeof options.limit === 'string' ? Number.parseInt(options.limit, 10) : undefined,
     })}\n`);
     return;
   }
@@ -240,19 +255,22 @@ export async function main(argv: string[]): Promise<void> {
   }
 
   if (command === 'harness') {
-    const { rest } = parseFlags(tail);
+    const { rest, options } = parseFlags(tail);
     const subcommand = rest[0];
     if (!subcommand) {
-      throw new Error('Harness requires a subcommand: status, check, intake, proof, decision, trace, friction.');
+      throw new Error('Harness requires a subcommand: status, check, intake, proof, decision, trace, score-trace, friction, backlog, friction-report.');
     }
 
-    const payload = subcommand === 'status' || subcommand === 'check' ? undefined : rest[1];
-    const repoRoot = subcommand === 'status' || subcommand === 'check' ? rest[1] : rest[2];
+    const noPayload = new Set(['status', 'check', 'score-trace', 'backlog', 'friction-report']);
+    const payload = noPayload.has(subcommand) ? undefined : rest[1];
+    const repoRoot = noPayload.has(subcommand) ? rest[1] : rest[2];
     const foundRepoRoot = resolveRepoRoot(repoRoot ? path.resolve(repoRoot) : process.cwd());
     writeJson(runHarnessCommand(subcommand, {
       repoRoot: foundRepoRoot,
       config: readRepoConfig(foundRepoRoot),
       value: payload,
+      id: optionString(options, 'id'),
+      filter: options.open ? 'open' : options.closed ? 'closed' : 'all',
     }));
     return;
   }

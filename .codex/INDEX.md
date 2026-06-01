@@ -10,9 +10,11 @@ folder recursively.
 - Run `agent-bootstrap plan status` after compact context for implementation, fix, security, frontend, backend, or verification work.
 - Use `agent-bootstrap plan start|update|complete|interrupt` to keep `docs/superpowers/plans/` and vault `Plans/` aligned; never infer completion from silence.
 - Run `agent-bootstrap harness status` and `agent-bootstrap harness check` after plan status for medium/high-risk feature work.
-- Use `agent-bootstrap harness intake|proof|decision|trace|friction` to keep feature intent, risk, scope, proof, trace, friction, and product decisions aligned with vault `ProductHarness/`.
+- Use `agent-bootstrap harness intake|proof|decision|trace|score-trace|friction|backlog|friction-report` to keep feature intent, risk, scope, proof, trace quality, friction intelligence, backlog outcomes, and product decisions aligned with vault `ProductHarness/`.
 - Use `agent-bootstrap harness trace "<summary>"` before final response after meaningful work.
+- Use `agent-bootstrap harness score-trace` after trace and before final response; if score fails, improve the trace or avoid claiming completion.
 - Use `agent-bootstrap harness friction "<pain>"` when the workflow itself is unclear.
+- Use `agent-bootstrap harness backlog --open` and `agent-bootstrap harness friction-report` when repeated workflow pain needs review.
 - Use `agent-bootstrap recall "<query>"` when compact context is not enough for prior decisions, facts, handoffs, or session summaries.
 - Use `agent-bootstrap memory status|index|compact|promote-global` when Memory Engine health, shared Vault indexing, diagnostics, next actions, export, backup, or session sync needs inspection.
 - Use `agent-bootstrap memory import-sessions` only for explicit maintenance; normal startup already runs it through compact context.
@@ -30,7 +32,7 @@ folder recursively.
 - Vault `Artifacts/recall-index.json`, `Artifacts/session-import-state.json`, `Artifacts/AgentBootstrap/`, and `Sessions/`: generated semantic recall, AI Memory Engine, approved global memory, and imported session assets maintained by `context`, `recall`, and `memory` commands.
 - `docs/superpowers/plans/` and vault `Plans/`: Active Plan State maintained by `agent-bootstrap plan`.
 - `docs/product/`, `docs/stories/`, `docs/validation/`, `docs/decisions/`, and vault `ProductHarness/`: Product Harness maintained by `agent-bootstrap harness`.
-- Product Harness docs health includes `SYSTEM_MAP.md`, `CONTEXT_RULES.md`, `GLOSSARY.md`, `MATURITY.md`, and `COMPONENTS.md`.
+- Product Harness docs health includes `SYSTEM_MAP.md`, `CONTEXT_RULES.md`, `GLOSSARY.md`, `MATURITY.md`, `COMPONENTS.md`, and `TRACE_SPEC.md`.
 
 There is no `.codex/rules/` folder. Mandatory guardrails live in `AGENTS.md`,
 this index, and `.codex/skills/INDEX.md`. Security rule references live inside
@@ -48,8 +50,8 @@ context output, or a cited source, mark it unknown instead of guessing.
 ## Product Harness
 
 Product Harness is not a skill and does not replace Superpowers. It is the bounded
-product contract layer for feature intent, scope, risk, proof, trace, friction,
-and product decisions. Use it for medium/high-risk work; keep small docs/copy/polish
+product contract layer for feature intent, scope, risk, proof, Trace Quality Gate,
+friction intelligence, backlog outcomes, and product decisions. Use it for medium/high-risk work; keep small docs/copy/polish
 tasks lightweight.
 
 ## AI Memory Engine

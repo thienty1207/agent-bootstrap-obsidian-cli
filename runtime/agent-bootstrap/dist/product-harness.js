@@ -15,6 +15,9 @@ exports.recordHarnessProof = recordHarnessProof;
 exports.recordHarnessDecision = recordHarnessDecision;
 exports.recordHarnessTrace = recordHarnessTrace;
 exports.recordHarnessFriction = recordHarnessFriction;
+exports.scoreHarnessTrace = scoreHarnessTrace;
+exports.readHarnessBacklog = readHarnessBacklog;
+exports.getHarnessFrictionReport = getHarnessFrictionReport;
 exports.formatProductHarnessContext = formatProductHarnessContext;
 exports.getCurrentStoryFile = getCurrentStoryFile;
 exports.getRecentStoryFiles = getRecentStoryFiles;
@@ -285,7 +288,7 @@ function harnessTemplate() {
         '- what trace was left after meaningful work',
         '- what workflow friction should improve next time',
         '',
-        'Daily logs still record what happened today. Active Plan State still records what step is active. Product Harness records the feature contract, proof, trace, and friction.',
+        'Daily logs still record what happened today. Active Plan State still records what step is active. Product Harness records the feature contract, proof, trace quality, friction, and backlog outcomes.',
         '',
     ].join('\n');
 }
@@ -324,11 +327,40 @@ function backlogTemplate() {
     return [
         '# Harness Backlog',
         '',
-        'Open workflow friction that should make future harness behavior sharper.',
+        'Workflow friction that should make future harness behavior sharper.',
+        '',
+        'Statuses: proposed, accepted, implemented, rejected.',
         '',
         '## Open Friction',
         '',
         '- none yet',
+        '',
+    ].join('\n');
+}
+function traceSpecTemplate() {
+    return [
+        '# Trace Spec',
+        '',
+        'Product Harness traces are short execution breadcrumbs written after meaningful work.',
+        'Trace Quality Gate checks whether the trace is strong enough for the task risk.',
+        '',
+        '## Quality Tiers',
+        '',
+        '- incomplete: missing summary or outcome.',
+        '- minimal: includes task summary and outcome.',
+        '- standard: minimal plus current story and proof summary.',
+        '- detailed: standard plus current plan, files changed/read, and verification evidence.',
+        '',
+        '## Risk Rules',
+        '',
+        '- Low-risk work requires minimal trace quality.',
+        '- Medium-risk work requires standard trace quality.',
+        '- High-risk work requires detailed trace quality.',
+        '- Auth, permission, payment, security, migration, tenant/RLS, upload, external provider, and data-loss tasks require detailed trace quality.',
+        '',
+        '## Completion Rule',
+        '',
+        'Trace scoring is not a replacement for tests. It is a completion-claim gate: if a medium/high-risk trace fails, the agent must improve the trace or avoid claiming the work is done.',
         '',
     ].join('\n');
 }
@@ -385,7 +417,7 @@ function glossaryTemplate() {
         '',
         '- Daily log: what happened today.',
         '- Active Plan State: the current implementation step and verification state.',
-        '- Product Harness: feature goal, scope, risk, proof, trace, and friction.',
+        '- Product Harness: feature goal, scope, risk, proof, trace quality, friction, and backlog outcomes.',
         '- Trace: a short breadcrumb of meaningful work after it happened.',
         '- Friction: a workflow pain that should improve the kit next time.',
         '- Memory Engine: the AI-facing index that filters Vault memory without replacing Markdown.',
@@ -406,7 +438,7 @@ function maturityTemplate() {
         '- Stage 2 - Traceable delivery: proof, traces, and decisions connect to plans.',
         '- Stage 3 - Adaptive harness: recurring friction becomes kit improvement.',
         '',
-        'Current default: Stage 1 until the project has repeated proof, trace, and friction review.',
+        'Current default: Stage 1 until the project has repeated proof, trace quality, and friction review.',
         '',
     ].join('\n');
 }
@@ -415,12 +447,13 @@ function componentsTemplate() {
         '# Harness Components',
         '',
         '- `PRODUCT.md`: what the product is and what users can trust.',
-        '- `HARNESS.md`: how feature intent, risk, proof, trace, and friction fit together.',
+        '- `HARNESS.md`: how feature intent, risk, proof, trace quality, friction, and backlog outcomes fit together.',
         '- `SYSTEM_MAP.md`: product and system boundaries.',
         '- `CONTEXT_RULES.md`: what AI should load first and what to skip.',
         '- `GLOSSARY.md`: shared meaning for recurring workflow terms.',
         '- `MATURITY.md`: lightweight adoption stages.',
         '- `HARNESS_BACKLOG.md`: open workflow friction.',
+        '- `TRACE_SPEC.md`: trace quality gate rules.',
         '- `docs/stories/`: feature stories and high-risk story packets.',
         '- `docs/validation/TEST_MATRIX.md`: proof visibility.',
         '- `docs/product/traces/`: short execution traces.',
@@ -467,6 +500,7 @@ function mirrorHarnessToVault(repoRoot, config) {
     copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'GLOSSARY.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'GLOSSARY.md'));
     copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'MATURITY.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'MATURITY.md'));
     copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'COMPONENTS.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'COMPONENTS.md'));
+    copyIfExists(node_path_1.default.join(repoProductRoot(repoRoot), 'TRACE_SPEC.md'), node_path_1.default.join(getVaultProductHarnessRoot(config), 'TRACE_SPEC.md'));
     copyIfExists(repoBacklogPath(repoRoot), vaultBacklogPath(config));
     node_fs_1.default.cpSync(repoTracesRoot(repoRoot), vaultTracesRoot(config), { recursive: true });
     node_fs_1.default.cpSync(repoStoriesRoot(repoRoot), vaultStoriesRoot(config), { recursive: true });
@@ -481,6 +515,7 @@ function writeHarnessDefaults(repoRoot, config) {
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'GLOSSARY.md'), glossaryTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'MATURITY.md'), maturityTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'COMPONENTS.md'), componentsTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoProductRoot(repoRoot), 'TRACE_SPEC.md'), traceSpecTemplate());
     (0, fs_utils_1.writeFileIfMissing)(repoBacklogPath(repoRoot), backlogTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoTracesRoot(repoRoot), 'README.md'), tracesReadmeTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(repoStoriesRoot(repoRoot), 'INDEX.md'), storiesIndexTemplate());
@@ -493,6 +528,7 @@ function writeHarnessDefaults(repoRoot, config) {
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'GLOSSARY.md'), glossaryTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'MATURITY.md'), maturityTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'COMPONENTS.md'), componentsTemplate());
+    (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(getVaultProductHarnessRoot(config), 'TRACE_SPEC.md'), traceSpecTemplate());
     (0, fs_utils_1.writeFileIfMissing)(vaultBacklogPath(config), backlogTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultTracesRoot(config), 'README.md'), tracesReadmeTemplate());
     (0, fs_utils_1.writeFileIfMissing)(node_path_1.default.join(vaultStoriesRoot(config), 'INDEX.md'), storiesIndexTemplate());
@@ -935,6 +971,67 @@ function inferTraceOutcome(summary) {
     }
     return 'completed';
 }
+function requiredTraceTierForRisk(risk) {
+    if (risk === 'high')
+        return 'detailed';
+    if (risk === 'medium')
+        return 'standard';
+    return 'minimal';
+}
+function tierRank(tier) {
+    switch (tier) {
+        case 'detailed': return 3;
+        case 'standard': return 2;
+        case 'minimal': return 1;
+        case 'incomplete': return 0;
+    }
+}
+function normalizeTraceTier(value) {
+    return value === 'detailed' || value === 'standard' || value === 'minimal' || value === 'incomplete'
+        ? value
+        : 'incomplete';
+}
+function normalizeTraceScoreStatus(value) {
+    return value === 'passed' || value === 'failed' || value === 'unscored' ? value : 'unscored';
+}
+function traceField(content, label) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return content.match(new RegExp(`^- ${escaped}:\\s+(.+)$`, 'm'))?.[1]?.trim() || null;
+}
+function traceSectionItems(content, heading) {
+    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const match = content.match(new RegExp(`## ${escaped}\\r?\\n\\r?\\n([\\s\\S]*?)(?:\\r?\\n## |\\s*$)`));
+    return (match?.[1] || '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => /^-\s+/.test(line))
+        .map((line) => line.replace(/^-\s+/, '').trim());
+}
+function parseMissingFields(value) {
+    if (!value || value === 'none' || value === 'not scored yet')
+        return [];
+    return value.split(',').map((item) => item.trim()).filter(Boolean);
+}
+function normalizeYesNo(value) {
+    return value === 'yes' || value === 'true' || value === 'passed';
+}
+function traceIdFromPath(filePath) {
+    return `trace-${(0, fs_utils_1.slugify)(node_path_1.default.basename(filePath, '.md')).slice(0, 96)}`;
+}
+function traceRiskFromContent(summary, content) {
+    const explicit = normalizeRisk(traceField(content, 'Risk lane') || undefined);
+    if (traceField(content, 'Risk lane'))
+        return explicit;
+    const story = traceField(content, 'Current story');
+    return classifyHarnessIntake(story && story !== 'none' ? story : summary).risk;
+}
+function traceInputTypeFromContent(summary, content) {
+    const explicit = normalizeInputType(traceField(content, 'Input type') || undefined);
+    if (traceField(content, 'Input type'))
+        return explicit;
+    const story = traceField(content, 'Current story');
+    return classifyHarnessIntake(story && story !== 'none' ? story : summary).inputType;
+}
 function readTraceRecord(repoRoot, config, filePath) {
     const content = (0, fs_utils_1.readIfExists)(filePath);
     if (!content) {
@@ -946,11 +1043,27 @@ function readTraceRecord(repoRoot, config, filePath) {
     const outcome = normalizeOutcome(content.match(/^- Outcome:\s+(.+)$/m)?.[1]?.trim());
     const created = content.match(/^- Created:\s+(.+)$/m)?.[1]?.trim() || node_fs_1.default.statSync(filePath).mtime.toISOString();
     const currentStory = content.match(/^- Current story:\s+(.+)$/m)?.[1]?.trim() || null;
+    const risk = traceRiskFromContent(summary, content);
+    const inputType = traceInputTypeFromContent(summary, content);
+    const requiredRaw = traceField(content, 'Required trace tier');
+    const requiredTraceTier = requiredRaw ? normalizeTraceTier(requiredRaw) : requiredTraceTierForRisk(risk);
+    const scoreStatus = normalizeTraceScoreStatus(traceField(content, 'Score status') || traceField(content, 'Status') || undefined);
+    const achievedTraceTier = normalizeTraceTier(traceField(content, 'Achieved trace tier') || traceField(content, 'Achieved tier') || undefined);
+    const meetsRequirement = normalizeYesNo(traceField(content, 'Meets requirement'));
+    const missingFields = parseMissingFields(traceField(content, 'Missing fields'));
     const relative = toPosix(node_path_1.default.relative(repoTracesRoot(repoRoot), filePath));
     return {
+        id: traceField(content, 'Trace id') || traceIdFromPath(filePath),
         summary,
         outcome,
         created,
+        risk,
+        inputType,
+        requiredTraceTier,
+        achievedTraceTier,
+        scoreStatus,
+        meetsRequirement,
+        missingFields,
         repoPath: filePath,
         vaultPath: node_path_1.default.join(vaultTracesRoot(config), relative),
         relativeRepoPath: toPosix(node_path_1.default.relative(repoRoot, filePath)),
@@ -967,7 +1080,16 @@ function latestTrace(repoRoot, config) {
     const latest = traceFiles(repoTracesRoot(repoRoot))[0];
     return latest ? readTraceRecord(repoRoot, config, latest) : null;
 }
-function readOpenFriction(repoRoot, config) {
+function parseBacklogStatus(heading) {
+    if (/\baccepted\b/i.test(heading))
+        return 'accepted';
+    if (/\bimplemented\b/i.test(heading))
+        return 'implemented';
+    if (/\brejected\b/i.test(heading) || /\bresolved\b/i.test(heading))
+        return 'rejected';
+    return 'proposed';
+}
+function readBacklogItems(repoRoot, config) {
     const content = (0, fs_utils_1.readIfExists)(repoBacklogPath(repoRoot)) || '';
     const records = [];
     const blocks = content.split(/\r?\n##\s+/).slice(1);
@@ -976,17 +1098,28 @@ function readOpenFriction(repoRoot, config) {
         if (!heading || heading === 'Open Friction') {
             continue;
         }
-        const status = /\bresolved\b/i.test(heading) ? 'resolved' : 'proposed';
-        if (status !== 'proposed') {
-            continue;
-        }
+        const status = parseBacklogStatus(heading);
         const pain = lines.find((line) => /^-\s+Pain:\s+/.test(line))?.replace(/^-\s+Pain:\s+/, '').trim()
             || lines.find((line) => /^-\s+/.test(line))?.replace(/^-\s+/, '').trim()
             || heading.trim();
+        const riskLane = normalizeRisk(lines.find((line) => /^-\s+Risk lane:\s+/.test(line))?.replace(/^-\s+Risk lane:\s+/, '').trim());
+        const inputType = normalizeInputType(lines.find((line) => /^-\s+Input type:\s+/.test(line))?.replace(/^-\s+Input type:\s+/, '').trim());
+        const currentStory = lines.find((line) => /^-\s+Current story:\s+/.test(line))?.replace(/^-\s+Current story:\s+/, '').trim() || null;
+        const currentPlan = lines.find((line) => /^-\s+Current plan:\s+/.test(line))?.replace(/^-\s+Current plan:\s+/, '').trim() || null;
+        const linkedTrace = lines.find((line) => /^-\s+Linked trace:\s+/.test(line))?.replace(/^-\s+Linked trace:\s+/, '').trim() || null;
+        const expectedImprovement = lines.find((line) => /^-\s+Expected improvement:\s+/.test(line))?.replace(/^-\s+Expected improvement:\s+/, '').trim() || null;
+        const actualOutcome = lines.find((line) => /^-\s+Actual outcome:\s+/.test(line))?.replace(/^-\s+Actual outcome:\s+/, '').trim() || null;
         records.push({
             pain,
             status,
             created: heading.split(' - ')[0].trim(),
+            riskLane,
+            inputType,
+            currentStory: currentStory === 'none' ? null : currentStory,
+            currentPlan: currentPlan === 'none' ? null : currentPlan,
+            linkedTrace: linkedTrace === 'none' ? null : linkedTrace,
+            expectedImprovement,
+            actualOutcome,
             repoPath: repoBacklogPath(repoRoot),
             vaultPath: vaultBacklogPath(config),
         });
@@ -1001,12 +1134,22 @@ function readOpenFriction(repoRoot, config) {
                 pain: item.replace(/^-\s+/, ''),
                 status: 'proposed',
                 created: 'unknown',
+                riskLane: 'medium',
+                inputType: 'change_request',
+                currentStory: null,
+                currentPlan: null,
+                linkedTrace: null,
+                expectedImprovement: null,
+                actualOutcome: null,
                 repoPath: repoBacklogPath(repoRoot),
                 vaultPath: vaultBacklogPath(config),
             });
         }
     }
     return records;
+}
+function readOpenFriction(repoRoot, config) {
+    return readBacklogItems(repoRoot, config).filter((item) => item.status === 'proposed' || item.status === 'accepted');
 }
 function getGitStatus(repoRoot) {
     try {
@@ -1025,7 +1168,152 @@ function currentPlanPointer(repoRoot) {
     if (!body) {
         return 'none';
     }
-    return body.match(/- Plan:\s+(.+)$/m)?.[1]?.trim() || toPosix(node_path_1.default.relative(repoRoot, currentPath));
+    return body.match(/- Plan:\s+(.+)$/m)?.[1]?.trim() || 'none';
+}
+function findTraceById(repoRoot, config, id) {
+    const traces = traceFiles(repoTracesRoot(repoRoot))
+        .map((filePath) => readTraceRecord(repoRoot, config, filePath))
+        .filter((trace) => Boolean(trace));
+    if (!id) {
+        return traces[0] || null;
+    }
+    return traces.find((trace) => trace.id === id) || null;
+}
+function verificationLooksReal(value) {
+    if (!value || value === 'none')
+        return false;
+    return /\b(test|tests|passed|verified|verification|smoke|build|lint|typecheck|screenshot|suite|npm|go test|cargo test|pytest|vitest|playwright)\b/i.test(value);
+}
+function filesEvidenceLooksReal(items) {
+    return items.some((item) => item && !/clean or unavailable/i.test(item));
+}
+function scoreTraceRecord(trace, content) {
+    const required = requiredTraceTierForRisk(trace.risk);
+    const currentPlan = traceField(content, 'Current plan');
+    const proofSummary = traceField(content, 'Proof summary');
+    const fileItems = traceSectionItems(content, 'Files Changed Or Read');
+    const minimalMissing = [];
+    if (!trace.summary || trace.summary === 'Harness Trace')
+        minimalMissing.push('task summary');
+    if (!trace.outcome)
+        minimalMissing.push('outcome');
+    const standardMissing = [...minimalMissing];
+    if (!trace.currentStory)
+        standardMissing.push('current story');
+    if (!proofSummary || proofSummary === 'none')
+        standardMissing.push('proof summary');
+    const detailedMissing = [...standardMissing];
+    if (!currentPlan || currentPlan === 'none')
+        detailedMissing.push('current plan');
+    if (!filesEvidenceLooksReal(fileItems))
+        detailedMissing.push('files changed/read');
+    if (!verificationLooksReal(proofSummary))
+        detailedMissing.push('verification evidence');
+    let achieved = 'detailed';
+    if (minimalMissing.length > 0) {
+        achieved = 'incomplete';
+    }
+    else if (standardMissing.length > 0) {
+        achieved = 'minimal';
+    }
+    else if (detailedMissing.length > 0) {
+        achieved = 'standard';
+    }
+    const missingFields = required === 'minimal'
+        ? minimalMissing
+        : required === 'standard'
+            ? standardMissing
+            : detailedMissing;
+    const meetsRequirement = tierRank(achieved) >= tierRank(required) && missingFields.length === 0;
+    return {
+        achieved,
+        required,
+        meetsRequirement,
+        missingFields,
+        nextAction: meetsRequirement
+            ? 'Trace quality gate passed.'
+            : `Improve trace before claiming completion: ${missingFields.join(', ') || 'required quality not met'}.`,
+    };
+}
+function replaceTraceField(content, label, value) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const pattern = new RegExp(`^- ${escaped}:.*$`, 'm');
+    if (pattern.test(content)) {
+        return content.replace(pattern, `- ${label}: ${value}`);
+    }
+    return content.replace(/^# Harness Trace\r?\n\r?\n/, `# Harness Trace\n\n- ${label}: ${value}\n`);
+}
+function writeTraceScore(trace, score) {
+    const raw = (0, fs_utils_1.readIfExists)(trace.repoPath);
+    if (!raw) {
+        throw new Error(`Could not read harness trace: ${trace.repoPath}`);
+    }
+    const status = score.meetsRequirement ? 'passed' : 'failed';
+    let updated = raw.replace(/\r?\n## Trace Quality Score\r?\n[\s\S]*?(?=\r?\n## |\s*$)/, '');
+    updated = replaceTraceField(updated, 'Score status', status);
+    updated = replaceTraceField(updated, 'Achieved trace tier', score.achieved);
+    updated = replaceTraceField(updated, 'Meets requirement', score.meetsRequirement ? 'yes' : 'no');
+    updated = replaceTraceField(updated, 'Missing fields', score.missingFields.length > 0 ? score.missingFields.join(', ') : 'none');
+    updated = `${updated.trimEnd()}\n\n## Trace Quality Score\n\n`
+        + `- Status: ${status}\n`
+        + `- Achieved tier: ${score.achieved}\n`
+        + `- Required tier: ${score.required}\n`
+        + `- Meets requirement: ${score.meetsRequirement ? 'yes' : 'no'}\n`
+        + `- Missing fields: ${score.missingFields.length > 0 ? score.missingFields.join(', ') : 'none'}\n`
+        + `- Next action: ${score.nextAction}\n`;
+    (0, fs_utils_1.writeFile)(trace.repoPath, updated);
+    (0, fs_utils_1.writeFile)(trace.vaultPath, updated);
+}
+function backlogFilter(items, filter) {
+    if (filter === 'open') {
+        return items.filter((item) => item.status === 'proposed' || item.status === 'accepted');
+    }
+    if (filter === 'closed') {
+        return items.filter((item) => item.status === 'implemented' || item.status === 'rejected');
+    }
+    return items;
+}
+function frictionReason(pain) {
+    const value = pain.toLowerCase();
+    if (/\bproof\b|\bevidence\b/.test(value))
+        return 'proof';
+    if (/\bcontext\b|\bmissing information\b|\bunclear\b/.test(value))
+        return 'context';
+    if (/\btrace\b|\blog\b/.test(value))
+        return 'trace';
+    if (/\bverification\b|\btest\b|\bsmoke\b|\bcheck\b/.test(value))
+        return 'verification';
+    return 'workflow';
+}
+function incrementCount(target, key) {
+    target[key] = (target[key] || 0) + 1;
+}
+function observabilityStatus(traces, backlog) {
+    const latest = traces[0] || null;
+    const open = backlogFilter(backlog, 'open');
+    const closed = backlogFilter(backlog, 'closed');
+    return {
+        latestTraceScore: latest
+            ? {
+                traceId: latest.id,
+                status: latest.scoreStatus,
+                achieved: latest.achievedTraceTier,
+                required: latest.requiredTraceTier,
+                meetsRequirement: latest.scoreStatus === 'unscored' ? null : latest.meetsRequirement,
+                missingFields: latest.missingFields,
+            }
+            : {
+                traceId: null,
+                status: 'none',
+                achieved: null,
+                required: null,
+                meetsRequirement: null,
+                missingFields: [],
+            },
+        failedTraceQualityGates: traces.filter((trace) => trace.scoreStatus === 'failed').length,
+        backlogOpen: open.length,
+        backlogClosed: closed.length,
+    };
 }
 function requiredHarnessDocs(repoRoot, config) {
     return [
@@ -1037,6 +1325,7 @@ function requiredHarnessDocs(repoRoot, config) {
         ['MATURITY.md', 'MATURITY.md'],
         ['COMPONENTS.md', 'COMPONENTS.md'],
         ['HARNESS_BACKLOG.md', 'HARNESS_BACKLOG.md'],
+        ['TRACE_SPEC.md', 'TRACE_SPEC.md'],
     ].map(([label, fileName]) => ({
         label,
         repoPath: node_path_1.default.join(repoProductRoot(repoRoot), fileName),
@@ -1084,8 +1373,12 @@ function getProductHarnessStatus({ repoRoot, config }) {
     const currentStory = currentStoryFromStories(stories);
     const decisionsBody = (0, fs_utils_1.readIfExists)(node_path_1.default.join(repoDecisionsRoot(repoRoot), 'INDEX.md')) || '';
     const decisionCount = (decisionsBody.match(/^##\s+/gm) || []).length;
+    const backlog = readBacklogItems(repoRoot, config);
     const openFriction = readOpenFriction(repoRoot, config);
-    const traceCount = traceFiles(repoTracesRoot(repoRoot)).length;
+    const traces = traceFiles(repoTracesRoot(repoRoot))
+        .map((filePath) => readTraceRecord(repoRoot, config, filePath))
+        .filter((trace) => Boolean(trace));
+    const traceCount = traces.length;
     const docsHealth = checkProductHarnessDocs({ repoRoot, config });
     return {
         ok: docsHealth.ok
@@ -1099,8 +1392,10 @@ function getProductHarnessStatus({ repoRoot, config }) {
         vaultHarnessRoot: getVaultProductHarnessRoot(config),
         docsHealth,
         currentStory,
-        latestTrace: latestTrace(repoRoot, config),
+        latestTrace: traces[0] || null,
         openFriction,
+        backlog,
+        observability: observabilityStatus(traces, backlog),
         proofGaps: proofGapsForStory(currentStory),
         counts: {
             stories: stories.length,
@@ -1262,24 +1557,47 @@ function recordHarnessTrace({ repoRoot, config, value }) {
     const timestamp = (0, date_1.getIsoTimestamp)();
     const today = (0, date_1.getTodayString)();
     const outcome = inferTraceOutcome(summary);
+    const classification = status.currentStory
+        ? {
+            risk: status.currentStory.risk,
+            inputType: status.currentStory.inputType,
+        }
+        : classifyHarnessIntake(summary);
+    const requiredTraceTier = requiredTraceTierForRisk(classification.risk);
+    const traceId = `trace-${timestampForFile()}-${(0, fs_utils_1.slugify)(summary).slice(0, 48)}`;
     const tracePath = node_path_1.default.join(repoTracesRoot(repoRoot), today, `${timestampForFile()}-${(0, fs_utils_1.slugify)(summary).slice(0, 80)}.md`);
     const relativeTrace = toPosix(node_path_1.default.relative(repoTracesRoot(repoRoot), tracePath));
     const vaultTracePath = node_path_1.default.join(vaultTracesRoot(config), relativeTrace);
     const changedFiles = getGitStatus(repoRoot);
+    const proofSummary = status.currentStory?.latestProof || 'none';
+    const currentPlan = currentPlanPointer(repoRoot);
     const body = [
         '# Harness Trace',
         '',
+        `- Trace id: ${traceId}`,
         `- Created: ${timestamp}`,
         `- Summary: ${summary}`,
         `- Outcome: ${outcome}`,
+        `- Risk lane: ${classification.risk}`,
+        `- Input type: ${classification.inputType}`,
+        `- Required trace tier: ${requiredTraceTier}`,
+        '- Score status: unscored',
+        '- Achieved trace tier: incomplete',
+        '- Meets requirement: no',
+        '- Missing fields: not scored yet',
         `- Current story: ${status.currentStory ? status.currentStory.title : 'none'}`,
         `- Current story path: ${status.currentStory ? status.currentStory.relativeRepoPath : 'none'}`,
-        `- Current plan: ${currentPlanPointer(repoRoot)}`,
-        `- Proof summary: ${status.currentStory?.latestProof || 'none'}`,
+        `- Current plan: ${currentPlan}`,
+        `- Proof status: ${proofSummary === 'none' ? 'missing' : 'present'}`,
+        `- Proof summary: ${proofSummary}`,
         '',
         '## Files Changed Or Read',
         '',
         ...(changedFiles.length > 0 ? changedFiles.map((line) => `- ${line}`) : ['- clean or unavailable']),
+        '',
+        '## Errors Or Friction',
+        '',
+        ...(status.openFriction.length > 0 ? status.openFriction.slice(0, 5).map((item) => `- ${item.pain}`) : ['- none']),
         '',
         '## Notes',
         '',
@@ -1291,6 +1609,7 @@ function recordHarnessTrace({ repoRoot, config, value }) {
     mirrorHarnessToVault(repoRoot, config);
     return {
         action: 'trace-recorded',
+        traceId,
         outcome,
         tracePath,
         vaultTracePath,
@@ -1304,14 +1623,19 @@ function recordHarnessFriction({ repoRoot, config, value }) {
     ensureProductHarness(repoRoot, config);
     const status = getProductHarnessStatus({ repoRoot, config });
     const timestamp = (0, date_1.getIsoTimestamp)();
+    const latest = status.latestTrace;
     const existing = ((0, fs_utils_1.readIfExists)(repoBacklogPath(repoRoot)) || backlogTemplate()).replace(/\n-\s+none yet\s*\n?/, '\n');
     const entry = [
         '',
         `## ${timestamp} - proposed`,
         `- Pain: ${pain}`,
+        `- Risk lane: ${status.currentStory?.risk || latest?.risk || 'medium'}`,
+        `- Input type: ${status.currentStory?.inputType || latest?.inputType || 'change_request'}`,
         `- Current story: ${status.currentStory ? status.currentStory.title : 'none'}`,
         `- Current plan: ${currentPlanPointer(repoRoot)}`,
-        '- Next harness improvement: clarify this friction before it repeats.',
+        `- Linked trace: ${latest?.id || 'none'}`,
+        '- Expected improvement: clarify this friction before it repeats.',
+        '- Actual outcome: pending',
         '',
     ].join('\n');
     (0, fs_utils_1.writeFile)(repoBacklogPath(repoRoot), `${existing.trimEnd()}\n${entry}`);
@@ -1324,18 +1648,88 @@ function recordHarnessFriction({ repoRoot, config, value }) {
         vaultBacklogPath: vaultBacklogPath(config),
     };
 }
+function scoreHarnessTrace({ repoRoot, config, id }) {
+    ensureProductHarness(repoRoot, config);
+    const trace = findTraceById(repoRoot, config, id);
+    if (!trace) {
+        throw new Error(id ? `No Product Harness trace found with id: ${id}` : 'No Product Harness trace found. Run `agent-bootstrap harness trace "<summary>"` first.');
+    }
+    const content = (0, fs_utils_1.readIfExists)(trace.repoPath) || '';
+    const score = scoreTraceRecord(trace, content);
+    writeTraceScore(trace, score);
+    mirrorHarnessToVault(repoRoot, config);
+    return {
+        action: 'trace-scored',
+        traceId: trace.id,
+        tracePath: trace.repoPath,
+        vaultTracePath: trace.vaultPath,
+        achieved: score.achieved,
+        required: score.required,
+        meetsRequirement: score.meetsRequirement,
+        missingFields: score.missingFields,
+        nextAction: score.nextAction,
+    };
+}
+function readHarnessBacklog({ repoRoot, config, filter = 'all' }) {
+    ensureProductHarness(repoRoot, config);
+    const items = readBacklogItems(repoRoot, config);
+    const filtered = backlogFilter(items, filter);
+    return {
+        action: 'harness-backlog',
+        filter,
+        open: backlogFilter(items, 'open').length,
+        closed: backlogFilter(items, 'closed').length,
+        items: filtered,
+    };
+}
+function getHarnessFrictionReport({ repoRoot, config }) {
+    ensureProductHarness(repoRoot, config);
+    const items = readOpenFriction(repoRoot, config);
+    const byRiskLane = { low: 0, medium: 0, high: 0 };
+    const byInputType = {
+        new_spec: 0,
+        spec_slice: 0,
+        change_request: 0,
+        new_initiative: 0,
+        maintenance: 0,
+        harness_improvement: 0,
+    };
+    const byReason = {
+        proof: 0,
+        context: 0,
+        trace: 0,
+        verification: 0,
+        workflow: 0,
+    };
+    for (const item of items) {
+        incrementCount(byRiskLane, item.riskLane);
+        incrementCount(byInputType, item.inputType);
+        incrementCount(byReason, frictionReason(item.pain));
+    }
+    return {
+        action: 'harness-friction-report',
+        totalOpen: items.length,
+        byRiskLane,
+        byInputType,
+        byReason,
+        items: items.slice(0, 10),
+    };
+}
 function formatProductHarnessContext(status) {
     const lines = [
         '# Product Harness',
         '',
         'Product Harness is not a skill and does not replace Superpowers.',
-        'It records feature intent, risk, scope, proof, trace, and friction while daily logs record what happened today.',
+        'It records feature intent, risk, scope, proof, trace quality, friction, and backlog outcomes while daily logs record what happened today.',
         '',
         `- Stories: ${status.counts.stories}`,
         `- High-risk stories: ${status.counts.highRiskStories}`,
         `- Stories missing proof: ${status.counts.storiesMissingProof}`,
         `- Traces: ${status.counts.traces}`,
         `- Open friction: ${status.counts.openFriction}`,
+        `- Backlog open: ${status.observability.backlogOpen}`,
+        `- Backlog closed: ${status.observability.backlogClosed}`,
+        `- Failed trace quality gates: ${status.observability.failedTraceQualityGates}`,
         `- Docs health: ${status.docsHealth.ok ? 'ok' : 'missing docs'}`,
         `- Maturity: ${status.docsHealth.maturityStage}`,
         '',
@@ -1356,7 +1750,7 @@ function formatProductHarnessContext(status) {
     }
     lines.push('', '## Latest Trace');
     if (status.latestTrace) {
-        lines.push(`- Summary: ${status.latestTrace.summary}`, `- Outcome: ${status.latestTrace.outcome}`, `- Source: ${status.latestTrace.relativeRepoPath}`);
+        lines.push(`- Trace id: ${status.latestTrace.id}`, `- Summary: ${status.latestTrace.summary}`, `- Outcome: ${status.latestTrace.outcome}`, `- Trace quality: ${status.latestTrace.scoreStatus} (${status.latestTrace.achievedTraceTier}/${status.latestTrace.requiredTraceTier})`, `- Meets requirement: ${status.latestTrace.scoreStatus === 'unscored' ? 'not scored' : status.latestTrace.meetsRequirement ? 'yes' : 'no'}`, `- Missing fields: ${status.latestTrace.missingFields.length > 0 ? status.latestTrace.missingFields.join(', ') : 'none'}`, `- Source: ${status.latestTrace.relativeRepoPath}`);
     }
     else {
         lines.push('- none');
@@ -1402,9 +1796,15 @@ function runHarnessCommand(subcommand, options) {
             return recordHarnessDecision(options);
         case 'trace':
             return recordHarnessTrace(options);
+        case 'score-trace':
+            return scoreHarnessTrace(options);
         case 'friction':
             return recordHarnessFriction(options);
+        case 'backlog':
+            return readHarnessBacklog(options);
+        case 'friction-report':
+            return getHarnessFrictionReport(options);
         default:
-            throw new Error('Unknown harness command. Use: status, check, intake, proof, decision, trace, friction.');
+            throw new Error('Unknown harness command. Use: status, check, intake, proof, decision, trace, score-trace, friction, backlog, friction-report.');
     }
 }

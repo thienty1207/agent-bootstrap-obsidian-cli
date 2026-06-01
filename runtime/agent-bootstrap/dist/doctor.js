@@ -34,6 +34,7 @@ function runDoctor({ repoRoot } = {}) {
         ['Plans/INDEX.md', node_path_1.default.join(config.project_root, 'Plans', 'INDEX.md')],
         ['ProductHarness/HARNESS.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS.md')],
         ['ProductHarness/HARNESS_BACKLOG.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md')],
+        ['ProductHarness/TRACE_SPEC.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'TRACE_SPEC.md')],
         ['ProductHarness/SYSTEM_MAP.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'SYSTEM_MAP.md')],
         ['ProductHarness/CONTEXT_RULES.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'CONTEXT_RULES.md')],
         ['ProductHarness/GLOSSARY.md', node_path_1.default.join(config.project_root, 'ProductHarness', 'GLOSSARY.md')],
@@ -59,6 +60,7 @@ function runDoctor({ repoRoot } = {}) {
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'Plans', 'CURRENT.md')),
         productHarness: node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'TRACE_SPEC.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'SYSTEM_MAP.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'CONTEXT_RULES.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'product', 'GLOSSARY.md'))
@@ -68,6 +70,7 @@ function runDoctor({ repoRoot } = {}) {
             && node_fs_1.default.existsSync(node_path_1.default.join(resolvedRepoRoot, 'docs', 'stories', 'INDEX.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'HARNESS_BACKLOG.md'))
+            && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'TRACE_SPEC.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'SYSTEM_MAP.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'CONTEXT_RULES.md'))
             && node_fs_1.default.existsSync(node_path_1.default.join(config.project_root, 'ProductHarness', 'GLOSSARY.md'))

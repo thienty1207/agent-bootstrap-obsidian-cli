@@ -18,6 +18,7 @@ const PUBLIC_COMMANDS = 'Public commands: setup, init, update, context, recall, 
 function parseFlags(args) {
     const options = {};
     const rest = [];
+    const booleanFlags = new Set(['open', 'closed']);
     for (let index = 0; index < args.length; index += 1) {
         const value = args[index];
         if (!value.startsWith('--')) {
@@ -25,6 +26,10 @@ function parseFlags(args) {
             continue;
         }
         const flag = value.slice(2);
+        if (booleanFlags.has(flag)) {
+            options[flag] = true;
+            continue;
+        }
         const next = args[index + 1];
         if (next === undefined || next.startsWith('--')) {
             throw new Error(`Missing value for --${flag}`);
@@ -33,6 +38,9 @@ function parseFlags(args) {
         index += 1;
     }
     return { rest, options };
+}
+function optionString(options, key) {
+    return typeof options[key] === 'string' ? options[key] : undefined;
 }
 function parseContextArgs(args) {
     let repoRoot;
@@ -120,7 +128,13 @@ function writeHelp() {
         '  agent-bootstrap harness proof "<verification summary>" [project-path]',
         '  agent-bootstrap harness decision "<decision summary>" [project-path]',
         '  agent-bootstrap harness trace "<summary>" [project-path]',
+        '  agent-bootstrap harness score-trace [project-path]',
+        '  agent-bootstrap harness score-trace --id <trace-id> [project-path]',
         '  agent-bootstrap harness friction "<pain or missing workflow>" [project-path]',
+        '  agent-bootstrap harness backlog [project-path]',
+        '  agent-bootstrap harness backlog --open [project-path]',
+        '  agent-bootstrap harness backlog --closed [project-path]',
+        '  agent-bootstrap harness friction-report [project-path]',
         '',
         'Remove the CLI if you no longer need it:',
         `  ${UNINSTALL_COMMAND}`,
@@ -145,9 +159,9 @@ async function main(argv) {
         const { rest, options } = parseFlags(tail);
         writeJson((0, bootstrap_1.initProject)({
             projectPath: rest[0] || process.cwd(),
-            slug: options.slug,
-            vaultRoot: options['vault-root'],
-            projectType: options.type,
+            slug: optionString(options, 'slug'),
+            vaultRoot: optionString(options, 'vault-root'),
+            projectType: optionString(options, 'type'),
         }));
         return;
     }
@@ -172,7 +186,7 @@ async function main(argv) {
         process.stdout.write(`${(0, memory_ops_1.runRecall)({
             query,
             repoRoot: rest[1],
-            limit: options.limit ? Number.parseInt(options.limit, 10) : undefined,
+            limit: typeof options.limit === 'string' ? Number.parseInt(options.limit, 10) : undefined,
         })}\n`);
         return;
     }
@@ -204,18 +218,21 @@ async function main(argv) {
         return;
     }
     if (command === 'harness') {
-        const { rest } = parseFlags(tail);
+        const { rest, options } = parseFlags(tail);
         const subcommand = rest[0];
         if (!subcommand) {
-            throw new Error('Harness requires a subcommand: status, check, intake, proof, decision, trace, friction.');
+            throw new Error('Harness requires a subcommand: status, check, intake, proof, decision, trace, score-trace, friction, backlog, friction-report.');
         }
-        const payload = subcommand === 'status' || subcommand === 'check' ? undefined : rest[1];
-        const repoRoot = subcommand === 'status' || subcommand === 'check' ? rest[1] : rest[2];
+        const noPayload = new Set(['status', 'check', 'score-trace', 'backlog', 'friction-report']);
+        const payload = noPayload.has(subcommand) ? undefined : rest[1];
+        const repoRoot = noPayload.has(subcommand) ? rest[1] : rest[2];
         const foundRepoRoot = (0, context_1.resolveRepoRoot)(repoRoot ? node_path_1.default.resolve(repoRoot) : process.cwd());
         writeJson((0, product_harness_1.runHarnessCommand)(subcommand, {
             repoRoot: foundRepoRoot,
             config: (0, context_1.readRepoConfig)(foundRepoRoot),
             value: payload,
+            id: optionString(options, 'id'),
+            filter: options.open ? 'open' : options.closed ? 'closed' : 'all',
         }));
         return;
     }

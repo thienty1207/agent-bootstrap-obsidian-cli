@@ -171,7 +171,12 @@ agent-bootstrap harness intake "<feature title>"
 agent-bootstrap harness proof "<verification summary>"
 agent-bootstrap harness decision "<decision summary>"
 agent-bootstrap harness trace "<task summary/outcome>"
+agent-bootstrap harness score-trace
+agent-bootstrap harness score-trace --id <trace-id>
 agent-bootstrap harness friction "<pain or missing workflow>"
+agent-bootstrap harness backlog --open
+agent-bootstrap harness backlog --closed
+agent-bootstrap harness friction-report
 ```
 
 Small docs, copy, and tiny polish tasks stay lightweight. Auth, login, payment,
@@ -187,9 +192,24 @@ friction` records unclear workflow moments so the kit can improve instead of
 letting the same confusion repeat.
 
 `harness check` verifies the Product Harness docs health layer: `SYSTEM_MAP.md`,
-`CONTEXT_RULES.md`, `GLOSSARY.md`, `MATURITY.md`, and `COMPONENTS.md`. These files
+`CONTEXT_RULES.md`, `GLOSSARY.md`, `MATURITY.md`, `COMPONENTS.md`, and `TRACE_SPEC.md`. These files
 help AI understand the product, shared terms, and context loading rules before it
 touches code.
+
+### Trace Quality Gate
+
+Trace Quality Gate is the “did the AI leave a good enough trail?” check. After
+meaningful work, AI agents write `harness trace`, then run `harness score-trace`
+before the final response. Low-risk work only needs a small trace; medium-risk
+work needs story and proof; high-risk work such as auth, payment, permissions,
+tenant/RLS, security, migrations, uploads, and external providers needs a
+detailed trace with proof, current plan, and files changed/read.
+
+If the trace score fails, the agent must improve the trace or avoid claiming the
+work is done. Friction intelligence groups repeated pain points by risk, input
+type, missing proof, weak trace, unclear context, and verification gaps. The
+backlog outcome loop keeps proposed/accepted/implemented/rejected harness
+improvements visible without adding a database or dashboard.
 
 ## AI Memory Engine
 
@@ -322,7 +342,10 @@ node scripts/agent-memory.js harness intake "<feature title>"
 node scripts/agent-memory.js harness proof "<verification summary>"
 node scripts/agent-memory.js harness decision "<decision summary>"
 node scripts/agent-memory.js harness trace "<task summary/outcome>"
+node scripts/agent-memory.js harness score-trace
 node scripts/agent-memory.js harness friction "<pain or missing workflow>"
+node scripts/agent-memory.js harness backlog --open
+node scripts/agent-memory.js harness friction-report
 node scripts/agent-memory.js memory status
 node scripts/agent-memory.js memory index
 node scripts/agent-memory.js memory compact
@@ -513,7 +536,7 @@ The vault bridge is stable across `init` and `update`:
 - `vault.config.json` links repo, vault, project slug, project type, and kit version
 - `agent-bootstrap context --compact` loads repo context, vault context, project memory index, automatic Codex session import, and bounded semantic Auto Recall
 - `agent-bootstrap plan <status|start|update|complete|interrupt>` tracks active implementation state in the repo and mirrors it into the vault
-- `agent-bootstrap harness <status|intake|proof|decision|trace|friction>` tracks feature intent, risk, scope, proof, trace, friction, and product decisions in the repo and mirrors it into the vault
+- `agent-bootstrap harness <status|intake|proof|decision|trace|score-trace|friction|backlog|friction-report>` tracks feature intent, risk, scope, proof, trace quality, friction, backlog outcomes, and product decisions in the repo and mirrors it into the vault
 - `agent-bootstrap recall "<query>"` searches durable project memory Markdown with hybrid lexical + concept recall
 - `agent-bootstrap memory <status|import-sessions|sync-sessions|export|backup>` handles health, import inspection, session replay, export, and backup
 - `scripts/agent-memory.js` writes tasks, decisions, facts, questions, handoffs, research, notes, recall output, memory maintenance, and compact summaries
@@ -521,7 +544,7 @@ The vault bridge is stable across `init` and `update`:
 - `Open Questions.md` is for unresolved assumptions
 - `Handoff.md` keeps the next-session state short
 - `Plans/CURRENT.md` keeps the active implementation state durable
-- `ProductHarness/` keeps feature intent, proof, trace, and friction durable
+- `ProductHarness/` keeps feature intent, proof, Trace Quality Gate, friction, and backlog outcomes durable
 
 ## Contributor Verification
 

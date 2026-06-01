@@ -171,6 +171,7 @@ function assertProductHarnessWorkspace(repoRoot, vaultProjectRoot) {
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'PRODUCT.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'HARNESS.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'TRACE_SPEC.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'SYSTEM_MAP.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'CONTEXT_RULES.md')), true);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'GLOSSARY.md')), true);
@@ -183,6 +184,7 @@ function assertProductHarnessWorkspace(repoRoot, vaultProjectRoot) {
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'PRODUCT.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'HARNESS.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'TRACE_SPEC.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'SYSTEM_MAP.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'CONTEXT_RULES.md')), true);
   assert.equal(fs.existsSync(path.join(vaultProjectRoot, 'ProductHarness', 'GLOSSARY.md')), true);
@@ -364,7 +366,10 @@ test('--help prints the quickstart flow', () => {
   assert.match(result.stdout, /agent-bootstrap harness intake/);
   assert.match(result.stdout, /agent-bootstrap harness check/);
   assert.match(result.stdout, /agent-bootstrap harness trace/);
+  assert.match(result.stdout, /agent-bootstrap harness score-trace/);
   assert.match(result.stdout, /agent-bootstrap harness friction/);
+  assert.match(result.stdout, /agent-bootstrap harness backlog/);
+  assert.match(result.stdout, /agent-bootstrap harness friction-report/);
   assert.match(result.stdout, /npm uninstall -g @kakasitink\/agent-bootstrap/);
 });
 
@@ -387,7 +392,7 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   const readme = readFile(path.join(repoRoot, 'README.md'));
   const agentGuide = readFile(path.join(repoRoot, 'AGENTS.md'));
 
-  assert.equal(packageJson.version, '1.0.0');
+  assert.equal(packageJson.version, '1.1.0');
   assert.doesNotMatch(agentGuide, /config set-vault/i);
   assert.doesNotMatch(agentGuide, /agent-bootstrap doctor/i);
   assert.doesNotMatch(agentGuide, /projects list/i);
@@ -399,6 +404,9 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.match(readme, /Automatic Memory Recall/);
   assert.match(readme, /Automatic Active Plan State/);
   assert.match(readme, /Product Harness/);
+  assert.match(readme, /Trace Quality Gate/);
+  assert.match(readme, /friction intelligence/i);
+  assert.match(readme, /backlog outcome/i);
   assert.match(readme, /AI Memory Engine/);
   assert.match(readme, /Memory Firewall/);
   assert.match(readme, /Verified Global Memory/);
@@ -416,7 +424,10 @@ test('repo docs stay aligned with the limited public CLI surface', () => {
   assert.match(readme, /agent-bootstrap harness status/);
   assert.match(readme, /agent-bootstrap harness check/);
   assert.match(readme, /agent-bootstrap harness trace/);
+  assert.match(readme, /agent-bootstrap harness score-trace/);
   assert.match(readme, /agent-bootstrap harness friction/);
+  assert.match(readme, /agent-bootstrap harness backlog/);
+  assert.match(readme, /agent-bootstrap harness friction-report/);
   assert.match(readme, /Trace = task này đã đi qua đường nào|Trace/i);
   assert.match(readme, /Friction = điểm nghẽn|Friction/i);
   assert.match(readme, /docs\/superpowers\/plans/);
@@ -507,6 +518,7 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(repoReadme, /optional project-specific custom skills/i);
   assert.match(repoReadme, /Automatic Active Plan State/i);
   assert.match(repoReadme, /Product Harness/i);
+  assert.match(repoReadme, /Trace Quality Gate/i);
   assert.match(repoReadme, /AI Memory Engine/i);
   assert.match(repoReadme, /Memory Firewall/i);
   assert.match(repoReadme, /docs\/stories/i);
@@ -527,7 +539,10 @@ test('setup stores portable config and init bootstraps current repo', () => {
   assert.match(rootAgent, /agent-bootstrap memory index/);
   assert.match(rootAgent, /agent-bootstrap memory compact/);
   assert.match(rootAgent, /agent-bootstrap harness trace/);
+  assert.match(rootAgent, /agent-bootstrap harness score-trace/);
   assert.match(rootAgent, /agent-bootstrap harness friction/);
+  assert.match(rootAgent, /agent-bootstrap harness backlog/);
+  assert.match(rootAgent, /agent-bootstrap harness friction-report/);
   assert.match(rootAgent, /Product Harness is not a skill/i);
   assert.match(rootAgent, /Do not infer completion from silence/i);
   assert.match(rootAgent, /Do not ask the user whether to run it/);
@@ -970,15 +985,18 @@ test('harness check reports docs health and update recreates missing harness doc
   assert.match(check.maturityStage, /Stage/);
 
   fs.rmSync(path.join(repoRoot, 'docs', 'product', 'GLOSSARY.md'), { force: true });
+  fs.rmSync(path.join(repoRoot, 'docs', 'product', 'TRACE_SPEC.md'), { force: true });
   result = runCli(['harness', 'check'], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
   check = parseJson(result.stdout);
   assert.equal(check.ok, false);
   assert.ok(check.missing.some((item) => item.endsWith('docs/product/GLOSSARY.md')));
+  assert.ok(check.missing.some((item) => item.endsWith('docs/product/TRACE_SPEC.md')));
 
   result = runCli(['update', repoRoot], { configHome, cwd: repoRoot });
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'GLOSSARY.md')), true);
+  assert.equal(fs.existsSync(path.join(repoRoot, 'docs', 'product', 'TRACE_SPEC.md')), true);
 });
 
 test('memory engine supports optional Rust accelerator with Node fallback', () => {
@@ -1757,6 +1775,10 @@ test('harness commands classify feature risk, track proof, and mirror stories to
   matrixBody = readFile(path.join(repoRoot, 'docs', 'validation', 'TEST_MATRIX.md'));
   assert.match(matrixBody, /\| backend login with Gin \| high \| yes \| no \| no \| no \| implemented \| go test \.\/\.\.\. passed for auth handlers \|/);
 
+  result = runCli(['plan', 'start', 'backend login with Gin', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  writeFile(path.join(repoRoot, 'src', 'auth-handler.js'), 'export const authHandler = true;\n');
+
   result = runCli(['harness', 'trace', 'implemented backend login with proof', repoRoot], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
   const trace = parseJson(result.stdout);
@@ -1765,8 +1787,27 @@ test('harness commands classify feature risk, track proof, and mirror stories to
   assert.match(trace.tracePath, new RegExp(`docs[\\\\/]product[\\\\/]traces[\\\\/]${today}[\\\\/]`));
   assert.equal(fs.existsSync(trace.tracePath), true);
   assert.equal(fs.existsSync(trace.vaultTracePath), true);
+  assert.match(trace.traceId, /^trace-/);
   assert.match(readFile(trace.tracePath), /implemented backend login with proof/);
   assert.match(readFile(trace.tracePath), /backend login with Gin/);
+  assert.match(readFile(trace.tracePath), /Score status: unscored/);
+
+  result = runCli(['harness', 'score-trace', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const score = parseJson(result.stdout);
+  assert.equal(score.action, 'trace-scored');
+  assert.equal(score.traceId, trace.traceId);
+  assert.equal(score.required, 'detailed');
+  assert.equal(score.achieved, 'detailed');
+  assert.equal(score.meetsRequirement, true);
+  assert.deepEqual(score.missingFields, []);
+  assert.match(readFile(trace.tracePath), /Status: passed/);
+  assert.match(readFile(trace.vaultTracePath), /Status: passed/);
+
+  result = runCli(['harness', 'score-trace', '--id', trace.traceId, repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const scoreById = parseJson(result.stdout);
+  assert.equal(scoreById.tracePath, trace.tracePath);
 
   result = runCli(['harness', 'friction', 'validation command was unclear', repoRoot], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
@@ -1774,9 +1815,33 @@ test('harness commands classify feature risk, track proof, and mirror stories to
   assert.equal(friction.action, 'friction-recorded');
   assert.equal(friction.status, 'proposed');
   assert.match(readFile(friction.backlogPath), /validation command was unclear/);
+  assert.match(readFile(friction.backlogPath), /Risk lane: high/);
+  assert.match(readFile(friction.backlogPath), /Expected improvement:/);
   assert.match(readFile(friction.vaultBacklogPath), /validation command was unclear/);
 
-  result = runCli(['recall', 'Gin login proof', repoRoot], { configHome, cwd: nested });
+  result = runCli(['harness', 'backlog', '--open', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const openBacklog = parseJson(result.stdout);
+  assert.equal(openBacklog.action, 'harness-backlog');
+  assert.equal(openBacklog.filter, 'open');
+  assert.equal(openBacklog.items.length, 1);
+  assert.equal(openBacklog.items[0].status, 'proposed');
+
+  result = runCli(['harness', 'backlog', '--closed', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const closedBacklog = parseJson(result.stdout);
+  assert.equal(closedBacklog.filter, 'closed');
+  assert.equal(closedBacklog.items.length, 0);
+
+  result = runCli(['harness', 'friction-report', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const frictionReport = parseJson(result.stdout);
+  assert.equal(frictionReport.action, 'harness-friction-report');
+  assert.equal(frictionReport.totalOpen, 1);
+  assert.ok(frictionReport.byRiskLane.high >= 1);
+  assert.ok(frictionReport.byReason.proof >= 1 || frictionReport.byReason.context >= 1);
+
+  result = runCli(['recall', 'implemented backend login with proof', repoRoot], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /backend login with Gin/i);
   assert.match(result.stdout, /\[harness-story\]/);
@@ -1798,6 +1863,16 @@ test('harness commands classify feature risk, track proof, and mirror stories to
   assert.match(lowRisk.storyPath, new RegExp(`docs[\\\\/]stories[\\\\/]${today}[\\\\/]${today}-docs-copy-polish\\.md$`));
   assert.doesNotMatch(readFile(lowRisk.storyPath), /auth\/security proof/i);
   assert.equal(fs.existsSync(path.join(path.dirname(lowRisk.storyPath), `${today}-docs-copy-polish`, 'overview.md')), false);
+
+  result = runCli(['harness', 'trace', 'updated docs copy polish', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const lowTrace = parseJson(result.stdout);
+  result = runCli(['harness', 'score-trace', repoRoot], { configHome, cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const lowScore = parseJson(result.stdout);
+  assert.equal(lowScore.traceId, lowTrace.traceId);
+  assert.equal(lowScore.required, 'minimal');
+  assert.equal(lowScore.meetsRequirement, true);
 
   result = runCli(['harness', 'intake', 'database migration deletes old invoices', repoRoot], { configHome, cwd: nested });
   assert.equal(result.status, 0, result.stderr);
@@ -1836,6 +1911,8 @@ test('compact context auto-refreshes recall index and includes bounded auto reca
   assert.match(result.stdout, /Product Harness/);
   assert.match(result.stdout, /backend login with Gin/i);
   assert.match(result.stdout, /Proof gaps/i);
+  assert.match(result.stdout, /Trace quality/i);
+  assert.match(result.stdout, /unscored/i);
   assert.match(result.stdout, /Bounded recall/);
   assert.doesNotMatch(result.stdout, /===== Today Daily Note =====/);
   assert.doesNotMatch(result.stdout, /===== Recent Story =====/);
@@ -1854,6 +1931,51 @@ test('compact context auto-refreshes recall index and includes bounded auto reca
   const full = runCli(['context', '--full'], { configHome, cwd: repoRoot });
   assert.equal(full.status, 0, full.stderr);
   assert.match(full.stdout, /===== Recent Story =====/);
+});
+
+test('harness trace scoring blocks weak high-risk completion claims', () => {
+  const root = makeTempDir('agent-bootstrap-trace-quality-');
+  const vaultRoot = path.join(root, 'vault');
+  const repoRoot = path.join(root, 'repo');
+  const configHome = path.join(root, 'config-home');
+
+  fs.mkdirSync(repoRoot, { recursive: true });
+
+  let result = runCli(['setup', vaultRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli([], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['harness', 'intake', 'auth login'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+
+  result = runCli(['harness', 'trace', 'completed auth login'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const trace = parseJson(result.stdout);
+
+  result = runCli(['harness', 'score-trace', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const score = parseJson(result.stdout);
+  assert.equal(score.traceId, trace.traceId);
+  assert.equal(score.required, 'detailed');
+  assert.equal(score.meetsRequirement, false);
+  assert.ok(score.missingFields.includes('current plan'));
+  assert.ok(score.missingFields.includes('proof summary'));
+  assert.ok(score.missingFields.includes('verification evidence'));
+  assert.match(readFile(trace.tracePath), /Status: failed/);
+  assert.match(readFile(trace.tracePath), /Missing fields:/);
+
+  result = runCli(['context', '--compact'], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Trace quality/i);
+  assert.match(result.stdout, /failed/i);
+
+  result = runCli(['memory', 'status', repoRoot], { configHome, cwd: repoRoot });
+  assert.equal(result.status, 0, result.stderr);
+  const status = parseJson(result.stdout);
+  assert.equal(status.productHarness.observability.failedTraceQualityGates, 1);
+  assert.ok(status.diagnostics.some((item) => item.code === 'product-harness-trace-quality'));
 });
 
 test('context compact automatically imports matching Codex sessions with redaction and dedupe', () => {
@@ -1998,6 +2120,9 @@ test('memory commands report status sync sessions export and backup project memo
   assert.equal(status.productHarness.currentStory.risk, 'high');
   assert.ok(status.productHarness.proofGaps.length > 0);
   assert.equal(status.productHarness.latestTrace.summary, 'partial backend login implementation');
+  assert.equal(status.productHarness.observability.latestTraceScore.status, 'unscored');
+  assert.equal(status.productHarness.observability.backlogOpen, 1);
+  assert.equal(status.productHarness.observability.backlogClosed, 0);
   assert.equal(status.productHarness.openFriction.length, 1);
   assert.equal(status.checks.productHarness, true);
   assert.ok(status.checks.planState);
@@ -2039,6 +2164,7 @@ test('memory commands report status sync sessions export and backup project memo
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Repo/docs/superpowers/plans/CURRENT.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'ProductHarness/HARNESS.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'ProductHarness/HARNESS_BACKLOG.md'));
+  assert.ok(exportBody.files.some((file) => file.relativePath === 'ProductHarness/TRACE_SPEC.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Artifacts/AgentBootstrap/APPROVED_GLOBAL.md'));
   assert.ok(exportBody.files.some((file) => file.relativePath === 'Artifacts/AgentBootstrap/memory-engine-index.json'));
   assert.ok(exportBody.files.some((file) => file.relativePath.startsWith('ProductHarness/Traces/')));
@@ -2055,6 +2181,7 @@ test('memory commands report status sync sessions export and backup project memo
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Repo', 'docs', 'superpowers', 'plans', 'CURRENT.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'HARNESS.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'HARNESS_BACKLOG.md')), true);
+  assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'TRACE_SPEC.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Artifacts', 'AgentBootstrap', 'APPROVED_GLOBAL.md')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'Artifacts', 'AgentBootstrap', 'memory-engine-index.json')), true);
   assert.equal(fs.existsSync(path.join(backup.backupPath, 'ProductHarness', 'Traces')), true);
@@ -2246,11 +2373,35 @@ test('repo-local runtime mirrors recall and memory status commands from nested p
   assert.equal(runtimeTrace.action, 'trace-recorded');
   assert.equal(fs.existsSync(runtimeTrace.tracePath), true);
 
+  result = runRuntime(repoRoot, ['harness', 'score-trace'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const runtimeScore = parseJson(result.stdout);
+  assert.equal(runtimeScore.action, 'trace-scored');
+  assert.equal(runtimeScore.traceId, runtimeTrace.traceId);
+  assert.equal(runtimeScore.required, 'detailed');
+
+  result = runRuntime(repoRoot, ['harness', 'score-trace', '--id', runtimeTrace.traceId], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const runtimeScoreById = parseJson(result.stdout);
+  assert.equal(runtimeScoreById.tracePath, runtimeTrace.tracePath);
+
   result = runRuntime(repoRoot, ['harness', 'friction', 'auth smoke proof was unclear'], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);
   const runtimeFriction = parseJson(result.stdout);
   assert.equal(runtimeFriction.action, 'friction-recorded');
   assert.equal(fs.existsSync(runtimeFriction.backlogPath), true);
+
+  result = runRuntime(repoRoot, ['harness', 'backlog', '--open'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const runtimeBacklog = parseJson(result.stdout);
+  assert.equal(runtimeBacklog.action, 'harness-backlog');
+  assert.equal(runtimeBacklog.filter, 'open');
+
+  result = runRuntime(repoRoot, ['harness', 'friction-report'], { cwd: nested });
+  assert.equal(result.status, 0, result.stderr);
+  const runtimeFrictionReport = parseJson(result.stdout);
+  assert.equal(runtimeFrictionReport.action, 'harness-friction-report');
+  assert.ok(runtimeFrictionReport.totalOpen >= 1);
 
   result = runRuntime(repoRoot, ['context'], { cwd: nested });
   assert.equal(result.status, 0, result.stderr);

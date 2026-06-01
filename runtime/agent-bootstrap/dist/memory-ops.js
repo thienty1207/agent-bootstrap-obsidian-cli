@@ -235,6 +235,14 @@ function getMemoryStatus(options = {}) {
         });
         diagnostics.nextActions.push('agent-bootstrap harness friction "<pain or missing workflow>"');
     }
+    if (productHarness.observability.failedTraceQualityGates > 0) {
+        diagnostics.diagnostics.push({
+            level: 'warn',
+            code: 'product-harness-trace-quality',
+            message: `${productHarness.observability.failedTraceQualityGates} Product Harness trace quality gate${productHarness.observability.failedTraceQualityGates === 1 ? '' : 's'} failed.`,
+        });
+        diagnostics.nextActions.push('agent-bootstrap harness score-trace');
+    }
     return {
         ok: node_fs_1.default.existsSync(config.vault_root) && node_fs_1.default.existsSync(config.project_root),
         recallMode: recall.index.mode,
@@ -268,6 +276,9 @@ function getMemoryStatus(options = {}) {
             stories: productHarness.counts.stories,
             harnessTraces: productHarness.counts.traces,
             harnessFriction: productHarness.counts.openFriction,
+            harnessBacklogOpen: productHarness.observability.backlogOpen,
+            harnessBacklogClosed: productHarness.observability.backlogClosed,
+            harnessTraceQualityFailures: productHarness.observability.failedTraceQualityGates,
         },
         planState,
         productHarness,
@@ -302,7 +313,10 @@ function getMemoryStatus(options = {}) {
             'agent-bootstrap memory backup',
             'agent-bootstrap harness status',
             'agent-bootstrap harness trace "<summary>"',
+            'agent-bootstrap harness score-trace',
             'agent-bootstrap harness friction "<pain or missing workflow>"',
+            'agent-bootstrap harness backlog --open',
+            'agent-bootstrap harness friction-report',
         ],
     };
 }
